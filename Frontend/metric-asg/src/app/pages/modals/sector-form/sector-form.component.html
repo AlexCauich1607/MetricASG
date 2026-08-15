@@ -1,0 +1,31 @@
+<div class="p-4 bg-white sw-modal">
+    <h5 class="modal-title fw-bold text-center text-my-purple mb-3">
+        {{ data.sector ? 'Editar Sector' : 'Nuevo Sector' }}
+    </h5>
+
+    <div class="modal-body">
+
+        <div class="mb-3" [formGroup]="form">
+            <label class="form-label sw-fs-7 fw-bold text-my-purple"><i class="bi bi-card-text me-1"></i> Nombre</label>
+            <input type="text" class="form-control sw-fs-7" formControlName="name"
+                placeholder="Ingrese el nombre del Sector" />
+            <div *ngIf="getValue('name')!.invalid && (getValue('name')!.dirty || getValue('name')!.touched)">
+                <p class="sw-text-error">*El nombre debe tener minimo 3 caracteres</p>
+            </div>
+            
+        </div>
+    </div>
+
+    <div class="modal-footer d-flex justify-content-between gap-2">
+        <button class="sw-btn-white-purple text-my-purple bg-white sw-cursor-pointer sw-fs-7 mb-3" (click)="close()">
+            <i class="bi bi-x-lg"></i> Descartar
+        </button>
+        <button class="sw-btn-red-secondary text-my-purple sw-cursor-pointer sw-fs-7 mb-3" *ngIf="data.sector"
+            (click)="delete()">
+            <i class="bi bi-trash"></i> Eliminar
+        </button>
+        <button class="btn-my-purple sw-cursor-pointer sw-h-20 sw-fs-7 mb-3" [disabled]="form.invalid" (click)="save()">
+            <i class="bi bi-check-lg"></i> Guardar
+        </button>
+    </div>
+</div>

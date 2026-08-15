@@ -1,0 +1,53 @@
+<nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm fixed-top py-3">
+    <div class="container">
+        <a class="navbar-brand d-flex align-items-center" href="/home">
+            <img src="assets/logo.png" alt="MetricASG" height="28" class="me-2">
+            <span class="text-my-purple mb-1 font-logo">MetricASG</span>
+        </a>
+
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNavbar">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+
+        <div id="mainNavbar" class="collapse navbar-collapse justify-content-end">
+            <ul class="navbar-nav fw-bold align-items-center">
+                <li class="nav-item mx-2 " *ngIf="!first">
+                    <a class="nav-link fw-bold" routerLink="/user/home" routerLinkActive="active">Inicio</a>
+                </li>
+
+                <li class="nav-item mx-2" *ngIf="!first">
+                    <a class="nav-link fw-bold" routerLink="/user/history" routerLinkActive="active">Historial</a>
+                </li>
+
+                <li class="nav-item mx-2" *ngIf="!first">
+                    <a class="nav-link fw-bold" routerLink="/user/feedback"
+                        routerLinkActive="active">Retroalimentación</a>
+                </li>
+
+
+                <li class="nav-item dropdown mx-2">
+                    <a class="nav-link  d-flex align-items-center m-0 p-0" role="button"
+                        data-bs-toggle="dropdown">
+                        <div *ngIf="!photo || photo.length <= 0" class="bg-my-purple sw-all-center sw-circle"
+                            style="height: 40px; width: 40px;"><i class="bi bi-person-fill text-white fs-5"></i></div>
+                        <img *ngIf="photo && photo.length > 0" class="sw-circle sw-all-center" style="height: 40px;width: 40px;"
+                            [src]="getImage()" alt="Foto de usuario" />
+
+                    </a>
+                    <ul class="dropdown-menu dropdown-menu-end">
+                        <li>
+                            <button class="dropdown-item text-my-purple fw-bold sw-fs-7" (click)="openConfiguration()">
+                                <i class="bi bi-gear me-1"></i>
+                                Configuración
+                            </button>
+                            <button class="dropdown-item text-danger fw-bold sw-fs-7" (click)="cerrarSesion()">
+                                <i class="bi bi-box-arrow-right me-1"></i>
+                                Cerrar Sesión
+                            </button>
+                        </li>
+                    </ul>
+                </li>
+            </ul>
+        </div>
+    </div>
+</nav>

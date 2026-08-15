@@ -1,0 +1,44 @@
+<div class="p-4 bg-white">
+    <h5 class="modal-title fw-bold text-center text-my-purple mb-3">
+        {{ data ? 'Editar Ámbito' : 'Nuevo Ámbito' }}
+    </h5>
+
+    <div class="modal-body" [formGroup]="form">
+
+        <div class="mb-3">
+            <label class="form-label sw-fs-7 fw-bold text-my-purple"><i class="bi bi-card-text me-1"></i> Nombre</label>
+            <input type="text" class="form-control sw-fs-7" formControlName="name" placeholder="Nombre del ámbito" />
+            <div *ngIf="getValue('name')!.invalid && (getValue('name')!.dirty || getValue('name')!.touched)">
+                <p class="sw-text-error">*El nombre debe tener minimo 3 caracteres</p>
+            </div>
+        </div>
+        <div class="row mb-3">
+            <div class="col-md-6 mb-3">
+                <label class="form-label sw-fs-7 fw-bold text-my-purple"><i class="bi bi-fonts me-1"></i> Letra</label>
+                <input type="text" maxlength="1" placeholder="Ejem: A, B..." class="form-control sw-fs-7"
+                    formControlName="letter" />
+                <div *ngIf="getValue('letter')!.invalid && (getValue('letter')!.dirty || getValue('letter')!.touched)">
+                    <p class="sw-text-error">*Este campo no puede estar vacio</p>
+                </div>
+            </div>
+            <div class="col-6 mb-3">
+                <label class="form-label sw-fs-7 fw-bold text-my-purple"><i class="bi bi-palette me-1"></i>
+                    Color</label>
+                <div class="sw-row">
+                    <input type="color" class="form-control sw-fs-7 sw-h-25" formControlName="color" />
+                    <p class="sw-fs-7 text-my-gray mt-1 ms-2"> {{ form.get('color')?.value }}</p>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-footer d-flex justify-content-between gap-2">
+        <button class="sw-btn-white-purple text-my-purple bg-white sw-cursor-pointer sw-fs-7 mb-3" (click)="close()">
+            <i class="bi bi-x-lg"></i> Descartar
+        </button>
+        <button class="btn-my-purple sw-cursor-pointer sw-h-20 sw-fs-7 mb-3"  (click)="save()">
+            <i class="bi bi-check-lg"></i> Guardar
+        </button>
+    </div>
+</div>

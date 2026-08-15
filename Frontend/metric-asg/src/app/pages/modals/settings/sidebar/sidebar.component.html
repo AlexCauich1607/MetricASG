@@ -1,0 +1,32 @@
+<div class=" bg-white">
+    <div class="layout">
+        <div class="sidebar px-0 py-4 d-flex flex-column align-items-center justify-content-start">
+            <div class="mb-3">
+                <div class="d-flex flex-column align-items-center justify-content-center ">
+                    <img src="assets/logo.png" alt="MetricASG" height="24" width="24" class="me-1">
+                    <span class="font-logo text-my-purple sw-fs-7">MetricASG</span>
+                </div>
+            </div>
+            <button class="btn sw-fs-7 btn-size mb-1 text-start" [class]="ix==0?'btn-active':''" (click)="selectIx(0)">
+                <i class="bi bi-person"></i> Mi perfil
+            </button>
+            <button class="btn sw-fs-7 btn-size mb-1 text-start" *ngIf="user?.role!='admin'" [class]="ix==1?'btn-active':''" (click)="selectIx(1)">
+                <i class="bi bi-building"></i> Empresa
+            </button>
+            <button class="btn sw-fs-7 btn-size mb-1 text-start" [class]="ix==2?'btn-active':''" (click)="selectIx(2)">
+                <i class="bi bi-envelope me-1"></i> Contacto
+            </button>
+            <div class="sw-end">
+                  <button class="sw-btn-white-purple text-my-purple bg-white sw-cursor-pointer sw-fs-7 mb-3" (click)="close()"> <i class="bi bi-x-lg"></i> Cerrar</button>
+            </div>
+        </div>
+        <div class="content">
+            <app-user-settings [user]="user" *ngIf="ix==0"></app-user-settings>
+            <app-company-settings [user]="user" *ngIf="ix==1 && user?.role!='admin'"></app-company-settings>
+            <app-contact-settings [user]="user" *ngIf="ix==2"></app-contact-settings>
+
+        </div>
+    </div>
+
+
+</div>

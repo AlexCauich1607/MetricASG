@@ -1,0 +1,38 @@
+<div class="p-4 sw-height">
+    <h6 class="fw-bold text-my-purple mb-4"><i class="bi bi-envelope-fill"></i> Contacto</h6>
+    <div class="mb-3">
+        <label class="form-label sw-fs-7 fw-bold text-my-purple"><i class="bi bi-building-fill me-1"></i> Correo</label>
+        <input type="text" class="form-control sw-fs-7 sw-bg-transparent text-muted" placeholder="Ingrese su correo"
+            [(ngModel)]="user!.email" disabled />
+    </div>
+    <div class="mb-3">
+        <label class="form-label sw-fs-7 fw-bold text-my-purple"><i class="bi bi-telephone-fill me-1"></i>
+            Telefono</label>
+        <input type="tel" class="form-control sw-fs-7 sw-bg-transparent" placeholder="Ingrese su telefono"
+            [(ngModel)]="user!.phone" />
+        <div *ngIf="user?.phone!.length > 0 && !isPhoneValidate()" class="m-0 p-0">
+            <p class="sw-text-error mb-0 pb-0">*El telefono no es valido</p>
+        </div>
+    </div>
+    <div class="mb-3">
+        <label class="form-label sw-fs-7 fw-bold text-my-purple"><i class="bi bi-lock-fill me-1"></i>
+            Nueva Contraseña</label>
+        <input type="password" class="form-control sw-fs-7 sw-bg-transparent" placeholder="Ingrese su nueva contraseña"
+            [(ngModel)]="password" />
+        <div *ngIf="password.length > 0 && password.length < 8" class="m-0 p-0">
+            <p class="sw-text-error mb-0 pb-0">*La contraseña debe tener minimo 8 caracteres</p>
+        </div>
+    </div>
+    <div class="mb-3 " *ngIf="isChangePassword()">
+        <label class="form-label sw-fs-7 fw-bold text-my-purple"><i class="bi bi-lock-fill me-1"></i>
+            Contraseña Anterior</label>
+        <input type="password" class="form-control sw-fs-7 sw-bg-transparent"
+            placeholder="Ingrese su anterior contraseña" [(ngModel)]="bf_password" />
+        <div *ngIf="bf_password.length < 8" class="m-0 p-0">
+            <p class="sw-text-error mb-0 pb-0">*La contraseña debe tener minimo 8 caracteres</p>
+        </div>
+    </div>
+    <div class="sw-end">
+        <button class="btn-my-purple sw-fs-7 mb-3" (click)="update()"><i class="bi bi-check-lg"></i> Guardar</button>
+    </div>
+</div>

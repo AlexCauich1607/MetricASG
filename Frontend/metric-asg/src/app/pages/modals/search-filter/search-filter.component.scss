@@ -1,0 +1,11 @@
+.sw-drop{
+    max-height: 80px;
+    overflow-y: scroll;
+    min-width: 200px;
+    overflow-x: hidden;
+}
+.text-ellipsis {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

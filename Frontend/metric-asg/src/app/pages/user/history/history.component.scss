@@ -1,0 +1,58 @@
+.sw-bg-sm-purple {
+    background-color: #cebdff63;
+}
+
+
+.sw-gris {
+    color: #7c8c6f;
+}
+
+
+.chart-container {
+    position: relative;
+    height: 65vh; 
+    width: 100%;
+    padding: 10px;
+}
+
+
+
+@media (min-width: 576px) and (max-width: 767px) {
+    .chart-container {
+        height: 60vh;
+        width: 100%;
+    }
+}
+
+@media (min-width: 768px) and (max-width: 991px) {
+    .chart-container {
+        height: 70vh;
+        width: 100%;
+        margin: 0 auto;
+    }
+}
+
+@media (min-width: 992px) and (max-width: 1199px) {
+    .chart-container {
+        height: 70vh;
+        width: 100%;
+        margin: 0 auto;
+    }
+}
+
+@media (min-width: 1200px) and (max-width: 1399px) {
+    .chart-container {
+        height: 65vh;
+        width: 100%;
+        margin: 0 auto;
+    }
+}
+
+@media (min-width: 1400px) {
+    .chart-container {
+        height: 60vh; 
+        width: 100%;
+        max-width: 1400px;
+        margin: 0 auto;
+    }
+}

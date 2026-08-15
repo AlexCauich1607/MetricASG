@@ -1,0 +1,39 @@
+.card {
+  border-radius: 20px !important;
+}
+
+
+@media (max-width: 768px) {
+  
+ .img-grid1 {
+  width: 98.74vw;
+  margin-left: calc(50% - 50vw);
+  margin-right: calc(50% - 50vw);
+  overflow-x: hidden; 
+}
+
+.img-grid1 img {
+  width: 100%;
+  height: auto;
+  overflow-x: hidden; 
+}
+
+}
+
+@media (min-width: 768px) {
+  .img-grid1 {
+    width: 100%;
+    aspect-ratio: 3 / 4;
+    object-fit: cover;
+    border-radius: 1rem;
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.1);
+  }
+  .img-grid {
+    width: 100%;
+    aspect-ratio: 4 / 2.57;
+    object-fit: cover;
+    border-radius: 1rem;
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.1);
+  }
+
+}

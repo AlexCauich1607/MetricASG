@@ -1,0 +1,74 @@
+<div class="p-4 bg-white">
+    <h5 class="modal-title fw-bold text-center text-my-purple mb-3">
+        Nuevo Administrador
+    </h5>
+
+    <div class="modal-body" [formGroup]="form">
+
+        <div class="mb-3">
+            <label class="form-label sw-fs-7 fw-bold text-my-purple"><i class="bi bi-person-fill"></i> Nombre</label>
+            <input type="text" class="form-control sw-fs-7" formControlName="name"
+                placeholder="Nombre del administrador" />
+            <div *ngIf="getValue('name')!.invalid && (getValue('name')!.dirty || getValue('name')!.touched)">
+                <p class="sw-text-error">*El nombre debe tener minimo 3 caracteres</p>
+            </div>
+        </div>
+        <div class="mb-3">
+            <label class="form-label sw-fs-7 fw-bold text-my-purple"><i class="bi bi-person-fill"></i> Apellido</label>
+            <input type="text" class="form-control sw-fs-7" formControlName="lastname"
+                placeholder="Apellido del administrador" />
+            <div
+                *ngIf="getValue('lastname')!.invalid && (getValue('lastname')!.dirty || getValue('lastname')!.touched)">
+                <p class="sw-text-error">*El apellido debe tener minimo 3 caracteres</p>
+            </div>
+        </div>
+        <div class="mb-3">
+            <label class="form-label sw-fs-7 fw-bold text-my-purple"><i
+                    class="bi bi-envelope-fill me-1"></i>Correo</label>
+            <input type="email" class="form-control sw-fs-7" formControlName="email" placeholder="Ingrese su correo" />
+            <div class="mb-3">
+
+                <div *ngIf="getValue('email')!.invalid && (getValue('email')!.dirty || getValue('email')!.touched)">
+                    <div *ngIf="getValue('email')?.errors?.['required']">
+                        <p class="sw-text-error">*Este campo es obligatorio</p>
+                    </div>
+                    <div *ngIf="!getValue('email')?.errors?.['required']">
+                        <p class="sw-text-error">*Correo no valido</p>
+                    </div>
+
+                </div>
+            </div>
+            <div class="mb-3">
+                <label class="form-label sw-fs-7 fw-bold text-my-purple"><i
+                        class="bi bi-lock-fill me-1"></i>Contraseña</label>
+                <input type="password" class="form-control sw-fs-7" formControlName="password"
+                    placeholder="Ingrese la contraseña" />
+                <div
+                    *ngIf="getValue('password')!.invalid && (getValue('password')!.dirty || getValue('password')!.touched)">
+                    <p class="sw-text-error">*El contraseña debe tener minimo 8 caracteres</p>
+                </div>
+            </div>
+
+             <div class="mb-3" *ngIf="getValue('password')?.valid">
+                <label class="form-label sw-fs-7 fw-bold text-my-purple"><i
+                        class="bi bi-lock-fill me-1"></i>Repita la contraseña</label>
+                <input type="password" class="form-control sw-fs-7" [(ngModel)]="r_password" [ngModelOptions]="{ standalone: true }"
+                    placeholder="Repita la contraseña" />
+                <div *ngIf="!validatePassword()">
+                    <p class="sw-text-error">*Las contraseñas no coinciden</p>
+                </div>
+            </div>
+
+        </div>
+
+        <div class="modal-footer d-flex justify-content-between gap-2">
+            <button class="sw-btn-white-purple text-my-purple bg-white sw-cursor-pointer sw-fs-7 mb-3"
+                (click)="close()">
+                <i class="bi bi-x-lg"></i> Descartar
+            </button>
+            <button class="btn-my-purple sw-cursor-pointer sw-h-20 sw-fs-7 mb-3" 
+                (click)="save()">
+                <i class="bi bi-check-lg"></i> Guardar
+            </button>
+        </div>
+    </div>

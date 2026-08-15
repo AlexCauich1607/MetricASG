@@ -1,0 +1,50 @@
+.layout{
+    display: flex;
+    flex-direction: row;
+    height: 500px;
+}
+
+.content{
+    height: 100%;
+    flex:1;
+}
+.sidebar{
+    background-color: white;
+    width: 150px;
+    border-right: 1px solid #c5c5c5;
+}
+
+
+.btn {
+  border-radius: .5rem;
+  //color: rgb(78, 70, 229);
+  color: #000080;
+}
+
+.btn-active {
+  //background: rgb(78, 70, 229);
+  background: #000080;
+  color: white;
+  font-weight: bold;
+}
+
+
+.btn:hover {
+  //background: rgba(78, 70, 229, 0.591);
+  background: #6767d4;
+  color: white;
+}
+
+.btn-size{
+    width: 100px;
+}
+
+.sw-end {
+     flex: 1;    
+    
+     justify-content: end;
+     align-items: end;
+     display: flex;
+
+}
+

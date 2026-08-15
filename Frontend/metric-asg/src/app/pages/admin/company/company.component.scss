@@ -1,0 +1,65 @@
+
+.borde-izq {
+  border-bottom: 4px solid #ffffff88!important;
+}
+
+
+.sw-bg-sm-white{
+    background-color: rgba(255, 255, 255, 0.242);
+}
+
+
+.sw-row{
+    display: flex;
+    flex-direction: row;
+}
+
+.sw-card{
+    overflow: hidden;
+}
+
+.sw-v-100{
+  height: 65vh;
+  max-height: 65vh;
+}
+.sw-scroll-h{
+  overflow: hidden;
+  overflow-y: scroll;
+}
+
+.ellipsis {
+  min-width: 0;         
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.debug-width {
+  max-width: 150px;
+}
+.text-truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.one-line-ellipsis {
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.ellipsis-container {
+  max-width: 100%;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  display: block;
+}
+
+.sw-sticky{
+    top: 0px;
+    position: sticky;
+    z-index: 10;
+}

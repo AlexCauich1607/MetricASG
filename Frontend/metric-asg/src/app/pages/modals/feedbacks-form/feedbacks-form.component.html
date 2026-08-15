@@ -1,0 +1,22 @@
+<div class="p-4 bg-white">
+    <h5 class="modal-title fw-bold text-center text-my-purple mb-3">
+        Editar Retroalimentación: {{data.name}}
+    </h5>
+
+    <div class="modal-body mb-4" [formGroup]="form">
+
+        <div class="mb-3">
+            <label class="form-label sw-fs-7 fw-bold text-my-purple"><i class="bi bi-text-paragraph me-1"></i> Texto</label>
+            <textarea type="text" class="form-control sw-fs-7" formControlName="text" placeholder="Descripción de {{data.name}}"></textarea>
+        </div>
+    </div>
+
+    <div class="modal-footer d-flex justify-content-between gap-2">
+        <button class="sw-btn-white-purple text-my-purple bg-white sw-cursor-pointer sw-fs-7 mb-3" (click)="close()">
+            <i class="bi bi-x-lg"></i> Descartar
+        </button>
+        <button class="btn-my-purple sw-cursor-pointer sw-h-20 sw-fs-7 mb-3" [disabled]="form.invalid" (click)="save()">
+            <i class="bi bi-check-lg"></i> Guardar
+        </button>
+    </div>
+</div>

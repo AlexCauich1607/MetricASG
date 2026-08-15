@@ -1,0 +1,54 @@
+<div class="p-4 sw-height">
+    <h6 class="fw-bold text-my-purple"><i class="bi bi-person-fill"></i> Mi Perfil</h6>
+    <div class="d-flex flex-row align-items-center">
+        <div *ngIf="!user?.profile_photo || user?.profile_photo!.length <= 0"
+            class="bg-my-purple mt-4 mb-3 sw-circle sw-all-center" style="height: 80px;width: 80px;">
+            <i class="bi bi-person-fill text-white fs-1"></i>
+        </div>
+
+        <img *ngIf="user?.profile_photo  && user?.profile_photo!.length > 0" class="mt-4 mb-3 sw-circle sw-all-center"
+            style="height: 80px;width: 80px;" [src]="getImage()" alt="Foto de usuario" />
+        <div class="d-flex flex-column ms-2">
+            <label class="form-label sw-fs-6 fw-bold text-my-purple">Foto de Perfil</label>
+            <div class="d-flex align-items-between justify-content-between">
+                <input type="file" id="fileInput" accept="image/*" (change)="onFileSelected($event)" hidden />
+                <label for="fileInput" class="btn-my-purple sw-fs-7 sw-cursor-pointer"><i
+                        class="bi bi-download me-1"></i> Cambiar</label>
+                <button class="sw-btn-red-secondary sw-fs-7 ms-2" (click)="deleteImg()"><i class="bi bi-x-lg me-1"></i>
+                    Eliminar</button>
+            </div>
+
+        </div>
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label sw-fs-7 fw-bold text-my-purple"><i class="bi bi-person-fill me-1"></i> Nombre</label>
+        <input type="text" class="form-control sw-fs-7 sw-bg-transparent" placeholder="Ingrese su nombre"
+            [(ngModel)]="user!.name" />
+        <div *ngIf="user?.name!.length < 3">
+            <p class="sw-text-error  mb-0 pb-0">*El nombre debe tener minimo 3 caracteres</p>
+        </div>
+    </div>
+    <div class="mb-3">
+        <label class="form-label sw-fs-7 fw-bold text-my-purple"><i class="bi bi-person-fill me-1"></i> Apellido</label>
+        <input type="text" class="form-control sw-fs-7 sw-bg-transparent" placeholder="Ingrese su apellido"
+            [(ngModel)]="user!.lastname" />
+        <div *ngIf="!this.user?.lastname || this.user?.lastname!.length < 3">
+            <p class="sw-text-error  mb-0 pb-0">*El apellido debe tener minimo 3 caracteres</p>
+        </div>
+    </div>
+    <div class="mb-3" *ngIf="user?.role!='admin'">
+        <label class="form-label sw-fs-7 fw-bold text-my-purple"><i class="bi bi-briefcase-fill me-1"></i>
+            Puesto</label>
+        <input type="text" class="form-control sw-fs-7 sw-bg-transparent" placeholder="Ingrese su puesto"
+            [(ngModel)]="user!.position" />
+            <div *ngIf="user?.position!.length < 3">
+            <p class="sw-text-error  mb-0 pb-0">*Este campo debe tener minimo 3 caracteres</p>
+        </div>
+    </div>
+    <div class="sw-end">
+
+        <button class="btn-my-purple sw-fs-7 mb-3" (click)="update()"><i class="bi bi-check-lg"></i> Guardar</button>
+
+    </div>
+</div>

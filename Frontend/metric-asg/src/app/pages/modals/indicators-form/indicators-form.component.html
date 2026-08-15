@@ -1,0 +1,46 @@
+<div class="p-4 bg-white sw-modal">
+    <h5 class="modal-title fw-bold text-center text-my-purple mb-3">
+        {{ data.indicator ? 'Editar Indicador' : 'Nuevo Indicador' }}
+    </h5>
+
+    <div class="modal-body">
+
+        <div class="mb-3" [formGroup]="form">
+            <label class="form-label sw-fs-6 fw-bold text-my-purple"><i class="bi bi-question-circle me-1"></i>
+                Pregunta</label>
+            <input type="text" class="form-control sw-fs-7" formControlName="question"
+                placeholder="Ingrese la pregunta" />
+            <div
+                *ngIf="getValue('question')!.invalid && (getValue('question')!.dirty || getValue('question')!.touched)">
+                <p class="sw-text-error">*Este campo no puede estar vacio</p>
+            </div>
+        </div>
+        <label class="form-label sw-fs-6 fw-bold text-my-purple mb-3"><i class="bi bi-chat-dots me-1"></i>
+            Respuestas</label>
+        <div *ngIf="!loading" class="mb-4">
+            <div *ngFor="let pregunta of preguntas,let i = index"  class="mb-3">
+                <div class=" sw-row s-v-center">
+                    <label class="form-label sw-fs-7 fw-bold text-my-purple mt-2 me-2">{{pregunta.level_name}}: </label>
+                    <input type="text" class="form-control sw-fs-7" [(ngModel)]="pregunta.text" (focus)="touch(i)"/>
+
+                </div>
+                <div *ngIf="(pregunta.text.length <= 0 && (form_send || touched[i]==true))">
+                    <p class="sw-text-error">*Este campo no puede estar vacio</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-footer d-flex justify-content-between gap-2">
+        <button class="sw-btn-white-purple text-my-purple bg-white sw-cursor-pointer sw-fs-7 mb-3" (click)="close()">
+            <i class="bi bi-x-lg"></i> Descartar
+        </button>
+        <button class="sw-btn-red-secondary text-my-purple sw-cursor-pointer sw-fs-7 mb-3" *ngIf="data.indicator"
+            (click)="delete()">
+            <i class="bi bi-trash"></i> Eliminar
+        </button>
+        <button class="btn-my-purple sw-cursor-pointer sw-h-20 sw-fs-7 mb-3" (click)="save()">
+            <i class="bi bi-check-lg"></i> Guardar
+        </button>
+    </div>
+</div>

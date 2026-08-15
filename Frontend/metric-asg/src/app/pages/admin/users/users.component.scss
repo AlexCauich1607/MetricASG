@@ -1,0 +1,78 @@
+.tables-container {
+    gap: 2rem;
+}
+
+.table-section {
+    flex: 1;
+    min-height: 0;
+}
+
+.table-wrapper {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.table-scroll {
+    flex: 1;
+    overflow-y: auto;
+}
+
+.table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    background-color: white;
+    color: #00245D;
+}
+
+.table td {
+
+    background-color: #DCEAF7;
+    color: #00245D;
+}
+
+
+.table-my-purple thead {
+    background-color: #5a32a3;
+}
+
+
+.sw-table-bg {
+    background-color: #aeb9d134;
+
+}
+
+.sw-sticky {
+    top: 0px;
+    position: sticky;
+    z-index: 10;
+}
+
+.btn-100 {
+    min-width: 13%;
+}
+
+.sw-input-none {
+    background-color: transparent;
+
+    padding: 0px;
+    margin: 0px;
+}
+
+.sw-input-100 {
+    flex: 1;
+    border: none;
+    outline: none;
+    box-shadow: none;
+}
+.sw-input-border{
+    border: 1px solid #00245D;
+}
+
+.sw-input-none:active,
+.sw-input-none:focus {
+    border: none;
+    outline: none;
+    box-shadow: none;
+}

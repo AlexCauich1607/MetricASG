@@ -1,0 +1,56 @@
+<div class="sw-split-ly color-bg">
+    <div>
+        <h2 class="text-my-purple text-center fw-bold mb-2"><i class="bi bi-clipboard-data"></i> Evaluación ASG</h2>
+        <h6 class="sw-gris text-center mb-4 sw-fs-7"><i class="bi bi-calendar-fill"></i> Semestre {{mesFuturo}}
+            {{anioFuturo!=anioActual?anioFuturo:""}} - {{mesActual}} {{anioActual}} </h6>
+        <div class="border rounded p-5 borde-izq shadow-sm bg-white" [style.--borde-color]="getAmbit().color">
+
+            <div class="d-flex  align-items-stretch justify-content-between mb-5">
+                <div>
+                    <div>
+                        <p class="fw-bold" [style.color]="getAmbit().color"> <b class="text-white px-2 py-1 rounded"
+                                [style.backgroundColor]="getAmbit().color">{{getAmbit().letter}}</b> {{ getAmbit().name
+                            }}</p>
+                    </div>
+                    <p class="text-my-purple fs-5"><strong>{{question+1}}. {{ getQuestion().question }}</strong></p>
+
+                    <div *ngFor="let answer of getQuestion().answers; let i= index">
+                        <label class="mb-2 py-2 px-3 answer-input" [style.--bg-color]="hexToRgbString(getAmbit().color)" [class]=" responses.get(getQuestion().id) === answer.maturity_level_id?'answer-select':''">
+                            <input type="radio"  [name]="'indicator-' + getQuestion().id"
+                                [checked]="responses.get(getQuestion().id) === answer.maturity_level_id"
+                                (change)="selectAnswer(getQuestion().id, answer.maturity_level_id, getAmbit().id)" />
+                            {{ answer.text }}
+                        </label>
+                    </div>
+                </div>
+
+                <div class="d-flex align-items-start ms-4">
+                    <div class="sw-v-center sw-bg-blue-light py-2 px-3 rounded">
+                        <p class="sw-fs-7  mt-1 mb-1 fw-bold">Progreso</p>
+                        <mat-progress-spinner class="sw-spinner ms-1" mode="determinate" [value]="progreso"
+                            diameter="40" strokeWidth="10" [style.--track-color]="fondo"
+                            [style.--mdc-circular-progress-active-indicator-color]="getAmbit().color">
+                        </mat-progress-spinner>
+                        <p class="sw-fs-7 ms-3 mt-1 mb-0">{{progreso}}%</p>
+                    </div>
+                </div>
+            </div>
+            <div class="d-flex align-items-stretch justify-content-between">
+                <div *ngIf="ambit==0 && question==0"></div>
+                <button class="btn btn-my-purple pe-4" *ngIf="ambit>0 || question>0" (click)="beforeQuestion()">
+                    <i class="bi bi-chevron-left"></i> Anterior
+                </button>
+                <button class="btn btn-my-purple ps-4"
+                    *ngIf="ambit<structure.ambits.length-1 || question < getAmbit().indicators.length-1"
+                    (click)="nextQuestion()">
+                    Siguiente <i class="bi bi-chevron-right"></i>
+                </button>
+                <button class="btn btn-my-purple ps-3"
+                    *ngIf="ambit==structure.ambits.length-1 && question == getAmbit().indicators.length-1"
+                    (click)="submit()">
+                    <i class="bi bi-send-fill"></i> Enviar evaluación
+                </button>
+            </div>
+        </div>
+    </div>
+</div>

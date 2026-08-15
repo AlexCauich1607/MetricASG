@@ -1,0 +1,122 @@
+<div class="container-fluid">
+
+
+    <div class="d-flex align-items-center color-bg justify-content-between py-2 px-5 pt-5 pb-4 sw-sticky">
+        <h4 class="text-my-purple fw-bold  fs-4"><span class="bg-white py-2 px-4 rounded-5 shadow-sm border"><i
+                    class="bi bi-diagram-3-fill me-1"></i> Ámbitos</span></h4>
+        <app-profile-photo></app-profile-photo>
+    </div>
+    <div class="mx-5 mb-5">
+        <div class="sw-row">
+            <div class="ambits-container border-1 sw-bg-blue-light px-3 pt-2 rounded-4">
+                <div class="card sw-cursor-pointer  sw-hover-scale-e ambit-card border-0 shadow-sm"
+                    *ngFor="let ambit of ambitos" [style.backgroundColor]="ambit.color"
+                    [ngClass]="{ 'borde-izq': ambito?.id === ambit.id }">
+                    <div class="card-body text-white align-items-center " (click)="selectedAmbit(ambit.id)">
+                        <div class="d-flex align-items-center justify-content-between mb-1">
+                            <div *ngIf="ambit.is_removable==false">
+
+                            </div>
+                            <div *ngIf="ambit.is_removable==true"
+                                class="sw-bg-sm-white text-white sw-fs-7 px-2 py-1 rounded"
+                                (click)="deleteAmbit(ambit.id)">
+                                <i class="bi bi-trash"></i>
+                            </div>
+                            <div class="sw-bg-sm-white text-white sw-fs-7 px-2 py-1 rounded"
+                                (click)="openUpdateAmbitModal(ambit.id)">
+                                <i class="bi bi-pencil"></i>
+                            </div>
+                        </div>
+                        <div class="text-center sw-all-center sw-h-a">
+                            <h3 class="mb-1 mt-1 bg-white fw-bold px-2 rounded-2" [style.color]="ambit.color"><b>{{
+                                    ambit.letter }}</b></h3>
+                            <small class="fw-bold sw-fs-7-5" s>{{ ambit.name }}</small>
+                        </div>
+
+                    </div>
+                </div>
+
+            </div>
+            <div class="card ms-3 ambit-card mt-2  border-1 sw-cursor-pointer sw-hover-scale-e  shadow-sm sw-bg-blue-light"
+                (click)="openCreateModal()">
+                <div class="card-body text-my-purple sw-all-center">
+                    <span class="material-icons fs-1">add</span>
+                    <small class="fw-bold">Añadir</small>
+                </div>
+            </div>
+        </div>
+        <h5 class="mt-5 text-my-purple fw-bold" [style.color]="ambito?.color"> <b
+                class="px-3 py-1 text-white rounded-2 me-2 fs-4 "
+                [style.backgroundColor]="ambito?.color">{{ambito?.letter}}</b> {{ambito?.name}}</h5>
+        <div class="row g-3 mt-1 sw-scroll-v mb-3 align-items-stretch">
+            <div class="col-lg-6">
+                <div class="card sw-card sw-bg-blue-light m-0 p-0 shadow-sm h-100">
+                    <div class="card-body p-0 d-flex flex-column">
+
+                        <div class="bg-white shadow-sm p-1 px-4">
+                            <div class="d-flex align-items-center justify-content-between">
+                                <p class="mt-3 fw-bold text-my-purple sw-fs-6">
+                                    <i class="bi bi-speedometer2 me-2"></i>Indicadores
+                                </p>
+                                <div class="btn-my-purple sw-cursor-pointer sw-fs-7"
+                                    (click)="openIndicatorCreateModal()">
+                                    + Añadir
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="text-muted sw-scroll-h sw-v-100 d-flex px-4 flex-column align-items-stretch">
+                            <div class="card sw-cursor-pointer rounded-4 w-100 my-2 sw-v-center border-0 shadow-sm"
+                                *ngFor="let indicador of indicadores; let i = index">
+                                <div class="card-body  text-my-purple d-flex align-items-center justify-content-between"
+                                    (click)="openIndicatorEditModal(indicador.id)">
+                                    <p class="fw-bold m-0 sw-fs-7 one-line-ellipsis">
+                                        {{i+1}}.- {{ indicador.question }}
+                                    </p>
+                                    <p
+                                        class="fw-bold ms-3 m-0 sw-bg-blue-light px-3 text-my-purple py-1 rounded-5 sw-fs-6 ">
+                                        ></p>
+                                </div>
+
+                            </div>
+                        </div>
+
+
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-6">
+                <div class="card sw-card sw-bg-blue-light m-0 p-0 shadow-sm h-100">
+                    <div class="card-body p-0 d-flex flex-column">
+
+                        <div class="bg-white shadow-sm p-1 px-4">
+                            <div class="d-flex align-items-center justify-content-between">
+                                <p class="mt-3 fw-bold text-my-purple sw-fs-6">
+                                    <i class="bi bi-chat-left-fill me-2"></i>Retroalimentación
+                                </p>
+                            </div>
+                        </div>
+
+                        <div class="text-muted sw-scroll-h sw-v-100 d-flex px-4 flex-column align-items-stretch">
+                            <div class="card sw-cursor-pointer rounded-4 w-100 my-2 sw-v-center border-0 shadow-sm"
+                                *ngFor="let nivel of niveles; let i">
+                                <div class="card-body  text-my-purple d-flex align-items-center justify-content-between"
+                                    (click)="openFeedbackEditModal(nivel.id!, nivel.name)">
+                                    <p class="fw-bold m-0 sw-fs-7 one-line-ellipsis">
+                                        {{ nivel.name }}
+                                    </p>
+                                    <p
+                                        class="fw-bold ms-3 m-0 sw-bg-blue-light px-3 text-my-purple py-1 rounded-5 sw-fs-6 ">
+                                        ></p>
+                                </div>
+
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

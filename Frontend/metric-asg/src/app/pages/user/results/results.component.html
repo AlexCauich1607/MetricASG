@@ -1,0 +1,62 @@
+<div class="sw-split-ly color-bg" id="pdf-content">
+    <div>
+        <p class="d-flex align-items-center mb-5 solo-pdf" >
+            <img src="assets/logo.png" alt="MetricASG" height="38" class="me-2">
+            <span class=" text-my-purple mb-1 font-logo fs-4">MetricAsg</span>
+        </p>
+        <h2 class="text-my-purple text-center fw-bold mb-2"><i class="bi bi-clipboard-data"></i> Evaluación ASG</h2>
+        <h6 class="sw-gris text-center mb-5 sw-fs-7"><i class="bi bi-calendar-fill"></i> Semestre {{mesAnterior}}
+            {{anioAnterior!=anioActual?anioAnterior:""}} - {{mesActual}} {{anioActual}} </h6>
+        <p class="fw-bold fs-5 mb-4 sw-gris text-center">!!Felicitaciones <b class="text-my-purple">{{name}}</b>, haz
+            concluido con tu Autodiagnóstico!!</p>
+        <!--<h4 class="sw-gris fw-bold mt-3 mb-3 text-center"><i class="bi bi-clipboard-data"></i> Puntuaciones</h4>-->
+
+
+        <p class=" text-my-purple fw-bold fs-5"><span class="bg-white py-2 px-3 rounded-5 shadow-sm border"><i
+                    class="bi bi-star-fill "></i> Tus Puntaciones</span></p>
+
+
+        <div class="row mb-1 align-items-stretch">
+            <div class="col-6 col-lg-3 mb-3">
+                <div class="sw-bg-blue-light sw-hover-scale rounded p-4">
+                    <div class="d-flex justify-content-between align-items-stretch">
+                        <p class="text-my-purple sw-fs-7 fw-bold"><i class="bi bi-globe-americas"></i> Nivel ASG</p>
+                    </div>
+                    <div class="d-flex justify-content-end">
+                        <div class="sw-bg-sm-purple text-my-purple p-0 px-3 py-1 rounded text-center">
+                            <p class=" sw-fs-7 m-0 p-0">{{results?.global_maturity_level}}
+                            </p>
+                            <p class="m-0 fs-3 p-0 fw-bold">{{results ? results.global_score.toFixed(1) : 0}}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-6 col-lg-3" *ngFor="let ambito of results?.ambits">
+                <app-ambit-card [title]="ambito.ambit_name" [letter]="ambito.letter" [color]="ambito.color"
+                    [subtitle]="ambito.maturity_level" [maturity_color]="ambito.maturity_color"
+                    [score]="ambito.score"></app-ambit-card>
+            </div>
+        </div>
+
+        <div class="row g-1 split-margin">
+            <div class="col-12 col-lg-12">
+                <div class="border rounded p-4 px-5 shadow-sm bg-white">
+                    <h5 class="sw-gris text-center fw-bold mb-2"><i
+                            class="bi bi-bar-chart-fill sw-bg-gris px-1 rounded me-1 text-white"></i> Ámbitos</h5>
+                    <app-bar-chart class="mx-5 chart-container" *ngIf="loadingChart" [data]="ambits" [scores]="scores"
+                        [bordes]="bordes" [colors]="colors"></app-bar-chart>
+                </div>
+            </div>
+        </div>
+        <div class="mt-5">
+            <p class=" text-my-purple fw-bold fs-5 mb-4"><span class="bg-white py-2 px-3 rounded-5 shadow-sm border"><i
+                        class="bi bi-chat-left-fill me-2"></i> Recomendaciones</span></p>
+            <feedback-component [ambits]="results? results.ambits: []"></feedback-component>
+        </div>
+        <div class="d-flex align-items-center justify-content-center mt-4" data-html2canvas-ignore>
+            <button class="btn-my-purple" (click)="downloadPdf()"><i class="bi bi-download me-1"></i> Descargar
+                Resultados</button>
+        </div>
+    </div>
+</div>

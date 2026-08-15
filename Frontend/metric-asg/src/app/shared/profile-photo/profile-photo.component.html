@@ -1,0 +1,7 @@
+<a class="nav-link  d-flex align-items-center m-0 p-0"  role="button" data-bs-toggle="dropdown" (click)="openConfiguration()">
+    <div *ngIf="!photo || photo.length <= 0" class="bg-my-purple sw-all-center sw-circle" style="height: 40px; width: 40px;"><i
+            class="bi bi-person-fill text-white fs-5"></i></div>
+    <img *ngIf="photo && photo.length > 0" class="sw-circle sw-all-center" style="height: 40px;width: 40px;" [src]="getImage()"
+        alt="Foto de usuario" />
+</a>
+ 

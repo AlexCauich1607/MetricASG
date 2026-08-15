@@ -1,0 +1,112 @@
+<div class="container-fluid">
+    <div class="d-flex align-items-center color-bg justify-content-between py-2 px-5 pt-5 pb-4 sw-sticky">
+        <h4 class="text-my-purple fs-4 fw-bold ">
+            <span class="bg-white py-2 px-4 rounded-5 shadow-sm border">
+                <i class="bi bi-people-fill"></i> Usuarios
+            </span>
+        </h4>
+        <app-profile-photo></app-profile-photo>
+    </div>
+    <div class="px-5 pb-5">
+        <div class="table-wrapper mt-1 mb-5" style="height: 50vh;">
+            <div class="d-flex align-items-stretch justify-content-between">
+                <p class="text-white fw-bold mb-3">
+                    <span class="bg-my-purple py-2 px-4 rounded-5 shadow-sm ">
+                        <i class="bi bi-key-fill fs-5 me-2"></i> Usuarios Administrador
+                    </span>
+                </p>
+                <button class="btn-my-purple sw-fs-7 px-4 mb-2 mt-1" (click)="openCreateModal()">+ Añadir</button>
+            </div>
+
+            <div class="d-flex flex-row mb-2 ">
+                <div class="d-flex flex-row sw-fs-7 form-control shadow-sm sw-input-border">
+                    <i class="bi bi-search me-2 text-my-purple fw-bold"></i> <input class="sw-input-none sw-input-100"
+                        [(ngModel)]="admin_name_search" (ngModelChange)="lodadAdminUsers()">
+                </div>
+            </div>
+
+            <div class="table-scroll sw-table-bg rounded border shadow-sm">
+                <table class="table table-my-purple table-striped table-bordered table-hover mb-0">
+                    <thead class="text-black sw-fs-6 text-center">
+                        <tr>
+                            <th>Nombre</th>
+                            <th>Email</th>
+                            <th>Último login</th>
+                            <th>Activo</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr class="sw-fs-7 text-center" *ngFor="let user of admin">
+                            <td>{{ user.name }} {{user.lastname}}</td>
+                            <td>{{ user.email }}</td>
+                            <td>{{ user.last_login | date:'short' }}</td>
+                            <td class="text-center">
+                                <span class="badge sw-cursor-pointer" (click)="changeStateUser(user.id, user.active)"
+                                    [ngClass]="user.active ? 'bg-success' : 'bg-danger'">
+                                    {{ user.active ? 'Sí' : 'No' }}
+                                </span>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+
+        <div class="table-wrapper" style="height: 50vh;">
+            <p class="text-white fw-bold mb-3">
+                <span class="bg-my-purple py-2 px-4 rounded-5 shadow-sm ">
+                    <i class="bi bi-person-fill fs-5"></i> Usuarios
+                </span>
+            </p>
+            <div class="d-flex flex-row mb-2 ">
+                <div class="d-flex flex-row sw-fs-7 form-control shadow-sm sw-input-border">
+                    <i class="bi bi-search me-2 text-my-purple fw-bold"></i> <input class="sw-input-none sw-input-100"
+                        [(ngModel)]="user_name_search" (ngModelChange)="loadNormalUsers()">
+                </div>
+                <button class="btn-my-purple btn-100 rounded ms-2 sw-fs-7 shadow-sm"
+                    (click)="openCreateFilterModal()"><i class="bi bi-sliders"></i> Filtros</button>
+            </div>
+            <div class="table-scroll sw-table-bg rounded shadow-sm border">
+                <table class="table table-striped table-hover table-bordered mb-0">
+                    <thead class="text-black text-center sw-fs-6">
+                        <tr>
+                            <th>Nombre</th>
+                            <th>Email</th>
+                            <th>Sector</th>
+                            <th>Tamaño</th>
+                            <!--
+                            <th>Se Unió</th>-->
+                            <th>Último login</th>
+                            <th>Autodiagnóstico</th>
+                            <th>Activo</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr class="sw-fs-7 text-center" *ngFor="let user of users">
+                            <td>{{ user.company_name }}</td>
+                            <td>{{ user.email }}</td>
+                            <td>{{ getSector(user.company_sector_id??0) }}</td>
+                            <td>{{ getSize(user.company_size_id??0) }}</td>
+                            <!--
+                            <td>{{ user.joined | date:'short' }}</td>-->
+                            <td>{{ user.last_login | date:'short' }}</td>
+                            <td class="text-center">
+                                <span class="badge" [ngClass]="user.biannual_evaluation ? 'bg-success' : 'bg-danger'">
+                                    {{ user.biannual_evaluation ? 'Sí' : 'No' }}
+                                </span>
+                            </td>
+                            <td class="text-center">
+                                <span class="badge sw-cursor-pointer" (click)="changeStateUser(user.id, user.active)"
+                                    [ngClass]="user.active ? 'bg-success' : 'bg-danger'">
+                                    {{ user.active ? 'Sí' : 'No' }}
+                                </span>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+</div>

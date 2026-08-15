@@ -1,0 +1,77 @@
+<div class="sw-split-flex-ly">
+    <div class="bg-my-purple sw-all-center sw-sm-hidden">
+        <div class="sw-img-bg-overlay image-panel px-5" style="--img-url: url(assets/login.jpg)">
+            <img src="assets/logo_white.png" class="mb-3" [height]="120">
+            <p class="text-white fw-bold fs-2">“Las empresas que lideran con propósito lideran el mercado.”</p>
+        </div>
+    </div>
+    <div class="split-margin color-bg">
+
+        <div class="text-center mb-4">
+            <img src="assets/logo.png" class="mb-2" [height]="48">
+            <h3 class="font-logo text-my-purple">MetricASG</h3>
+            <p class="text-center text-muted mb-0">Accede para evaluar y comprender tu nivel de madurez.</p>
+
+        </div>
+        <div [formGroup]="form">
+            <div class="floating-input mt-5">
+                <input type="email" class="color-input-bg" id="email" placeholder="usuario@empresa.com"
+                    formControlName="email" required>
+                <label for="email"><i class="bi bi-envelope-fill me-1"></i> Correo electrónico</label>
+            </div>
+            <div *ngIf="getValue('email')!.invalid && (getValue('email')!.dirty || getValue('email')!.touched)">
+                <div *ngIf="getValue('email')!.errors!['required']">
+                    <p class="sw-text-error mb-0 pb-0">
+                        *Este campo no puede estar vacio
+                    </p>
+                </div>
+                  <div *ngIf="!getValue('email')!.errors!['required']">
+                    <p class="sw-text-error mb-0 pb-0">
+                        *Correo no valido
+                    </p>
+                </div>
+            </div>
+
+
+            <div class="floating-input password-field mt-5">
+                <input class="color-input-bg" [type]="showPassword ? 'text' : 'password'" id="password" placeholder=" "
+                    (input)="onInput($event)" formControlName="password" />
+
+                <label for="password"><i class="bi bi-lock-fill me-1"></i> Contraseña</label>
+
+                <button type="button" class="toggle-password" (click)="togglePassword()"
+                    [attr.aria-label]="showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'">
+                    <span class="material-icons">
+                        {{ showPassword ? 'visibility_off' : 'visibility' }}
+                    </span>
+                </button>
+            </div>
+            <div
+                *ngIf="getValue('password')!.invalid && (getValue('password')!.dirty || getValue('password')!.touched)">
+                <p class="sw-text-error mb-0 pb-0">
+                    *El contraseña debe tener minimo 8 caracteres
+                </p>
+            </div>
+
+            <div class="d-grid mt-5 mb-3">
+                <button class="btn py-2 btn-my-purple btn-lg rounded-pill" (click)="login()">
+                    <i class="bi bi-box-arrow-in-right me-1"></i> Iniciar sesión
+                </button>
+            </div>
+        </div>
+
+
+        <div class="text-center my-3 text-muted">
+            — o —
+        </div>
+
+
+        <div class="text-center">
+            <span class="text-muted">¿No tienes cuenta?</span>
+            <a href="/sing-up" class="text-my-purple fw-semibold text-decoration-none">
+                Regístrate
+            </a>
+        </div>
+
+    </div>
+</div>

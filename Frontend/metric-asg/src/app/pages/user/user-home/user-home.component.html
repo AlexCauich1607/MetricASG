@@ -1,0 +1,77 @@
+<div class="sw-split-ly color-bg content">
+    <div><!--
+        <div class="d-flex align-items-start mb-3">
+            
+            <div class="sw-all-center">
+                <img src="assets/logo.png" alt="MetricASG" height="40" width="40" class="me-2">
+                <span class="font-logo text-my-purple fs-4">concamin</span>
+            </div>
+
+
+        </div>-->
+        <div class="d-flex align-items-center mb-4">
+            <img src="assets/logo.png" alt="MetricASG" height="38" class="me-2">
+            <span class="fw-bold text-my-purple font-logo fs-4">MetricASG</span>
+        </div>
+        <h2 class="text-my-purple fw-bold mb-1">!Bienvenido, <b class="text-my-green">{{user?.name}}
+                {{user?.lastname}}</b>!</h2>
+        <div *ngIf="!results" class="mt-3">
+            <p class="sw-fs-6 mb-2 p-0">!Para empezar, realiza tu primer diagnostico!</p>
+            <button class="btn-my-purple m-0 sw-fs-7 shadow-sm"
+                [class]="user?.biannual_evaluation ? 'text-gray' : 'text-white'" (click)="goEvaluation()">
+                <i [class]="user?.biannual_evaluation ? 'bi bi-lock-fill' : 'bi bi-rocket-fill'"></i> !Realizar
+                Autodiagnóstico!</button>
+        </div>
+        <div class="d-flex  align-items-center justify-content-between mt-1 mb-4" *ngIf="results">
+            <h5 class="text-white fw-bold mt-4 fs-5 bg-my-purple border shadow-sm rounded-5 px-3 py-2"><i
+                    class="bi bi-calendar-fill  "></i> Semestre {{mesAnterior}}
+                {{anioAnterior!=anioActual?anioAnterior:""}} - {{mesActual}} {{anioActual}} </h5>
+            <div>
+                <p class="sw-fs-7-5 text-center m-1 p-0">Proximo Autodiagnóstico: <b>{{evaluationDate}}</b></p>
+                <button class="btn-my-purple m-0 sw-fs-7 shadow-sm"
+                    [class]="user?.biannual_evaluation ? 'text-gray' : 'text-white'" (click)="goEvaluation()">
+                    <i [class]="user?.biannual_evaluation ? 'bi bi-lock-fill' : 'bi bi-rocket-fill'"></i> !Realizar
+                    Autodiagnóstico!</button>
+            </div>
+        </div>
+
+        <!--<h4 class="sw-gris fw-bold mt-3 mb-3 text-center"><i class="bi bi-clipboard-data"></i> Puntuaciones</h4>-->
+        <div class="row mb-4 align-items-stretch" *ngIf="results">
+            <div class="col-6 col-lg-3 mb-3">
+                <div class="sw-bg-blue-light sw-hover-scale border rounded shadow-sm p-4">
+                    <div class="d-flex justify-content-between align-items-stretch">
+                        <p class="text-my-purple sw-fs-7 fw-bold"><i class="bi bi-globe-americas"></i> Nivel ASG</p>
+                    </div>
+                    <div class="d-flex justify-content-end">
+                        <div class="sw-bg-sm-purple text-my-purple p-0 px-3 py-1 rounded text-center">
+                            <p class=" sw-fs-7 m-0 p-0">{{results.global_maturity_level}}
+                            </p>
+                            <p class="m-0 fs-3 p-0 fw-bold">{{results ? results.global_score.toFixed(1) : 0}}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-6 col-lg-3" *ngFor="let ambito of results?.ambits">
+                <app-ambit-card class="shadow-sm" [title]="ambito.ambit_name" [letter]="ambito.letter"
+                    [color]="ambito.color" [subtitle]="ambito.maturity_level" [maturity_color]="ambito.maturity_color"
+                    [score]="ambito.score"></app-ambit-card>
+            </div>
+
+        </div>
+
+        <div class="row g-1 split-margin" *ngIf="results">
+            <div class="col-12 col-lg-12">
+                <div class="border rounded p-4 px-5 shadow-sm bg-white">
+                    <h5 class="text-my-green text-center fw-bold mb-2"><i
+                            class="bi bi-bar-chart-fill bg-my-green px-1 rounded me-1 text-white"></i> Ámbitos</h5>
+                    <app-bar-chart class="mx-5 chart-container" *ngIf="loadingChart" [data]="ambits" [scores]="scores"
+                        [bordes]="bordes" [colors]="colors"></app-bar-chart>
+                </div>
+            </div>
+        </div>
+        <div *ngIf="results" class="d-flex align-items-center justify-content-center mt-4">
+            <button class="btn-my-purple" (click)="downloadPdf()"><i class="bi bi-eye-fill me-1"></i> Ver Resultados</button>
+        </div>
+    </div>
+</div>

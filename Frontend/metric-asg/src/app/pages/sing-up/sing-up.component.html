@@ -1,0 +1,235 @@
+<div class=" bg-black image-panel" style="--img-url: url(assets/login.jpg)">
+    <div class="container">
+        <div class="row">
+            <div class="col-0 col-lg-6 d-none d-md-block ">
+                <div class="pe-5 sw-all-center  sw-flex-fx">
+                    <img src="assets/logo_white.png" class="mb-3" [height]="120">
+                    <p class="text-white fw-bold fs-2">“Rentabilidad y responsabilidad ya no compiten: se potencian.”</p>
+                </div>
+            </div>
+            <div class="col-12 col-lg-6 my-5">
+                <div class="color-bg rounded-5 p-5">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <p class="fw-bold text-my-purple fs-5">Crear Cuenta</p>
+                        <div class="">
+                            <h3 class="fw-bold text-my-purple sw-fs-6"><img src="assets/logo.png" class="mb-2"
+                                    [height]="24"> MetricASG</h3>
+                        </div>
+                    </div>
+                    <mat-horizontal-stepper linear class="bg-transparent">
+                        <div [formGroup]="form">
+                            <mat-step>
+                                <ng-template matStepLabel>
+                                    <i class="bi bi-person-fill"></i> Paso 1
+                                </ng-template>
+
+                                <div class="row">
+                                    <div class="">
+                                        <p class=" text-my-purple mb-1 fw-bold">
+                                            <i class="bi bi-person-fill"></i> Información Personal
+                                        </p>
+                                        <div class="floating-input mb-1">
+                                            <input type="text" class="color-input-bg" id="name"
+                                                placeholder="Ingrese su nombre" formControlName="name" required>
+                                            <label for="email"><i class="bi bi-person-fill"></i> Nombre</label>
+                                        </div>
+                                        <div
+                                            *ngIf="getValue('name')!.invalid && (getValue('name')!.dirty || getValue('name')!.touched)">
+                                            <p class="sw-text-error mb-0 pb-0">*Este campo debe tener minimo 3
+                                                caracteres</p>
+                                        </div>
+
+                                        <div class="floating-input mb-1 ">
+                                            <input type="text" class="color-input-bg" id="lastname"
+                                                placeholder="Ingrese su Apellido" formControlName="lastname" required>
+                                            <label for="lastname"><i class="bi bi-person-fill"></i> Apellido</label>
+                                        </div>
+                                        <div
+                                            *ngIf="getValue('lastname')!.invalid && (getValue('lastname')!.dirty || getValue('lastname')!.touched)">
+                                            <p class="sw-text-error mb-0 pb-0">*Este campo debe tener minimo 3
+                                                caracteres</p>
+                                        </div>
+                                        <div class="floating-input mb-1">
+                                            <input type="text" class="color-input-bg" id="position"
+                                                placeholder="Ingrese su puesto dentro de la empresa"
+                                                formControlName="position" required>
+                                            <label for="position"><i class="bi bi-briefcase-fill"></i> Puesto</label>
+
+                                        </div>
+                                        <div
+                                            *ngIf="getValue('position')!.invalid && (getValue('position')!.dirty || getValue('position')!.touched)">
+                                            <p class="sw-text-error mb-0 pb-0">*Este campo debe tener minimo 3
+                                                caracteres</p>
+                                        </div>
+                                        <div class="text-end mt-4" *ngIf="getValue('name')?.valid && getValue('lastname')?.valid && getValue('position')?.valid">
+                                            <button mat-button matStepperNext>Siguiente <i class="bi bi-chevron-right"></i></button>
+                                        </div>
+
+                                    </div>
+                                </div>
+                            </mat-step>
+                            <mat-step>
+                                <ng-template matStepLabel>
+                                    <i class="bi bi-building-fill"></i> Paso 2
+                                </ng-template>
+
+                                <div class="row">
+                                    <div class="">
+                                        <p class="text-my-purple mb-1 fw-bold">
+                                            <i class="bi bi-building-fill"></i> Información de la Empresa
+                                        </p>
+                                        <div class="floating-input mb-1 ">
+                                            <input type="text" class="color-input-bg" id="company_name"
+                                                placeholder="Ingrese el nombre de la empresa"
+                                                formControlName="company_name" required>
+
+                                            <label for="company_name"><i class="bi bi-building-fill"></i> Nombre de la
+                                                empresa</label>
+
+
+
+                                        </div>
+                                        <div
+                                            *ngIf="getValue('company_name')!.invalid && (getValue('company_name')!.dirty || getValue('company_name')!.touched)">
+                                            <p class="sw-text-error mb-0 pb-0">*Este campo debe tener minimo 3
+                                                caracteres</p>
+                                        </div>
+                                        <div class="floating-input mb-1">
+                                            <select id="sector" class="color-input-bg" [(ngModel)]="sectorSeleccionado"
+                                                [ngModelOptions]="{standalone: true}">
+                                                <option [ngValue]="null">Seleccione un sector</option>
+                                                <option *ngFor="let sector of sectores" [ngValue]="sector">
+                                                    {{ sector.name }}
+                                                </option>
+                                            </select>
+
+                                            <label for="sector"><i class="bi bi-gear-fill"></i> Sector</label>
+
+                                            <div *ngIf="sectorSeleccionado==null">
+                                                <p class="sw-text-error mb-0 pb-0">*Este campo no puede estar vacio</p>
+                                            </div>
+                                        </div>
+                                        <div class="floating-input mb-1">
+                                            <select id="size" class="color-input-bg" [(ngModel)]="sizeSeleccionado"
+                                                [ngModelOptions]="{standalone: true}">
+                                                <option [ngValue]="null">Seleccione un Tamaño</option>
+                                                <option *ngFor="let size of sizes" [ngValue]="size">
+                                                    {{ size.name }}
+                                                </option>
+                                            </select>
+
+                                            <label for="size"><i class="bi bi-people-fill"></i> Tamaño</label>
+
+                                            <div *ngIf="sizeSeleccionado==null">
+                                                <p class="sw-text-error mb-0 pb-0">*Este campo no puede estar vacio</p>
+                                            </div>
+                                        </div>
+
+                                        <div class="d-flex justify-content-between mt-4">
+                                            <button mat-button matStepperPrevious><i class="bi bi-chevron-left"></i> Volver</button>
+                                            <button mat-button matStepperNext *ngIf="getValue('company_name')?.valid && sectorSeleccionado!=null && sizeSeleccionado!=null">Siguiente <i class="bi bi-chevron-right"></i></button>
+                                        </div>
+
+                                    </div>
+                                </div>
+                            </mat-step>
+                            <mat-step>
+                                <ng-template matStepLabel>
+                                    <i class="bi bi-envelope-fill me-1"></i> Paso 3
+                                </ng-template>
+
+                                <div class="row">
+                                    <div class="">
+                                        <p class=" text-my-purple mb-1 fw-bold">
+                                            <i class="bi bi-envelope-fill me-1"></i> Información de Contacto
+                                        </p>
+                                        <div class="floating-input mb-1 ">
+                                            <input type="email" class="color-input-bg" id="email"
+                                                placeholder="usuario@empresa.com" formControlName="email" required>
+                                            <label for="email"><i class="bi bi-envelope-fill me-1"></i> Correo
+                                                electrónico</label>
+                                        </div>
+                                        <div
+                                            *ngIf="getValue('email')!.invalid && (getValue('email')!.dirty || getValue('email')!.touched)">
+                                            <div *ngIf="getValue('email')?.errors?.['required']">
+                                                <p class="sw-text-error mb-0 pb-0">*Este campo no puede estar vacio</p>
+                                            </div>
+                                            <div *ngIf="!getValue('email')?.errors?.['required']">
+                                                <p class="sw-text-error mb-0 pb-0">*No es un correo valido</p>
+                                            </div>
+
+                                        </div>
+
+                                        <div class="floating-input mb-1 ">
+                                            <input type="tel" class="color-input-bg" id="phone"
+                                                placeholder="+5212345678910" formControlName="phone" required>
+                                            <label for="phone"><i class="bi bi-telephone-fill me-1"></i>
+                                                Telefono</label>
+                                        </div>
+                                        <div
+                                            *ngIf="getValue('phone')!.invalid && (getValue('phone')!.dirty || getValue('phone')!.touched)">
+                                            <p class="sw-text-error mb-0 pb-0">*Este campo no puede estar vacio</p>
+                                        </div>
+                                        <div *ngIf="getValue('phone')!.value.length > 0 && !validatePhone()">
+                                            <p class="sw-text-error mb-0 pb-0">*Telefono no valido</p>
+                                        </div>
+
+                                        <div class="floating-input password-field mb-1">
+                                            <input class="color-input-bg" [type]="showPassword ? 'text' : 'password'"
+                                                id="password" placeholder=" " (input)="onInput($event)"
+                                                formControlName="password" />
+
+                                            <label for="password"><i class="bi bi-lock-fill me-1"></i>
+                                                Contraseña</label>
+
+                                            <button type="button" class="toggle-password" (click)="togglePassword()"
+                                                [attr.aria-label]="showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'">
+                                                <span class="material-icons">
+                                                    {{ showPassword ? 'visibility_off' : 'visibility' }}
+                                                </span>
+                                            </button>
+                                        </div>
+                                        <div
+                                            *ngIf="getValue('password')!.invalid && (getValue('password')!.dirty || getValue('password')!.touched)">
+                                            <p class="sw-text-error mb-0 pb-0">*Este campo debe tener minimo 8
+                                                caracteres</p>
+                                        </div>
+                                        <div *ngIf="getValue('password')!.value.length > 0">
+                                            <div class="floating-input password-field">
+                                                <input class="color-input-bg"
+                                                    [type]="showPassword ? 'text' : 'password'" id="r_password"
+                                                    placeholder=" " (input)="onInput($event)" [(ngModel)]="r_password"
+                                                    [ngModelOptions]="{standalone: true}" />
+
+                                                <label for="r_password"><i class="bi bi-lock-fill me-1"></i> Repetir
+                                                    Contraseña</label>
+
+                                                <button type="button" class="toggle-password" (click)="togglePassword()"
+                                                    [attr.aria-label]="showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'">
+                                                    <span class="material-icons">
+                                                        {{ showPassword ? 'visibility_off' : 'visibility' }}
+                                                    </span>
+                                                </button>
+                                            </div>
+                                            <div *ngIf="!validatePassword()">
+                                                <p class="sw-text-error mb-0 pb-0">*Las contraseñas no coinciden</p>
+                                            </div>
+                                        </div>
+                                        <div class="d-grid my-4">
+                                            <button class="btn py-2 btn-my-purple btn-lg rounded-pill" type="submit"
+                                                (click)="register()">
+                                                <i class="bi bi-person-plus-fill me-1"></i> Registrarse
+                                            </button>
+                                        </div>
+                                        <button mat-button matStepperPrevious><i class="bi bi-chevron-left"></i> Volver</button>
+                                    </div>
+                                </div>
+
+                            </mat-step>
+                        </div>
+                    </mat-horizontal-stepper>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

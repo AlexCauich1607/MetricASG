@@ -1,0 +1,30 @@
+<div class="sw-bg-blue-light borde-izq p-0 mb-4 shadow-sm rounded " [style.--border-color]="ambito.color" [style.backgroundColor]="ambito.color"
+    *ngFor="let ambito of ambits">
+    <div class="sw-bg-sm-white p-4">
+        <div class="d-flex  align-items-stretch">
+            <div class="sw-all-center p-4 me-4">
+                <p class="text-white fs-1 fw-bold m-0 mb-2">
+                    <b class="text-white px-3 py-1 rounded" [style.backgroundColor]="ambito.color">{{ambito.letter}}</b>
+                </p>
+                <p class="text-white sw-fs-7 fw-bold m-0">{{ambito.ambit_name}} </p>
+            </div>
+
+            <div class="flex-grow-1  rounded p-3 sw-card-bg" >
+                <div class=" justify-content-end">
+                    <div class=" p-0 px-3 py-1 rounded">
+                        <p class="sw-fs-6 p-0 fw-bold text-white m-0 mb-3 p-0"><span class=" px-4  py-1 rounded-3 " [style.backgroundColor]="ambito.maturity_color">{{ambito.maturity_level}}</span>
+                        </p>
+                        <p class="sw-fs-7 text-black">
+                            {{ambito.feedback}}
+                        </p>
+
+                    </div>
+
+                </div>
+            </div>
+
+
+        </div>
+    </div>
+
+</div>

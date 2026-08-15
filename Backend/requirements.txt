@@ -1,0 +1,13 @@
+fastapi
+uvicorn[standard]
+sqlalchemy
+psycopg2-binary
+python-dotenv
+alembic
+pydantic
+pydantic[email]
+python-jose[cryptography]
+passlib[bcrypt]
+argon2-cffi
+python-multipart
+python-dateutil==2.9.0

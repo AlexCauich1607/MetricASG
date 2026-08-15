@@ -1,0 +1,8 @@
+router-outlet {
+  display: block;     
+  padding-top: 70px;  
+}
+
+router-outlet + * {
+  flex: 1;
+}

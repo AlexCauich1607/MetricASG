@@ -1,0 +1,71 @@
+<div class="container-fluid">
+  <div class="d-flex align-items-center color-bg justify-content-between py-2 px-5 pt-5 pb-4 sw-sticky">
+    <div class="d-flex align-items-center">
+      <img src="assets/logo.png" alt="MetricASG" height="38" class="me-2">
+      <span class="fw-bold text-my-purple font-logo fs-4 ">MetricASG</span>
+    </div>
+    <app-profile-photo ></app-profile-photo>
+  </div>
+  <div class="px-5 pb-5">
+    <h2 class="mb-4 text-my-purple fw-bold">!Bienvenido, <b class="text-my-green">{{name}}</b>!</h2>
+
+    <div class="card border-0 rounded-4 sw-bg-gris  mb-4">
+      <div class="card-body flex-row sw-all-center px-5  py-5">
+        <span class="material-icons text-white display-1 me-4">warning</span>
+        <div>
+          <p class="text-justify text-white">
+            Actualmente se encuentra en la Página de Administración de <b class="font-logo fs-5">MetricASG</b>. Las
+            modificaciones aquí realizadas
+            afectan el comportamiento y la data de la aplicación.
+          </p>
+        </div>
+
+      </div>
+    </div>
+
+    <div class="row g-3 mb-4 align-items-stretch">
+
+      <div class="col-sm-6 col-lg-3" *ngFor="let stat of stats">
+        <div class="card h-100 border-0 shadow-sm" [style.backgroundColor]="stat.color">
+
+          <div class="card-body text-white d-flex flex-column">
+
+
+            <small class="fw-bold mb-3">{{ stat.label }}</small>
+
+            <div class="mt-auto d-flex align-items-center justify-content-between">
+              <span class="sw-bg-sm-white p-2 rounded-2 material-icons fs-1">{{stat.icon}}</span>
+              <h3 class="fw-bold fs-1">{{ stat.value }}</h3>
+            </div>
+
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+    <div class="row g-1 split-margin" *ngIf="loadingChart">
+      <div class="col-12 col-lg-6 ">
+        <div class="border rounded bg-white p-4 m-2 shadow-sm">
+          <h5 class="text-center fw-bold mb-3 " [style.color]="blueColor">
+            <b class="text-white px-1 rounded" [style.backgroundColor]="blueColor"><i class="bi bi-person-fill"></i></b>
+            {{usersData.name}}
+          </h5>
+          <app-bar-chart [data]="usersData.data" [scores]="usersData.value" [colors]="usersData.colors"
+            [id]="0"></app-bar-chart>
+        </div>
+      </div>
+
+      <div class="col-12 col-lg-6 " *ngFor="let ambito of data | keyvalue">
+        <div class="border rounded bg-white p-4 m-2 shadow-sm">
+          <h5 class="text-center fw-bold mb-3 " [style.color]="ambito.value.color">
+            <b class="text-white px-2 rounded" [style.backgroundColor]="ambito.value.color">{{ambito.value.letter}}</b>
+            {{ambito.value.name}}
+          </h5>
+          <app-bar-chart [data]="data.get(ambito.key)?.data??[]" [scores]="data.get(ambito.key)?.scores??[]"
+            [colors]="data.get(ambito.key)?.colors??[]" [id]="ambito.key"></app-bar-chart>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

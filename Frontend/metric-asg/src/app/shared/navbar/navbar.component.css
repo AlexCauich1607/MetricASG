@@ -1,0 +1,17 @@
+.navbar-brand span {
+  font-size: 1.3rem;
+}
+
+.nav-link {
+  font-size: 1rem;
+  color: #333 !important;
+}
+
+.nav-link:hover {
+  color: #4a1fff !important;
+}
+
+.btn-primary {
+  background: #4a1fff !important;
+  border-color: #4a1fff !important;
+}

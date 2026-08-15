@@ -1,0 +1,61 @@
+<div class="p-4 bg-white">
+    <h5 class="modal-title fw-bold text-center text-my-purple mb-3">
+        Filtros
+    </h5>
+    <div class="row mb-3">
+        <div class="col-6">
+            <p class="sw-fs-7 fw-bold text-my-purple mb-1 ">Sectores</p>
+            <div class="dropdown w-100 mt-0">
+                <button class="btn btn-outline-secondary sw-fs-7 dropdown-toggle w-100 text-ellipsis  text-start"
+                    type="button" data-bs-toggle="dropdown">
+
+                    <i class="bi bi-funnel me-2"></i>
+                    {{getTitleSectores()}}
+                </button>
+                <ul class="dropdown-menu p-2 sw-drop sw-fs-7">
+                    <li><label class="dropdown-item"><input class="form-check-input me-2 " type="checkbox"
+                                [checked]="all" (change)="selectAll()"> Todos</label></li>
+                    <li *ngFor="let sector of data.sectores">
+                        <label class="dropdown-item">
+                            <input class="form-check-input me-2 " type="checkbox" [checked]="isSelected(sector.id)"
+                                (change)="toggleSector(sector.id, $event)">
+                            {{ sector.name }}
+                        </label>
+                    </li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="col-6">
+            <p class="sw-fs-7 fw-bold text-my-purple mb-1">Tamaños</p>
+            <div class="dropdown w-100 mt-0">
+                <button class="btn btn-outline-secondary sw-fs-7 dropdown-toggle w-100 text-ellipsis  text-start"
+                    type="button" data-bs-toggle="dropdown">
+
+                    <i class="bi bi-funnel me-2"></i>
+                    {{getTitleSize()}}
+                </button>
+                <ul class="dropdown-menu p-2 sw-drop sw-fs-7">
+                    <li><label class="dropdown-item"><input class="form-check-input me-2 " type="checkbox"
+                                [checked]="all_sizes" (change)="selectAllSize()"> Todos</label></li>
+                    <li *ngFor="let size of data.sizes">
+                        <label class="dropdown-item">
+                            <input class="form-check-input me-2 " type="checkbox" [checked]="isSelected_size(size.id)"
+                                (change)="toggleSectorSize(size.id, $event)">
+                            {{ size.name }}
+                        </label>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+    <div class="modal-footer d-flex justify-content-between gap-2">
+        <button class="sw-btn-white-purple text-my-purple bg-white sw-cursor-pointer sw-fs-7 mb-3" (click)="close()">
+            <i class="bi bi-x-lg"></i> Descartar
+        </button>
+
+        <button class="btn-my-purple sw-cursor-pointer sw-h-20 sw-fs-7 mb-3" (click)="save()">
+            <i class="bi bi-check-lg"></i> Aplicar
+        </button>
+    </div>
+</div>

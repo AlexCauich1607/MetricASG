@@ -1,0 +1,31 @@
+<div class="p-4 sw-height">
+    <h6 class="fw-bold text-my-purple mb-4"><i class="bi bi-building-fill"></i> Empresa</h6>
+    <div class="mb-3">
+        <label class="form-label sw-fs-7 fw-bold text-my-purple"><i class="bi bi-building-fill me-1"></i> Nombre</label>
+        <input type="text" class="form-control sw-fs-7 sw-bg-transparent" placeholder="Ingrese el nombre de la empresa"
+            [(ngModel)]="user!.company_name" />
+        <div *ngIf="user?.company_name!.length < 3" class="m-0 p-0">
+            <p class="sw-text-error mb-0 pb-0">*El nombre debe tener minimo 3 caracteres</p>
+        </div>
+    </div>
+    <div class="mb-3">
+        <label class="form-label sw-fs-7 fw-bold text-my-purple"><i class="bi bi-gear-fill me-1"></i> Sector</label>
+        <select id="sector" class="form-control sw-fs-7 sw-bg-transparent" [(ngModel)]="sectorSeleccionado">
+            <option *ngFor="let sector of sectores" [ngValue]="sector">
+                {{ sector.name }}
+            </option>
+        </select>
+    </div>
+    <div class="mb-3">
+        <label class="form-label sw-fs-7 fw-bold text-my-purple"><i class="bi bi-people-fill me-1"></i>
+            Tamaño</label>
+        <select id="size" class="form-control sw-fs-7 sw-bg-transparent" [(ngModel)]="sizeSeleccionado">
+            <option *ngFor="let size of sizes" [ngValue]="size">
+                {{ size.name }}
+            </option>
+        </select>
+    </div>
+    <div class="sw-end">
+        <button class="btn-my-purple sw-fs-7 mb-3" (click)="update()"><i class="bi bi-check-lg"></i> Guardar</button>
+    </div>
+</div>

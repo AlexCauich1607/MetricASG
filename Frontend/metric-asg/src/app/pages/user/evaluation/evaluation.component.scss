@@ -1,0 +1,53 @@
+.sw-spinner {
+  --mdc-circular-progress-track-color: #f30f0f !important;
+  /* fondo */
+}
+
+.sw-spinner .mdc-circular-progress__track {
+  stroke: var(--track-color, #e0e0e0);
+}
+
+.sw-spinner .mdc-circular-progress__track {
+  stroke: red !important;
+}
+
+:host ::ng-deep .sw-spinner .mdc-circular-progress__track {
+  stroke: var(--track-color, #e0e0e0);
+}
+
+.spinner-wrapper {
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  border: 10px solid #e0e0e0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+
+.sw-gris {
+    color: #7c8c6f;
+}
+
+.borde-izq {
+  border-left: 6px solid var(--borde-color) !important;
+}
+
+.sw-bg-sm-white {
+  background-color: rgba(255, 255, 255, 0.242);
+}
+
+.answer-select {
+  background-color: rgba(var(--bg-color, 0, 123, 255), 0.4);
+  border-radius: 15px;
+  transition: background-color 0.3s ease;
+}
+
+
+
+
+.answer-input:hover {
+  background-color: rgba(var(--bg-color, 0, 123, 255), 0.2);
+  border-radius: 15px;
+}
