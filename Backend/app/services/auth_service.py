@@ -1,4 +1,6 @@
+import os
 from datetime import datetime, timedelta
+
 from fastapi import HTTPException, Response, Request
 from sqlalchemy.orm import Session
 from passlib.context import CryptContext
@@ -7,7 +9,14 @@ from passlib.hash import argon2
 
 from app.models.user_model import User
 
-SECRET_KEY = "ANTOMIC"
+
+SECRET_KEY = os.getenv("JWT_SECRET_KEY")
+
+if not SECRET_KEY:
+    raise RuntimeError(
+        "JWT_SECRET_KEY environment variable is required"
+    )
+
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60
 
