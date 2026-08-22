@@ -59,13 +59,15 @@ Las dependencias del backend se encuentran definidas en:
 Backend/requirements.txt
 ```
 
+Entre las dependencias utilizadas para la configuración del backend se encuentra `pydantic-settings`.
+
 #### Variables de entorno
 
-MetricASG utiliza variables de entorno para mantener credenciales y secretos fuera del código fuente.
+MetricASG utiliza variables de entorno para mantener la configuración, credenciales y secretos fuera del código fuente.
 
-El archivo `.env.example`, ubicado en la raíz del repositorio, define las variables de configuración del proyecto sin incluir valores sensibles.
+El archivo `.env.example`, ubicado en la raíz del repositorio, define las variables necesarias sin incluir valores sensibles.
 
-Para configurar el entorno utilizado por Docker Compose, debe crearse un archivo `.env` a partir del ejemplo.
+Para configurar el entorno utilizado por Docker Compose debe crearse un archivo `.env` a partir del ejemplo.
 
 Desde la raíz del repositorio:
 
@@ -73,11 +75,20 @@ Desde la raíz del repositorio:
 Copy-Item .env.example .env
 ```
 
-Actualmente, las variables sensibles utilizadas directamente por el backend son:
+Las variables utilizadas actualmente por el backend son:
 
 ```dotenv
+APP_ENV=development
+
 DATABASE_URL=
+
 JWT_SECRET_KEY=
+JWT_ALGORITHM=HS256
+
+ACCESS_TOKEN_EXPIRE_MINUTES=60
+REFRESH_TOKEN_EXPIRE_DAYS=30
+
+CORS_ORIGINS=http://localhost:4200,http://127.0.0.1:4200
 ```
 
 Docker Compose utiliza además las variables necesarias para configurar PostgreSQL:
@@ -90,47 +101,86 @@ POSTGRES_HOST=db
 POSTGRES_PORT=5432
 ```
 
-El archivo `.env.example` también contempla otras variables de configuración:
-
-```dotenv
-JWT_ALGORITHM=HS256
-ACCESS_TOKEN_EXPIRE_MINUTES=60
-REFRESH_TOKEN_EXPIRE_DAYS=30
-```
-
-Actualmente estas últimas configuraciones todavía no son consumidas de forma centralizada por el backend. Su integración se realizará posteriormente mediante una capa de configuración tipada.
-
 El archivo `.env` contiene valores locales y sensibles, por lo que se encuentra excluido mediante `.gitignore` y no debe agregarse al repositorio.
 
 Docker Compose carga este archivo para proporcionar las variables necesarias tanto al servicio de PostgreSQL como a la API de FastAPI.
-
-Si `JWT_SECRET_KEY` o `DATABASE_URL` no están configuradas, el backend detendrá su inicialización y mostrará un error indicando la variable faltante.
 
 > Los valores reales de `POSTGRES_PASSWORD`, `DATABASE_URL` y `JWT_SECRET_KEY` deben mantenerse privados y nunca deben almacenarse directamente en el código fuente, `docker-compose.yml` o archivos versionados.
 
 > Las credenciales y claves que estuvieron publicadas anteriormente en el repositorio fueron rotadas y no deben volver a utilizarse.
 
-> La configuración será centralizada posteriormente en una capa de settings tipada.
+#### Configuración centralizada del backend
+
+La configuración utilizada por FastAPI se encuentra centralizada en:
+
+```text
+Backend/app/core/config.py
+```
+
+MetricASG utiliza `pydantic-settings` para cargar y validar las variables de entorno requeridas por el backend.
+
+La aplicación utiliza una instancia centralizada de `Settings`, que es consumida por los módulos relacionados con:
+
+* Conexión a la base de datos.
+* Generación y validación de JWT.
+* Tiempos de expiración de tokens.
+* Configuración del entorno.
+* Configuración de CORS.
+
+Esto evita mantener llamadas dispersas a `os.getenv()` o valores de configuración duplicados en distintos módulos.
+
+Actualmente se modelan las siguientes variables:
+
+```dotenv
+APP_ENV=development
+DATABASE_URL=
+
+JWT_SECRET_KEY=
+JWT_ALGORITHM=HS256
+
+ACCESS_TOKEN_EXPIRE_MINUTES=60
+REFRESH_TOKEN_EXPIRE_DAYS=30
+
+CORS_ORIGINS=http://localhost:4200,http://127.0.0.1:4200
+```
+
+Las variables obligatorias son validadas durante el arranque de la aplicación.
+
+Si una variable requerida está ausente, vacía o contiene un valor inválido, el backend detiene su inicialización y muestra un error de configuración.
+
+Entre las validaciones actuales se encuentran:
+
+* `APP_ENV` debe contener un valor.
+* `DATABASE_URL` no puede estar vacía.
+* `JWT_SECRET_KEY` no puede estar vacía.
+* `JWT_ALGORITHM` debe contener un valor.
+* `ACCESS_TOKEN_EXPIRE_MINUTES` debe ser un número entero mayor que `0`.
+* `REFRESH_TOKEN_EXPIRE_DAYS` debe ser un número entero mayor que `0`.
+* `CORS_ORIGINS` debe contener al menos un valor.
+
+La configuración de CORS se obtiene actualmente desde `CORS_ORIGINS`. La política definitiva de orígenes permitidos para desarrollo y producción será revisada posteriormente.
 
 #### Ejecución local de FastAPI
 
-FastAPI puede ejecutarse directamente desde Python, aunque actualmente esta modalidad requiere configurar manualmente las variables de entorno en la terminal.
-
-Desde la carpeta `Backend`, con el entorno virtual activado, deben existir al menos:
-
-```text
-JWT_SECRET_KEY
-DATABASE_URL
-```
+FastAPI puede ejecutarse directamente desde Python. En esta modalidad las variables requeridas deben existir en el entorno del proceso, ya que el backend no carga directamente el archivo `.env`.
 
 Por ejemplo, en PowerShell:
 
 ```powershell
-$env:JWT_SECRET_KEY="<clave-local>"
+$env:APP_ENV="development"
+
 $env:DATABASE_URL="<cadena-de-conexion-local>"
+
+$env:JWT_SECRET_KEY="<clave-local>"
+$env:JWT_ALGORITHM="HS256"
+
+$env:ACCESS_TOKEN_EXPIRE_MINUTES="60"
+$env:REFRESH_TOKEN_EXPIRE_DAYS="30"
+
+$env:CORS_ORIGINS="http://localhost:4200,http://127.0.0.1:4200"
 ```
 
-Después puede iniciarse FastAPI con:
+Después puede iniciarse FastAPI desde la carpeta `Backend` con:
 
 ```powershell
 python -m uvicorn app.main:app --reload
@@ -148,7 +198,7 @@ La documentación interactiva de FastAPI estará disponible en:
 http://127.0.0.1:8000/docs
 ```
 
-y ReDoc en:
+ReDoc estará disponible en:
 
 ```text
 http://127.0.0.1:8000/redoc
@@ -202,7 +252,13 @@ docker info
 
 #### Servicios disponibles
 
-El archivo `Backend/docker-compose.yml` define dos servicios principales:
+El archivo:
+
+```text
+Backend/docker-compose.yml
+```
+
+define dos servicios principales:
 
 ```text
 db
@@ -241,7 +297,7 @@ El valor:
 POSTGRES_HOST=db
 ```
 
-se utiliza porque `db` es el nombre del servicio PostgreSQL definido dentro de Docker Compose.
+se utiliza como referencia porque `db` es el nombre del servicio PostgreSQL dentro de Docker Compose.
 
 La API utiliza adicionalmente:
 
@@ -519,7 +575,7 @@ Ctrl + C
 
 ## Verificación del entorno de desarrollo
 
-La configuración documentada fue validada desde un clon limpio del repositorio.
+La configuración documentada fue validada desde un clon limpio del repositorio y durante las tareas posteriores de seguridad y centralización de configuración.
 
 ### Entorno utilizado
 
@@ -546,12 +602,19 @@ Se verificó correctamente:
 * Respuesta HTTP `200` del backend.
 * Carga de `JWT_SECRET_KEY` mediante variables de entorno.
 * Carga de `DATABASE_URL` mediante variables de entorno.
-* Validación del fallo controlado cuando `JWT_SECRET_KEY` no está configurada.
-* Validación del fallo controlado cuando `DATABASE_URL` no está configurada.
-* Conexión exitosa de SQLAlchemy con PostgreSQL.
 * Rotación de la clave JWT anteriormente publicada.
 * Rotación de la contraseña PostgreSQL anteriormente publicada.
 * Invalidación de la contraseña PostgreSQL anterior.
+* Instalación y funcionamiento de `pydantic-settings`.
+* Centralización de la configuración en `app/core/config.py`.
+* Uso de configuración centralizada desde base de datos, autenticación, validación de tokens y FastAPI.
+* Eliminación de llamadas dispersas a `os.getenv()`.
+* Validación del fallo de arranque cuando `JWT_SECRET_KEY` está ausente o vacía.
+* Validación del fallo de arranque cuando `DATABASE_URL` está ausente o vacía.
+* Validación de que `ACCESS_TOKEN_EXPIRE_MINUTES` debe ser mayor que `0`.
+* Conexión exitosa de SQLAlchemy con PostgreSQL mediante la configuración centralizada.
+* Generación y validación de JWT mediante la configuración centralizada.
+* Carga de los orígenes CORS mediante la configuración centralizada.
 * Instalación del frontend mediante `npm ci`.
 * Compilación del frontend mediante `npm run build`.
 * Inicio del frontend mediante `npm start`.
@@ -564,10 +627,11 @@ Se verificó correctamente:
 Durante la validación se detectaron algunas advertencias y aspectos técnicos que no impiden ejecutar el proyecto y serán atendidos en etapas posteriores:
 
 * El archivo `docker-compose.yml` utiliza actualmente el atributo obsoleto `version`.
+* SQLAlchemy muestra advertencias relacionadas con relaciones superpuestas en `CompanyRelationship`. Estas advertencias no bloquean actualmente el funcionamiento del backend y serán revisadas posteriormente.
+* La política de CORS será revisada para separar correctamente los orígenes permitidos de desarrollo y producción.
 * Algunas dependencias del frontend requieren revisión y actualización.
 * El bundle inicial de Angular supera actualmente el presupuesto configurado.
 * Algunas dependencias utilizadas por el frontend no son ESM.
-* La configuración del backend todavía se obtiene desde distintos puntos y será centralizada posteriormente en una capa de settings.
 * La aplicación será migrada posteriormente a una versión más reciente de Angular.
 
 Estos puntos no impiden actualmente levantar MetricASG en un entorno de desarrollo.

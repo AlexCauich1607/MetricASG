@@ -11,3 +11,4 @@ passlib[bcrypt]
 argon2-cffi
 python-multipart
 python-dateutil==2.9.0
+pydantic-settings
