@@ -72,11 +72,12 @@ class EvaluationService:
     
     
     
-    def submit_evaluation(self, payload: dict):
-
-        user_id = payload["user_id"]
+    def submit_evaluation(
+        self,
+        payload: dict,
+        user_id: int
+    ):
         responses = payload["responses"]
-
         user = self.db.query(User).filter(User.id == user_id).first()
         if not user:
             raise HTTPException(404, "User not found")
