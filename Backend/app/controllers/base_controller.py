@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, Query, HTTPException
 from sqlalchemy.orm import Session
 from typing import Optional, Type, List, Any, Dict
 from pydantic import create_model
-from ..services.token_service import get_current_user
+from ..services.token_service import get_current_user, require_admin
 from app.database.database import get_db
 from app.services.base_service import BaseService
 
@@ -42,9 +42,37 @@ class BaseController:
             raise Exception("Debes definir 'model' y 'prefix' en la clase hija.")
 
         self.Schema = generate_schema(self.model)
-        self.router = APIRouter(prefix=f"/api/{self.prefix}", tags=[self.prefix.capitalize()], dependencies=[Depends(get_current_user)])
+        read_all_dependencies = (
+            [Depends(require_admin)]
+            if self.read_all_only_admin
+            else []
+        )
 
-        @self.router.get("/", response_model=List[self.Schema])
+        read_dependencies = (
+            [Depends(require_admin)]
+            if self.read_only_admin
+            else []
+        )
+
+        create_dependencies = (
+            [Depends(require_admin)]
+            if self.create_only_admin
+            else []
+        )
+
+        update_dependencies = (
+            [Depends(require_admin)]
+            if self.update_only_admin
+            else []
+        )
+
+        delete_dependencies = (
+            [Depends(require_admin)]
+            if self.delete_only_admin
+            else []
+        )
+        self.router = APIRouter(prefix=f"/api/{self.prefix}", tags=[self.prefix.capitalize()], dependencies=[Depends(get_current_user)])
+        @self.router.get("/", response_model=List[self.Schema],  dependencies=read_all_dependencies)
         def read_all(
             db: Session = Depends(get_db),
             order_by: Optional[str] = Query(None),
@@ -59,25 +87,25 @@ class BaseController:
                 order_dir=order_dir
             )
 
-        @self.router.get("/{item_id}", response_model=self.Schema)
+        @self.router.get("/{item_id}", response_model=self.Schema, dependencies=read_dependencies)
         def read(item_id: int, db: Session = Depends(get_db)):
             obj = BaseService(self.model, db).read(item_id)
             if not obj:
                 raise HTTPException(404, "Item not found")
             return obj
 
-        @self.router.post("/", response_model=self.Schema)
+        @self.router.post("/", response_model=self.Schema, dependencies=create_dependencies)
         def create(data: Dict[str, Any], db: Session = Depends(get_db)):
             return BaseService(self.model, db).create(data)
 
-        @self.router.put("/{item_id}", response_model=self.Schema)
+        @self.router.put("/{item_id}", response_model=self.Schema, dependencies=update_dependencies)
         def update(item_id: int, data: Dict[str, Any], db: Session = Depends(get_db)):
             updated = BaseService(self.model, db).update(item_id, data)
             if not updated:
                 raise HTTPException(404, "Item not found")
             return updated
 
-        @self.router.delete("/{item_id}")
+        @self.router.delete("/{item_id}", dependencies=delete_dependencies)
         def delete(item_id: int, db: Session = Depends(get_db)):
             deleted = BaseService(self.model, db).delete(item_id)
             if not deleted:
