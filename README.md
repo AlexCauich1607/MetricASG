@@ -158,7 +158,13 @@ Entre las validaciones actuales se encuentran:
 * `REFRESH_TOKEN_EXPIRE_DAYS` debe ser un número entero mayor que `0`.
 * `CORS_ORIGINS` debe contener al menos un valor.
 
-La configuración de CORS se obtiene actualmente desde `CORS_ORIGINS`. La política definitiva de orígenes permitidos para desarrollo y producción será revisada posteriormente.
+La configuración de CORS se obtiene desde la variable `CORS_ORIGINS`.
+
+En el entorno de desarrollo se permiten únicamente los orígenes locales configurados explícitamente, por ejemplo:
+
+```dotenv
+APP_ENV=development
+CORS_ORIGINS=http://localhost:4200,http://127.0.0.1:4200
 
 #### Ejecución local de FastAPI
 
