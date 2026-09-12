@@ -8,9 +8,10 @@ from sqlalchemy import (
     Float,
     ForeignKey
 )
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import relationship, validates
 from sqlalchemy.sql import func
 from ..database.database import Base
+from ..core.roles import UserRole
 
 class User(Base):
     __tablename__ = "users"
@@ -43,7 +44,11 @@ class User(Base):
     
     #Información Extra
     profile_photo = Column(Text, nullable=True)
-    role = Column(String(50), default="user")
+    role = Column(
+        String(50),
+        default=UserRole.USER.value,
+        nullable=False
+    )
     joined = Column(DateTime, server_default=func.now())
     last_login = Column(DateTime)
     biannual_evaluation = Column(Boolean, default=False)
@@ -79,3 +84,16 @@ class User(Base):
         passive_deletes=True
     )
 
+    @validates("role")
+    def validate_role(self, key, value):
+        if isinstance(value, UserRole):
+            return value.value
+
+        try:
+            return UserRole(value).value
+        except ValueError as exc:
+            allowed_roles = ", ".join(role.value for role in UserRole)
+
+            raise ValueError(
+                f"Invalid role '{value}'. Allowed roles: {allowed_roles}"
+            ) from exc
