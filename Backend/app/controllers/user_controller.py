@@ -35,27 +35,44 @@ class UsersController:
                 order_dir=order_dir
             )
 
-        @self.router.get("/{item_id}", response_model=UserResponse)
+        @self.router.get(
+            "/{item_id}",
+            response_model=UserResponse,
+            dependencies=[Depends(require_admin)]
+        )
         def read(item_id: int, db: Session = Depends(get_db)):
             obj = BaseService(self.model, db).read(item_id)
+
             if not obj:
                 raise HTTPException(404, "Item not found")
+
             data = orm_to_dict(obj)
             data.pop("password", None)
+
             return data
 
         @self.router.post("/", response_model=self.Schema, dependencies=[Depends(require_admin)])
         def create(data: Dict[str, Any], db: Session = Depends(get_db)):
             return BaseService(self.model, db).create(data)
 
-        @self.router.put("/{item_id}", response_model=self.Schema)
-        def update(item_id: int, data: Dict[str, Any], db: Session = Depends(get_db)):
+        @self.router.put(
+            "/{item_id}",
+            response_model=self.Schema,
+            dependencies=[Depends(require_admin)]
+        )
+        def update(
+            item_id: int,
+            data: Dict[str, Any],
+            db: Session = Depends(get_db)
+        ):
             data.pop("role", None)
             data.pop("active", None)
-                
+
             updated = BaseService(self.model, db).update(item_id, data)
+
             if not updated:
                 raise HTTPException(404, "Item not found")
+
             return updated
 
         @self.router.delete("/{item_id}", dependencies=[Depends(require_admin)])
@@ -64,3 +81,34 @@ class UsersController:
             if not deleted:
                 raise HTTPException(404, "Item not found")
             return {"success": True}
+        @self.router.get("/profile/me", response_model=UserResponse)
+        def read_current_user(
+            current_user: User = Depends(get_current_user)
+        ):
+            data = orm_to_dict(current_user)
+            data.pop("password", None)
+
+            return data
+        @self.router.put("/profile/me", response_model=UserResponse)
+        def update_current_user(
+            data: Dict[str, Any],
+            current_user: User = Depends(get_current_user),
+            db: Session = Depends(get_db)
+        ):
+            data.pop("id", None)
+            data.pop("role", None)
+            data.pop("active", None)
+            data.pop("password", None)
+
+            updated = BaseService(self.model, db).update(
+                current_user.id,
+                data
+            )
+
+            if not updated:
+                raise HTTPException(404, "Item not found")
+
+            result = orm_to_dict(updated)
+            result.pop("password", None)
+
+            return result
