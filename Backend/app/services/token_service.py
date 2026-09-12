@@ -1,20 +1,29 @@
-from fastapi import Depends, HTTPException
+from typing import Optional
+
+from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from jose import jwt, JWTError
 from sqlalchemy.orm import Session
 
 from ..core.config import settings
+from ..core.roles import UserRole
 from ..database.database import get_db
 from ..models.user_model import User
 
 
-security = HTTPBearer()
+security = HTTPBearer(auto_error=False)
 
 
 def get_current_user(
-    credentials: HTTPAuthorizationCredentials = Depends(security),
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security),
     db: Session = Depends(get_db)
 ):
+    if credentials is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authentication required"
+        )
+
     token = credentials.credentials
 
     try:
@@ -27,55 +36,46 @@ def get_current_user(
         user_id = payload.get("id")
 
         if not user_id:
-            raise HTTPException(status_code=401)
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid token"
+            )
 
-    except JWTError:
+    except JWTError as exc:
         raise HTTPException(
-            status_code=401,
+            status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid or expired token"
-        )
+        ) from exc
 
     user = db.query(User).filter(User.id == user_id).first()
 
     if not user:
-        raise HTTPException(status_code=401)
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="User not found"
+        )
 
     return user
 
 
-def get_is_admin(
-    credentials: HTTPAuthorizationCredentials = Depends(security),
-    db: Session = Depends(get_db)
-):
-    token = credentials.credentials
+def require_role(*allowed_roles: UserRole):
+    if not allowed_roles:
+        raise ValueError("At least one role must be provided")
 
-    try:
-        payload = jwt.decode(
-            token,
-            settings.jwt_secret_key,
-            algorithms=[settings.jwt_algorithm]
-        )
+    allowed_values = {role.value for role in allowed_roles}
 
-        user_id = payload.get("id")
+    def role_dependency(
+        current_user: User = Depends(get_current_user)
+    ):
+        if current_user.role not in allowed_values:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Insufficient permissions"
+            )
 
-        if not user_id:
-            raise HTTPException(status_code=401)
+        return current_user
 
-    except JWTError:
-        raise HTTPException(
-            status_code=401,
-            detail="Invalid or expired token"
-        )
+    return role_dependency
 
-    user = db.query(User).filter(User.id == user_id).first()
 
-    if not user:
-        raise HTTPException(status_code=401)
-
-    if user.role != "admin":
-        raise HTTPException(
-            status_code=401,
-            detail="The user is not admin"
-        )
-
-    return user
+require_admin = require_role(UserRole.ADMIN)

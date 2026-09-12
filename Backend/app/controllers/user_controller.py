@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, Query, HTTPException
 from sqlalchemy.orm import Session
 from typing import Optional, Type, List, Any, Dict
 from pydantic import create_model
-from ..services.token_service import get_current_user, get_is_admin
+from ..services.token_service import get_current_user, require_admin
 from ..database.database import get_db
 from ..services.base_service import BaseService
 from .base_controller import generate_schema
@@ -20,7 +20,7 @@ class UsersController:
         self.Schema = generate_schema(self.model)
         self.router = APIRouter(prefix=f"/api/{self.prefix}", tags=[self.prefix.capitalize()], dependencies=[Depends(get_current_user)])
 
-        @self.router.get("/", response_model=List[UserResponse],dependencies=[Depends(get_is_admin)])
+        @self.router.get("/", response_model=List[UserResponse],dependencies=[Depends(require_admin)])
         def read_all(
             db: Session = Depends(get_db),
             order_by: Optional[str] = Query(None),
@@ -44,7 +44,7 @@ class UsersController:
             data.pop("password", None)
             return data
 
-        @self.router.post("/", response_model=self.Schema, dependencies=[Depends(get_is_admin)])
+        @self.router.post("/", response_model=self.Schema, dependencies=[Depends(require_admin)])
         def create(data: Dict[str, Any], db: Session = Depends(get_db)):
             return BaseService(self.model, db).create(data)
 
@@ -58,7 +58,7 @@ class UsersController:
                 raise HTTPException(404, "Item not found")
             return updated
 
-        @self.router.delete("/{item_id}", dependencies=[Depends(get_is_admin)])
+        @self.router.delete("/{item_id}", dependencies=[Depends(require_admin)])
         def delete(item_id: int, db: Session = Depends(get_db)):
             deleted = BaseService(self.model, db).delete(item_id)
             if not deleted:

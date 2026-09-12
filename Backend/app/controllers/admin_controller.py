@@ -1,4 +1,4 @@
-from ..services.token_service import get_is_admin
+from ..services.token_service import require_admin
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
@@ -17,7 +17,7 @@ class AdminController:
         self.router = APIRouter(
             prefix=f"/api/{self.prefix}",
             tags=["Admin"], 
-            dependencies=[Depends(get_is_admin)]
+            dependencies=[Depends(require_admin)]
         )
         
         @self.router.get("/summary")

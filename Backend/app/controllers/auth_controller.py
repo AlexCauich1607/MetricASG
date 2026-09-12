@@ -1,5 +1,5 @@
 from typing import Optional
-from ..services.token_service import get_current_user, get_is_admin
+from ..services.token_service import require_admin
 from fastapi import APIRouter, Depends, HTTPException, Response, Request
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
@@ -94,7 +94,7 @@ class AuthController:
         def register_company(payload: RegisterCompanyRequest, db: Session = Depends(get_db)):
             return auth_service.create_company(payload.dict(), db)
      
-        @self.router.post("/create-admin", dependencies=[Depends(get_is_admin)])
+        @self.router.post("/create-admin", dependencies=[Depends(require_admin)])
         def create_admin(payload: AdminRequest, db: Session = Depends(get_db)):
             return auth_service.create_admin(payload.dict(), db)
         
