@@ -9,6 +9,8 @@ from passlib.hash import argon2
 from app.core.config import settings
 from app.models.user_model import User
 
+from app.core.roles import UserRole
+
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
@@ -116,7 +118,7 @@ class AuthService:
             raise HTTPException(400, "Email already registered")
 
         data["password"] = self.hash_password(data["password"])
-        data["role"] = "user"
+        data["role"] = UserRole.USER.value
         data["next_evaluation"] = datetime.now()
 
         user = User(**data)
@@ -131,7 +133,7 @@ class AuthService:
             raise HTTPException(400, "Email already registered")
 
         data["password"] = self.hash_password(data["password"])
-        data["role"] = "company"
+        data["role"] = UserRole.USER.value
         data["next_evaluation"] = datetime.now()
 
         user = User(**data)
@@ -147,7 +149,7 @@ class AuthService:
 
         data["password"] = self.hash_password(data["password"])
         data["company_name"] = data["name"]
-        data["role"] = "admin"
+        data["role"] = UserRole.ADMIN.value
         data["next_evaluation"] = datetime.now()
 
         admin = User(**data)
