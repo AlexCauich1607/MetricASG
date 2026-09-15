@@ -176,6 +176,5 @@ class AuthService:
 
         user.password = self.hash_password(new_password)
         db.commit()
-        db.refresh(user)
 
-        return user
+        return {"success": True}
