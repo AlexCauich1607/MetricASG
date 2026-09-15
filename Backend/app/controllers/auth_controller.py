@@ -1,8 +1,8 @@
 from typing import Optional
-from ..services.token_service import require_admin
+from ..services.token_service import get_current_user, require_admin
 from fastapi import APIRouter, Depends, HTTPException, Response, Request
 from sqlalchemy.orm import Session
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from app.database.database import get_db
 from app.services.auth_service import AuthService
@@ -19,10 +19,8 @@ class LoginRequest(BaseModel):
     password: str
 
 class ChangePasswordRequest(BaseModel):
-    id_user: int
-    new_password: str
+    new_password: str = Field(min_length=8, max_length=72)
     bf_password: str
-
 
 class RegisterRequest(BaseModel):
     name: str
@@ -103,9 +101,13 @@ class AuthController:
             return auth_service.refresh(payload, db)
         
         @self.router.post("/change-password")
-        def change_password(payload: ChangePasswordRequest, db: Session = Depends(get_db)):
+        def change_password(
+            payload: ChangePasswordRequest,
+            current_user = Depends(get_current_user),
+            db: Session = Depends(get_db)
+        ):
             return auth_service.chage_password(
-                payload.id_user,
+                current_user.id,
                 payload.new_password,
                 payload.bf_password,
                 db
