@@ -4,7 +4,8 @@ import { Router } from '@angular/router';
 import { MatDialog, MatDialogRef } from '@angular/material/dialog';
 import { AdminLayoutComponent } from '../../admin/layout/admin-layout/admin-layout.component';
 import { SidebarComponent } from '../../modals/settings/sidebar/sidebar.component';
-
+import { finalize } from 'rxjs';
+import { AuthService } from '../../../services/auth.service';
 
 @Component({
   selector: 'app-user-navbar',
@@ -15,13 +16,22 @@ import { SidebarComponent } from '../../modals/settings/sidebar/sidebar.componen
 export class UserNavbarComponent {
 
   first = SessionService.getSessionItem('first-time');
-  photo = SessionService.getSessionItem('photo') ;
-  constructor(private router: Router, private dialog: MatDialog) {
+  photo = SessionService.getSessionItem('photo');
+  constructor(private router: Router, private dialog: MatDialog,
+    private authService: AuthService) {
 
   }
   cerrarSesion() {
-    SessionService.logout();
-    this.router.navigate(["/home"])
+    this.authService.logout()
+      .pipe(
+        finalize(() => {
+          SessionService.logout();
+          this.router.navigate(['/home']);
+        })
+      )
+      .subscribe({
+        error: () => { }
+      });
   }
 
   getImage(): string {

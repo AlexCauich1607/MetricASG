@@ -1,6 +1,8 @@
 import { Component } from '@angular/core';
 import { SessionService } from '../../../shared/class/temporalStorage';
 import { Router } from '@angular/router';
+import { finalize } from 'rxjs';
+import { AuthService } from '../../../services/auth.service';
 
 @Component({
   selector: 'app-sidebar',
@@ -11,7 +13,7 @@ import { Router } from '@angular/router';
 export class SidebarComponent {
   isOpen = false;
 
-  constructor(private router: Router){
+  constructor(private router: Router, private authService: AuthService) {
 
   }
   toggleSidebar() {
@@ -25,7 +27,15 @@ export class SidebarComponent {
   }
 
   close() {
-    SessionService.logout();
-    this.router.navigate(["/home"])
+    this.authService.logout()
+      .pipe(
+        finalize(() => {
+          SessionService.logout();
+          this.router.navigate(['/home']);
+        })
+      )
+      .subscribe({
+        error: () => { }
+      });
   }
 }
