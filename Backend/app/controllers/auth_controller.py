@@ -4,6 +4,8 @@ from fastapi import APIRouter, Depends, HTTPException, Response, Request
 from sqlalchemy.orm import Session
 from pydantic import BaseModel, Field
 
+from app.core.config import settings
+
 from app.database.database import get_db
 from app.services.auth_service import AuthService
 
@@ -74,9 +76,9 @@ class AuthController:
                 key="refresh_token",
                 value=result["refresh_token"],
                 httponly=True,
-                secure=False,        
+                secure=settings.app_env.lower() == "production",
                 samesite="lax",
-                max_age=60 * 60 * 24 * 7
+                max_age=settings.refresh_token_expire_days * 24 * 60 * 60
             )
 
             result.pop("refresh_token")
@@ -97,8 +99,25 @@ class AuthController:
             return auth_service.create_admin(payload.dict(), db)
         
         @self.router.post("/refresh-token")
-        def refresh_token(payload: Request, db: Session = Depends(get_db)):
-            return auth_service.refresh(payload, db)
+        def refresh_token(
+            request: Request,
+            response: Response,
+            db: Session = Depends(get_db)
+        ):
+            result = auth_service.refresh(request, db)
+
+            response.set_cookie(
+                key="refresh_token",
+                value=result["refresh_token"],
+                httponly=True,
+                secure=settings.app_env.lower() == "production",
+                samesite="lax",
+                max_age=settings.refresh_token_expire_days * 24 * 60 * 60
+            )
+
+            result.pop("refresh_token")
+
+            return result
         
         @self.router.post("/change-password")
         def change_password(
@@ -113,4 +132,19 @@ class AuthController:
                 db
             )
             
-    
+        @self.router.post("/logout")
+        def logout(
+            request: Request,
+            response: Response,
+            db: Session = Depends(get_db)
+        ):
+            result = auth_service.logout(request, db)
+
+            response.delete_cookie(
+                key="refresh_token",
+                httponly=True,
+                secure=settings.app_env.lower() == "production",
+                samesite="lax"
+            )
+
+            return result

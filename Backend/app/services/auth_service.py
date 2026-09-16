@@ -3,11 +3,14 @@ from datetime import datetime, timedelta
 from fastapi import HTTPException, Response, Request
 from sqlalchemy.orm import Session
 from passlib.context import CryptContext
-from jose import jwt
+from uuid import uuid4
+from jose import JWTError, jwt
 from passlib.hash import argon2
 
 from app.core.config import settings
 from app.models.user_model import User
+
+from app.models.refresh_session_model import RefreshSession
 
 from app.core.roles import UserRole
 
@@ -38,14 +41,26 @@ class AuthService:
             algorithm=settings.jwt_algorithm
         )
 
-    def create_refresh_token(self, data: dict):
+    def create_refresh_token(self, data: dict, db: Session):
         to_encode = data.copy()
 
         token_expire = datetime.utcnow() + timedelta(
             days=settings.refresh_token_expire_days
         )
 
+        jti = str(uuid4())
+
         to_encode["exp"] = token_expire
+        to_encode["jti"] = jti
+
+        refresh_session = RefreshSession(
+            user_id=int(data["id"]),
+            jti=jti,
+            expires_at=token_expire
+        )
+
+        db.add(refresh_session)
+        db.commit()
 
         return jwt.encode(
             to_encode,
@@ -65,12 +80,48 @@ class AuthService:
             algorithms=[settings.jwt_algorithm]
         )
 
+        jti = payload.get("jti")
+
+        if not jti:
+            raise HTTPException(401, "Invalid refresh session")
+
+        refresh_session = (
+            db.query(RefreshSession)
+            .filter(
+                RefreshSession.jti == jti,
+                RefreshSession.user_id == int(payload["id"])
+            )
+            .first()
+        )
+
+        if not refresh_session:
+            raise HTTPException(401, "Invalid refresh session")
+
+        if refresh_session.revoked_at is not None:
+            raise HTTPException(401, "Refresh session revoked")
+
+        if refresh_session.expires_at <= datetime.utcnow():
+            raise HTTPException(401, "Refresh session expired")
+
+        refresh_session.revoked_at = datetime.utcnow()
+
         new_access = self.create_token({
             "id": payload["id"],
             "role": payload["role"]
         })
 
-        return {"token": new_access}
+        new_refresh = self.create_refresh_token(
+            {
+                "id": payload["id"],
+                "role": payload["role"]
+            },
+            db
+        )
+
+        return {
+            "token": new_access,
+            "refresh_token": new_refresh
+        }
 
     def login(self, email: str, password: str, db: Session):
         user = db.query(User).filter(User.email == email).first()
@@ -93,10 +144,13 @@ class AuthService:
             "role": user.role
         })
 
-        refresh_token = self.create_refresh_token({
-            "id": str(user.id),
-            "role": user.role
-        })
+        refresh_token = self.create_refresh_token(
+            {
+                "id": str(user.id),
+                "role": user.role
+            },
+            db
+        )
 
         return {
             "access_token": token,
@@ -176,5 +230,39 @@ class AuthService:
 
         user.password = self.hash_password(new_password)
         db.commit()
+
+        return {"success": True}
+
+    def logout(self, request: Request, db: Session):
+        refresh_token = request.cookies.get("refresh_token")
+
+        if not refresh_token:
+            return {"success": True}
+
+        try:
+            payload = jwt.decode(
+                refresh_token,
+                settings.jwt_secret_key,
+                algorithms=[settings.jwt_algorithm]
+            )
+
+            jti = payload.get("jti")
+
+            if jti:
+                refresh_session = (
+                    db.query(RefreshSession)
+                    .filter(RefreshSession.jti == jti)
+                    .first()
+                )
+
+                if (
+                    refresh_session
+                    and refresh_session.revoked_at is None
+                ):
+                    refresh_session.revoked_at = datetime.utcnow()
+                    db.commit()
+
+        except JWTError:
+            pass
 
         return {"success": True}
