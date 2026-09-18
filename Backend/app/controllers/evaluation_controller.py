@@ -1,4 +1,5 @@
 from fastapi import Depends
+from pydantic import BaseModel, ConfigDict
 from sqlalchemy.orm import Session
 from ..controllers.base_controller import BaseController
 from ..database.database import get_db
@@ -7,6 +8,15 @@ from ..services.evaluations_service import EvaluationService
 from ..models.user_model import User
 from ..services.token_service import get_current_user
 
+class EvaluationResponseRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    indicator_id: int
+    indicator_answer_id: int
+
+
+class EvaluationSubmitRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    responses: list[EvaluationResponseRequest]
 
 class EvaluationsController(BaseController):
     model = Evaluation
@@ -26,15 +36,14 @@ class EvaluationsController(BaseController):
         
         @self.router.post("/submit")
         def submit_evaluation(
-            payload: dict,
+            payload: EvaluationSubmitRequest,
             current_user: User = Depends(get_current_user),
             db: Session = Depends(get_db)
         ):
             return EvaluationService(db).submit_evaluation(
-                payload,
+                payload.model_dump(),
                 current_user.id
             )
-        
         
         @self.router.get("/results/me")
         def get_latest_results(

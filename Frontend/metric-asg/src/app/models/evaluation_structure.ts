@@ -17,6 +17,7 @@ export interface EvaluationIndicator {
 }
 
 export interface EvaluationIndicatorAnswer {
+  id: number;
   maturity_level_id: number;
   text: string;
 }

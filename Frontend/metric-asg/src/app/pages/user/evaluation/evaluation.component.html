@@ -15,10 +15,11 @@
                     <p class="text-my-purple fs-5"><strong>{{question+1}}. {{ getQuestion().question }}</strong></p>
 
                     <div *ngFor="let answer of getQuestion().answers; let i= index">
-                        <label class="mb-2 py-2 px-3 answer-input" [style.--bg-color]="hexToRgbString(getAmbit().color)" [class]=" responses.get(getQuestion().id) === answer.maturity_level_id?'answer-select':''">
-                            <input type="radio"  [name]="'indicator-' + getQuestion().id"
-                                [checked]="responses.get(getQuestion().id) === answer.maturity_level_id"
-                                (change)="selectAnswer(getQuestion().id, answer.maturity_level_id, getAmbit().id)" />
+                        <label class="mb-2 py-2 px-3 answer-input" [style.--bg-color]="hexToRgbString(getAmbit().color)"
+                            [class]="responses.get(getQuestion().id) === answer.id ? 'answer-select' : ''">
+                            <input type="radio" [name]="'indicator-' + getQuestion().id"
+                                [checked]="responses.get(getQuestion().id) === answer.id"
+                                (change)="selectAnswer(getQuestion().id, answer.id, getAmbit().id)"/>
                             {{ answer.text }}
                         </label>
                     </div>

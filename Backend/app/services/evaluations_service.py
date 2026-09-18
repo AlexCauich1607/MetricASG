@@ -1,6 +1,6 @@
 from collections import defaultdict
 from datetime import date
-from http.client import HTTPException
+from fastapi import HTTPException
 
 from dateutil.relativedelta import relativedelta
 
@@ -58,6 +58,7 @@ class EvaluationService:
                     )
 
                     indicator_data["answers"].append({
+                        "id": answer.id,
                         "maturity_level_id": answer.maturity_level_id,
                         "maturity_name": ml.name if ml else None,
                         "value": ml.value if ml else None,
@@ -97,9 +98,24 @@ class EvaluationService:
        
         for r in responses:
             indicator = self.db.query(Indicator).get(r["indicator_id"])
-            maturity = self.db.query(MaturityLevel).get(r["maturity_level_id"])
+            answer = self.db.query(IndicatorAnswer).get(
+                r["indicator_answer_id"]
+            )
 
-            if not indicator or not maturity:
+            if not indicator or not answer:
+                continue
+
+            if answer.indicator_id != indicator.id:
+                raise HTTPException(
+                    status_code=422,
+                    detail="Indicator answer does not belong to indicator"
+                )
+
+            maturity = self.db.query(MaturityLevel).get(
+                answer.maturity_level_id
+            )
+
+            if not maturity:
                 continue
 
             response = EvaluationIndicatorResponse(
