@@ -2,7 +2,7 @@ import { Component } from '@angular/core';
 import { EvaluationService } from '../../../services/evaluation.service';
 import { EvaluationAmbit, EvaluationIndicator, EvaluationStructure } from '../../../models/evaluation_structure';
 import { Router } from '@angular/router';
-import { SessionService } from '../../../shared/class/temporalStorage';
+import { EvaluationSubmitPayload } from '../../../models/evaluation_submit';
 
 @Component({
   selector: 'app-evaluation',
@@ -16,7 +16,6 @@ export class EvaluationComponent {
   responses: Map<number, number> = new Map();
   completadas: Map<number, number> = new Map();
   fondo = "#6d2828ff"
-  userId: number = SessionService.getSessionItem('id') ?? 0;
 
   ambit = 0;
   question = 0;
@@ -94,18 +93,16 @@ export class EvaluationComponent {
       }
     });
   }
-  selectAnswer(indicatorId: number, maturityId: number, ambit_id: number) {
+  selectAnswer(indicatorId: number, answerId: number, ambit_id: number) {
     if (this.responses.get(indicatorId)) {
-      this.responses.set(indicatorId, maturityId);
+      this.responses.set(indicatorId, answerId);
     } else {
-      this.responses.set(indicatorId, maturityId);
+      this.responses.set(indicatorId, answerId);
       const valor = this.completadas.get(ambit_id) ?? 0;
       this.completadas.set(ambit_id, valor + 1);
       this.actualizarProgreso();
     }
-
   }
-
 
 
   getAllQuestionsLeght(): number {
@@ -129,12 +126,11 @@ export class EvaluationComponent {
     console.log(this.getAllQuestionsLeght())
     if (this.responses.size == this.getAllQuestionsLeght()) {
       if (confirm("¿Desea enviar esta evaluación?")) {
-        const payload = {
-          user_id: this.userId,
+        const payload: EvaluationSubmitPayload = {
           responses: Array.from(this.responses.entries()).map(
-            ([indicator_id, maturity_level_id]) => ({
+            ([indicator_id, indicator_answer_id]) => ({
               indicator_id,
-              maturity_level_id
+              indicator_answer_id
             })
           )
         };
