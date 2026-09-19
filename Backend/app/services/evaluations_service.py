@@ -10,7 +10,7 @@ from ..models.user_model import User
 
 from ..models.evaluation_ambit_score_model import EvaluationAmbitScore
 from ..models.evaluation_indicator_response_model import EvaluationIndicatorResponse
-from ..models.evaluation_model import Evaluation
+from ..models.evaluation_model import Evaluation, EvaluationStatus
 from ..models.ambit_model import Ambit;
 from ..models.indicator_model import Indicator;
 from ..models.indicator_answer_model import IndicatorAnswer;
@@ -71,31 +71,42 @@ class EvaluationService:
 
         return result
     
-    
-    
-    def submit_evaluation(
-        self,
-        payload: dict,
-        user_id: int
-    ):
+    def save_draft(self, payload: dict, user_id: int):
         responses = payload["responses"]
+
         user = self.db.query(User).filter(User.id == user_id).first()
         if not user:
             raise HTTPException(404, "User not found")
 
-       
-        evaluation = Evaluation(
-            user_id=user_id,
-            date=date.today()
+        evaluation = (
+            self.db.query(Evaluation)
+            .filter(
+                Evaluation.user_id == user_id,
+                Evaluation.status == EvaluationStatus.DRAFT
+            )
+            .order_by(Evaluation.id.desc())
+            .first()
         )
-        
-        self.db.add(evaluation)
-        self.db.flush()  
 
-       
-        ambit_scores = defaultdict(list)
+        if not evaluation:
+            evaluation = Evaluation(
+                user_id=user_id,
+                date=date.today(),
+                status=EvaluationStatus.DRAFT
+            )
+            self.db.add(evaluation)
+            self.db.flush()
+        else:
+            self.db.query(EvaluationIndicatorResponse).filter(
+                EvaluationIndicatorResponse.evaluation_id == evaluation.id
+            ).delete(synchronize_session=False)
 
-       
+            self.db.query(EvaluationAmbitScore).filter(
+                EvaluationAmbitScore.evaluation_id == evaluation.id
+            ).delete(synchronize_session=False)
+
+            evaluation.global_score = None
+
         for r in responses:
             indicator = self.db.query(Indicator).get(r["indicator_id"])
             answer = self.db.query(IndicatorAnswer).get(
@@ -122,16 +133,75 @@ class EvaluationService:
                 evaluation_id=evaluation.id,
                 indicator_id=indicator.id,
                 maturity_level_id=maturity.id,
-                score=maturity.value   
+                score=maturity.value
             )
 
             self.db.add(response)
-            
+
+        self.db.commit()
+
+        return {
+            "evaluation_id": evaluation.id,
+            "status": evaluation.status.value
+        }
+
+    def submit_evaluation(self, payload: dict, user_id: int):
+        responses = payload["responses"]
+        user = self.db.query(User).filter(User.id == user_id).first()
+        if not user:
+            raise HTTPException(404, "User not found")
+
+        self.validate_evaluation_completeness(responses)
+
+        evaluation = Evaluation(
+            user_id=user_id,
+            date=date.today(),
+            status=EvaluationStatus.COMPLETED
+        )
+
+        self.db.add(evaluation)
+        self.db.flush()
+
+
+        ambit_scores = defaultdict(list)
+
+
+        for r in responses:
+            indicator = self.db.query(Indicator).get(r["indicator_id"])
+            answer = self.db.query(IndicatorAnswer).get(
+                r["indicator_answer_id"]
+            )
+
+            if not indicator or not answer:
+                continue
+
+            if answer.indicator_id != indicator.id:
+                raise HTTPException(
+                    status_code=422,
+                    detail="Indicator answer does not belong to indicator"
+                )
+
+            maturity = self.db.query(MaturityLevel).get(
+                answer.maturity_level_id
+            )
+
+            if not maturity:
+                continue
+
+            response = EvaluationIndicatorResponse(
+                evaluation_id=evaluation.id,
+                indicator_id=indicator.id,
+                maturity_level_id=maturity.id,
+                score=maturity.value
+            )
+
+            self.db.add(response)
+
             ambit_scores[indicator.ambit_id].append(maturity.value)
 
-       
+
         global_scores = []
-        
+
 
         for ambit_id, scores in ambit_scores.items():
             avg_score = sum(scores) / len(scores)
@@ -153,7 +223,7 @@ class EvaluationService:
             self.db.add(ambit_score)
             global_scores.append(avg_score)
 
-       
+
         evaluation.global_score = (
             sum(global_scores) / len(global_scores)
             if global_scores else 0
@@ -168,16 +238,18 @@ class EvaluationService:
             "evaluation_id": evaluation.id,
             "global_score": evaluation.global_score
         }
-    
+
     def get_latest_results(self, user_id: int):
 
         evaluation = (
             self.db.query(Evaluation)
-            .filter(Evaluation.user_id == user_id)
+            .filter(
+                Evaluation.user_id == user_id,
+                Evaluation.status == EvaluationStatus.COMPLETED
+            )
             .order_by(Evaluation.id.desc())
             .first()
         )
-
         if not evaluation:
             raise HTTPException(404, "No evaluations found")
 
@@ -240,11 +312,14 @@ class EvaluationService:
             "global_maturity_level": global_level.name,
             "ambits": ambit_results
         }
-        
+
     def get_evaluation_history(self, user_id: int):
         evaluations = (
             self.db.query(Evaluation)
-            .filter(Evaluation.user_id == user_id)
+            .filter(
+                Evaluation.user_id == user_id,
+                Evaluation.status == EvaluationStatus.COMPLETED
+            )
             .order_by(Evaluation.id.asc())
             .all()
         )
@@ -258,7 +333,7 @@ class EvaluationService:
                 .filter(EvaluationAmbitScore.evaluation_id == ev.id)
                 .all()
             )
-            
+
 
             ambit_data = []
 
@@ -287,18 +362,18 @@ class EvaluationService:
                 "global_score": ev.global_score,
                 "ambits": ambit_data
             })
-            
+
         ambit_averages = []
-        
+
         for ambit_id, scores in ambit_accumulator.items():
             ambit_info = (self.db.query(Ambit).filter(Ambit.id == ambit_id).first())
             ambit_averages.append({
                 "ambit_name": ambit_info.name,
                 "ambit_id": ambit_id,
                 "letter": ambit_info.letter,
-                "ambit_color": ambit_info.color, 
+                "ambit_color": ambit_info.color,
                 "score": sum(scores) / len(scores)
-            
+
             })
 
         global_average = (
@@ -313,3 +388,25 @@ class EvaluationService:
                 "ambits": ambit_averages
             }
         }
+    def get_required_indicator_ids(self) -> set[int]:
+        return {
+            indicator_id
+            for (indicator_id,) in self.db.query(Indicator.id).all()
+        }
+    def validate_evaluation_completeness(self, responses: list[dict]) -> None:
+        required_indicator_ids = self.get_required_indicator_ids()
+        submitted_indicator_ids = {
+            response["indicator_id"]
+            for response in responses
+        }
+
+        missing_indicator_ids = required_indicator_ids - submitted_indicator_ids
+
+        if missing_indicator_ids:
+            raise HTTPException(
+                status_code=422,
+                detail={
+                    "message": "Evaluation is incomplete",
+                    "missing_indicator_ids": sorted(missing_indicator_ids)
+                }
+            )

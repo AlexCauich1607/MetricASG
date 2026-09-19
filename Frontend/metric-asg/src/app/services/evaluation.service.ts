@@ -20,6 +20,13 @@ export class EvaluationService extends BaseService<Evaluation> {
     return this.http.get<EvaluationStructure>(`http://localhost:8000/api/${this.endpoint}/structure/all`);
   }
 
+  saveDraft(payload: EvaluationSubmitPayload): Observable<any> {
+    return this.http.post(
+      `http://localhost:8000/api/evaluations/draft`,
+      payload
+    );
+  }
+
   submitEvaluation(payload: EvaluationSubmitPayload): Observable<any> {
     return this.http.post(
       `http://localhost:8000/api/evaluations/submit`,
