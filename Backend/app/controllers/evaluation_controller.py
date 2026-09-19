@@ -34,6 +34,16 @@ class EvaluationsController(BaseController):
         def get_structure(db: Session = Depends(get_db)):
             return EvaluationService(db).get_structure()
         
+        @self.router.post("/draft")
+        def save_draft(
+            payload: EvaluationSubmitRequest,
+            current_user: User = Depends(get_current_user),
+            db: Session = Depends(get_db)
+        ):
+            return EvaluationService(db).save_draft(
+                payload.model_dump(),
+                current_user.id
+            )
         @self.router.post("/submit")
         def submit_evaluation(
             payload: EvaluationSubmitRequest,
