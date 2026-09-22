@@ -70,7 +70,7 @@ class EvaluationService:
             result["ambits"].append(ambit_data)
 
         return result
-    
+
     def save_draft(self, payload: dict, user_id: int):
         responses = payload["responses"]
 
@@ -205,14 +205,7 @@ class EvaluationService:
 
         for ambit_id, scores in ambit_scores.items():
             avg_score = sum(scores) / len(scores)
-            maturity_level = (
-                self.db.query(MaturityLevel)
-                .filter(
-                    MaturityLevel.min_score <= avg_score,
-                    MaturityLevel.max_score >= avg_score
-                )
-                .first()
-            )
+            maturity_level = self.get_maturity_level_for_score(avg_score)
             ambit_score = EvaluationAmbitScore(
                 evaluation_id=evaluation.id,
                 ambit_id=ambit_id,
@@ -264,14 +257,7 @@ class EvaluationService:
         for ambit_score in ambit_scores:
 
 
-            maturity = (
-                self.db.query(MaturityLevel)
-                .filter(
-                    MaturityLevel.min_score <= ambit_score.score,
-                    MaturityLevel.max_score >= ambit_score.score
-                )
-                .first()
-            )
+            maturity = self.get_maturity_level_for_score(ambit_score.score)
 
             feedback = None
             if maturity:
@@ -297,14 +283,7 @@ class EvaluationService:
                 "maturity_color": maturity.color if maturity else None,
                 "feedback": feedback
             })
-        global_level = (
-                self.db.query(MaturityLevel)
-                .filter(
-                    MaturityLevel.min_score <= evaluation.global_score,
-                    MaturityLevel.max_score >= evaluation.global_score
-                )
-                .first()
-            )
+        global_level = self.get_maturity_level_for_score(evaluation.global_score)
         return {
             "evaluation_id": evaluation.id,
             "date": evaluation.date,
@@ -339,14 +318,7 @@ class EvaluationService:
 
             for a in ambits:
                 ambit_info = (self.db.query(Ambit).filter(Ambit.id == a.ambit_id).first())
-                maturity_level = (
-                    self.db.query(MaturityLevel)
-                    .filter(
-                        MaturityLevel.min_score <= a.score,
-                        MaturityLevel.max_score >= a.score
-                    )
-                    .first()
-                )
+                maturity_level = self.get_maturity_level_for_score(a.score)
                 ambit_data.append({
                     "ambit_name": ambit_info.name if ambit_info else None,
                     "ambit_color": maturity_level.color if maturity_level else None,
@@ -410,3 +382,41 @@ class EvaluationService:
                     "missing_indicator_ids": sorted(missing_indicator_ids)
                 }
             )
+
+    def get_maturity_level_for_score(
+        self,
+        score: float
+    ) -> MaturityLevel:
+        maturity_levels = (
+            self.db.query(MaturityLevel)
+            .order_by(MaturityLevel.min_score.asc())
+            .all()
+        )
+
+        if not maturity_levels:
+            raise HTTPException(
+                status_code=500,
+                detail="Maturity levels are not configured"
+            )
+
+        for index, maturity_level in enumerate(maturity_levels):
+            is_last_level = index == len(maturity_levels) - 1
+
+            if is_last_level:
+                matches = (
+                    maturity_level.min_score <= score
+                    <= maturity_level.max_score
+                )
+            else:
+                matches = (
+                    maturity_level.min_score <= score
+                    < maturity_level.max_score
+                )
+
+            if matches:
+                return maturity_level
+
+        raise HTTPException(
+            status_code=500,
+            detail=f"No maturity level configured for score {score}"
+        )

@@ -48,7 +48,7 @@ def seed_database():
                 "value": 6,
                 "description": "",
                 "min_score": 6,
-                "max_score": 7.4,
+                "max_score": 7.5,
                 "color": "#a6074c",
                 "is_removable": False
             },
@@ -57,7 +57,7 @@ def seed_database():
                 "value": 8,
                 "description": "",
                 "min_score": 7.5,
-                "max_score": 9.4,
+                "max_score": 9.5,
                 "color": "#13b46e",
                 "is_removable": False
             },
@@ -73,11 +73,14 @@ def seed_database():
         ]
 
         for data in maturity_levels_data:
-            exists = db.query(MaturityLevel).filter(
+            existing = db.query(MaturityLevel).filter(
                 MaturityLevel.value == data["value"]
             ).first()
 
-            if not exists:
+            if existing:
+                existing.min_score = data["min_score"]
+                existing.max_score = data["max_score"]
+            else:
                 db.add(MaturityLevel(**data))
 
         db.commit()
