@@ -78,6 +78,8 @@ class EvaluationService:
         if not user:
             raise HTTPException(404, "User not found")
 
+        self.validate_duplicate_indicators(responses)
+
         evaluation = (
             self.db.query(Evaluation)
             .filter(
@@ -108,26 +110,20 @@ class EvaluationService:
             evaluation.global_score = None
 
         for r in responses:
-            indicator = self.db.query(Indicator).get(r["indicator_id"])
-            answer = self.db.query(IndicatorAnswer).get(
+            indicator = self.get_indicator_or_error(r["indicator_id"])
+            answer = self.get_indicator_answer_or_error(
                 r["indicator_answer_id"]
-            )
-
-            if not indicator or not answer:
-                continue
-
-            if answer.indicator_id != indicator.id:
-                raise HTTPException(
-                    status_code=422,
-                    detail="Indicator answer does not belong to indicator"
                 )
 
-            maturity = self.db.query(MaturityLevel).get(
-                answer.maturity_level_id
+            self.validate_answer_belongs_to_indicator(
+                indicator,
+                answer
             )
 
-            if not maturity:
-                continue
+            maturity = self.get_maturity_level_or_error(
+                answer.maturity_level_id,
+                answer.id
+            )
 
             response = EvaluationIndicatorResponse(
                 evaluation_id=evaluation.id,
@@ -151,6 +147,7 @@ class EvaluationService:
         if not user:
             raise HTTPException(404, "User not found")
 
+        self.validate_duplicate_indicators(responses)
         self.validate_evaluation_completeness(responses)
 
         evaluation = Evaluation(
@@ -167,26 +164,20 @@ class EvaluationService:
 
 
         for r in responses:
-            indicator = self.db.query(Indicator).get(r["indicator_id"])
-            answer = self.db.query(IndicatorAnswer).get(
+            indicator = self.get_indicator_or_error(r["indicator_id"])
+            answer = self.get_indicator_answer_or_error(
                 r["indicator_answer_id"]
             )
 
-            if not indicator or not answer:
-                continue
-
-            if answer.indicator_id != indicator.id:
-                raise HTTPException(
-                    status_code=422,
-                    detail="Indicator answer does not belong to indicator"
-                )
-
-            maturity = self.db.query(MaturityLevel).get(
-                answer.maturity_level_id
+            self.validate_answer_belongs_to_indicator(
+                indicator,
+                answer
             )
 
-            if not maturity:
-                continue
+            maturity = self.get_maturity_level_or_error(
+                answer.maturity_level_id,
+                answer.id
+            )
 
             response = EvaluationIndicatorResponse(
                 evaluation_id=evaluation.id,
@@ -365,6 +356,59 @@ class EvaluationService:
             indicator_id
             for (indicator_id,) in self.db.query(Indicator.id).all()
         }
+
+    def validate_duplicate_indicators(self, responses: list[dict]) -> None:
+        seen_indicator_ids = set()
+        duplicate_indicator_ids = set()
+
+        for response in responses:
+            indicator_id = response["indicator_id"]
+
+            if indicator_id in seen_indicator_ids:
+                duplicate_indicator_ids.add(indicator_id)
+            else:
+                seen_indicator_ids.add(indicator_id)
+
+        if duplicate_indicator_ids:
+            raise HTTPException(
+                status_code=422,
+                detail={
+                    "message": "Duplicate indicators are not allowed",
+                    "duplicate_indicator_ids": sorted(duplicate_indicator_ids)
+                }
+            )
+
+    def get_indicator_answer_or_error(
+        self,
+        indicator_answer_id: int
+    ) -> IndicatorAnswer:
+        answer = self.db.query(IndicatorAnswer).get(indicator_answer_id)
+
+        if not answer:
+            raise HTTPException(
+                status_code=422,
+                detail={
+                    "message": "Indicator answer not found",
+                    "indicator_answer_id": indicator_answer_id
+                }
+            )
+
+        return answer
+
+    def get_indicator_or_error(self, indicator_id: int) -> Indicator:
+        indicator = self.db.query(Indicator).get(indicator_id)
+
+        if not indicator:
+            raise HTTPException(
+                status_code=422,
+                detail={
+                    "message": "Indicator not found",
+                    "indicator_id": indicator_id
+                }
+            )
+
+        return indicator
+
     def validate_evaluation_completeness(self, responses: list[dict]) -> None:
         required_indicator_ids = self.get_required_indicator_ids()
         submitted_indicator_ids = {
@@ -380,6 +424,21 @@ class EvaluationService:
                 detail={
                     "message": "Evaluation is incomplete",
                     "missing_indicator_ids": sorted(missing_indicator_ids)
+                }
+            )
+
+    def validate_answer_belongs_to_indicator(
+        self,
+        indicator: Indicator,
+        answer: IndicatorAnswer
+    ) -> None:
+        if answer.indicator_id != indicator.id:
+            raise HTTPException(
+                status_code=422,
+                detail={
+                    "message": "Indicator answer does not belong to indicator",
+                    "indicator_id": indicator.id,
+                    "indicator_answer_id": answer.id
                 }
             )
 
@@ -420,3 +479,33 @@ class EvaluationService:
             status_code=500,
             detail=f"No maturity level configured for score {score}"
         )
+
+    def get_maturity_level_or_error(
+        self,
+        maturity_level_id: int | None,
+        indicator_answer_id: int
+    ) -> MaturityLevel:
+        if maturity_level_id is None:
+            raise HTTPException(
+                status_code=422,
+                detail={
+                    "message": "Indicator answer has no maturity level",
+                    "indicator_answer_id": indicator_answer_id
+                }
+            )
+
+        maturity = self.db.query(MaturityLevel).get(
+            maturity_level_id
+        )
+
+        if not maturity:
+            raise HTTPException(
+                status_code=422,
+                detail={
+                    "message": "Maturity level not found for indicator answer",
+                    "indicator_answer_id": indicator_answer_id,
+                    "maturity_level_id": maturity_level_id
+                }
+            )
+
+        return maturity
