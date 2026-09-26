@@ -4,14 +4,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.controllers import controllers
 from app.core.config import settings
 
-from .database.database import Base, engine
-from .database.seed import seed_database
-
-
-Base.metadata.create_all(bind=engine)
-seed_database()
-
-
 app = FastAPI(
     title="ASG Metrics API",
     version="1.0.0",
