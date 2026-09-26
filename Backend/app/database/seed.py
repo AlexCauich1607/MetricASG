@@ -1,7 +1,12 @@
 from sqlalchemy.orm import Session
+
 from app.database.database import SessionLocal
 from app.models.ambit_model import Ambit
+from app.models.feedback_ambit_model import FeedbackAmbit
+from app.models.indicator_answer_model import IndicatorAnswer
+from app.models.indicator_model import Indicator
 from app.models.maturity_level_model import MaturityLevel
+from app.models.maturity_level_score_range_model import MaturityLevelScoreRange
 
 
 def seed_database():
@@ -87,3 +92,6 @@ def seed_database():
 
     finally:
         db.close()
+
+if __name__ == "__main__":
+    seed_database()
