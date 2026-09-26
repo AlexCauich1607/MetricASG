@@ -195,7 +195,7 @@ class EvaluationService:
 
 
         for ambit_id, scores in ambit_scores.items():
-            avg_score = sum(scores) / len(scores)
+            avg_score = self.calculate_ambit_score(scores)
             maturity_level = self.get_maturity_level_for_score(avg_score)
             ambit_score = EvaluationAmbitScore(
                 evaluation_id=evaluation.id,
@@ -208,9 +208,8 @@ class EvaluationService:
             global_scores.append(avg_score)
 
 
-        evaluation.global_score = (
-            sum(global_scores) / len(global_scores)
-            if global_scores else 0
+        evaluation.global_score = self.calculate_global_score(
+            global_scores
         )
 
         user.biannual_evaluation = True
@@ -509,3 +508,18 @@ class EvaluationService:
             )
 
         return maturity
+
+    @staticmethod
+    def calculate_ambit_score(scores: list[float]) -> float:
+        if not scores:
+            raise ValueError("Ambit scores cannot be empty")
+
+        return sum(scores) / len(scores)
+
+
+    @staticmethod
+    def calculate_global_score(ambit_scores: list[float]) -> float:
+        if not ambit_scores:
+            raise ValueError("Global ambit scores cannot be empty")
+
+        return sum(ambit_scores) / len(ambit_scores)
