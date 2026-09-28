@@ -29,6 +29,12 @@ class Evaluation(Base):
         nullable=False
     )
 
+    methodology_id = Column(
+        Integer,
+        ForeignKey("methodologies.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
+
     date = Column(DateTime, server_default=func.now())
     global_score = Column(Float)
     description = Column(Text)
@@ -43,6 +49,11 @@ class Evaluation(Base):
         nullable=False,
         default=EvaluationStatus.COMPLETED,
         server_default=EvaluationStatus.COMPLETED.value
+    )
+
+    methodology = relationship(
+        "Methodology",
+        back_populates="evaluations",
     )
 
     ambit_scores = relationship(

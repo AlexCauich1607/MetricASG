@@ -16,16 +16,30 @@ from ..models.indicator_model import Indicator;
 from ..models.indicator_answer_model import IndicatorAnswer;
 from ..models.maturity_level_model import MaturityLevel;
 
+from ..services.methodology_service import MethodologyService
+
 class EvaluationService:
 
     def __init__(self, db):
         self.db = db
 
     def get_structure(self):
+        methodology = MethodologyService(self.db).get_active()
 
-        ambits = self.db.query(Ambit).all()
-        maturity_levels = self.db.query(MaturityLevel)\
-            .order_by(MaturityLevel.value).all()
+        ambits = (
+            self.db.query(Ambit)
+            .filter(Ambit.methodology_id == methodology.id)
+            .all()
+        )
+
+        maturity_levels = (
+            self.db.query(MaturityLevel)
+            .filter(
+                MaturityLevel.methodology_id == methodology.id
+            )
+            .order_by(MaturityLevel.value)
+            .all()
+        )
 
         result = {"ambits": []}
 
@@ -78,12 +92,15 @@ class EvaluationService:
         if not user:
             raise HTTPException(404, "User not found")
 
+        methodology = MethodologyService(self.db).get_active()
+
         self.validate_duplicate_indicators(responses)
 
         evaluation = (
             self.db.query(Evaluation)
             .filter(
                 Evaluation.user_id == user_id,
+                Evaluation.methodology_id == methodology.id,
                 Evaluation.status == EvaluationStatus.DRAFT
             )
             .order_by(Evaluation.id.desc())
@@ -93,6 +110,7 @@ class EvaluationService:
         if not evaluation:
             evaluation = Evaluation(
                 user_id=user_id,
+                methodology_id=methodology.id,
                 date=date.today(),
                 status=EvaluationStatus.DRAFT
             )
@@ -110,7 +128,7 @@ class EvaluationService:
             evaluation.global_score = None
 
         for r in responses:
-            indicator = self.get_indicator_or_error(r["indicator_id"])
+            indicator = self.get_indicator_or_error(r["indicator_id"], methodology.id,)
             answer = self.get_indicator_answer_or_error(
                 r["indicator_answer_id"]
                 )
@@ -122,7 +140,8 @@ class EvaluationService:
 
             maturity = self.get_maturity_level_or_error(
                 answer.maturity_level_id,
-                answer.id
+                answer.id,
+                methodology.id,
             )
 
             response = EvaluationIndicatorResponse(
@@ -147,11 +166,14 @@ class EvaluationService:
         if not user:
             raise HTTPException(404, "User not found")
 
+        methodology = MethodologyService(self.db).get_active()
+
         self.validate_duplicate_indicators(responses)
-        self.validate_evaluation_completeness(responses)
+        self.validate_evaluation_completeness(responses,methodology.id)
 
         evaluation = Evaluation(
             user_id=user_id,
+            methodology_id=methodology.id,
             date=date.today(),
             status=EvaluationStatus.COMPLETED
         )
@@ -164,7 +186,9 @@ class EvaluationService:
 
 
         for r in responses:
-            indicator = self.get_indicator_or_error(r["indicator_id"])
+            indicator = self.get_indicator_or_error(r["indicator_id"],
+                methodology.id,
+            )
             answer = self.get_indicator_answer_or_error(
                 r["indicator_answer_id"]
             )
@@ -176,7 +200,8 @@ class EvaluationService:
 
             maturity = self.get_maturity_level_or_error(
                 answer.maturity_level_id,
-                answer.id
+                answer.id,
+                methodology.id
             )
 
             response = EvaluationIndicatorResponse(
@@ -196,7 +221,10 @@ class EvaluationService:
 
         for ambit_id, scores in ambit_scores.items():
             avg_score = self.calculate_ambit_score(scores)
-            maturity_level = self.get_maturity_level_for_score(avg_score)
+            maturity_level = self.get_maturity_level_for_score(
+                avg_score,
+                methodology.id,
+            )
             ambit_score = EvaluationAmbitScore(
                 evaluation_id=evaluation.id,
                 ambit_id=ambit_id,
@@ -247,7 +275,10 @@ class EvaluationService:
         for ambit_score in ambit_scores:
 
 
-            maturity = self.get_maturity_level_for_score(ambit_score.score)
+            maturity = self.get_maturity_level_for_score(
+                ambit_score.score,
+                evaluation.methodology_id,
+            )
 
             feedback = None
             if maturity:
@@ -273,7 +304,10 @@ class EvaluationService:
                 "maturity_color": maturity.color if maturity else None,
                 "feedback": feedback
             })
-        global_level = self.get_maturity_level_for_score(evaluation.global_score)
+        global_level = self.get_maturity_level_for_score(
+            evaluation.global_score,
+            evaluation.methodology_id,
+        )
         return {
             "evaluation_id": evaluation.id,
             "date": evaluation.date,
@@ -308,7 +342,10 @@ class EvaluationService:
 
             for a in ambits:
                 ambit_info = (self.db.query(Ambit).filter(Ambit.id == a.ambit_id).first())
-                maturity_level = self.get_maturity_level_for_score(a.score)
+                maturity_level = self.get_maturity_level_for_score(
+                    a.score,
+                    ev.methodology_id,
+                )
                 ambit_data.append({
                     "ambit_name": ambit_info.name if ambit_info else None,
                     "ambit_color": maturity_level.color if maturity_level else None,
@@ -350,10 +387,18 @@ class EvaluationService:
                 "ambits": ambit_averages
             }
         }
-    def get_required_indicator_ids(self) -> set[int]:
+    def get_required_indicator_ids(
+        self,
+        methodology_id: int,
+    ) -> set[int]:
         return {
             indicator_id
-            for (indicator_id,) in self.db.query(Indicator.id).all()
+            for (indicator_id,) in (
+                self.db.query(Indicator.id)
+                .join(Ambit, Indicator.ambit_id == Ambit.id)
+                .filter(Ambit.methodology_id == methodology_id)
+                .all()
+            )
         }
 
     def validate_duplicate_indicators(self, responses: list[dict]) -> None:
@@ -394,36 +439,68 @@ class EvaluationService:
 
         return answer
 
-    def get_indicator_or_error(self, indicator_id: int) -> Indicator:
-        indicator = self.db.query(Indicator).get(indicator_id)
+    def get_indicator_or_error(
+        self,
+        indicator_id: int,
+        methodology_id: int,
+    ) -> Indicator:
+        indicator = (
+            self.db.query(Indicator)
+            .join(Ambit, Indicator.ambit_id == Ambit.id)
+            .filter(
+                Indicator.id == indicator_id,
+                Ambit.methodology_id == methodology_id,
+            )
+            .first()
+        )
 
         if not indicator:
             raise HTTPException(
                 status_code=422,
                 detail={
-                    "message": "Indicator not found",
-                    "indicator_id": indicator_id
-                }
+                    "message": (
+                        "Indicator not found in active methodology"
+                    ),
+                    "indicator_id": indicator_id,
+                },
             )
 
         return indicator
 
-    def validate_evaluation_completeness(self, responses: list[dict]) -> None:
-        required_indicator_ids = self.get_required_indicator_ids()
+    def validate_evaluation_completeness(
+        self,
+        responses: list[dict],
+        methodology_id: int,
+    ) -> None:
+        required_indicator_ids = self.get_required_indicator_ids(
+            methodology_id
+        )
+
         submitted_indicator_ids = {
             response["indicator_id"]
             for response in responses
         }
 
-        missing_indicator_ids = required_indicator_ids - submitted_indicator_ids
+        missing_indicator_ids = (
+            required_indicator_ids - submitted_indicator_ids
+        )
 
-        if missing_indicator_ids:
+        unexpected_indicator_ids = (
+            submitted_indicator_ids - required_indicator_ids
+        )
+
+        if missing_indicator_ids or unexpected_indicator_ids:
             raise HTTPException(
                 status_code=422,
                 detail={
-                    "message": "Evaluation is incomplete",
-                    "missing_indicator_ids": sorted(missing_indicator_ids)
-                }
+                    "message": "Evaluation indicators do not match methodology",
+                    "missing_indicator_ids": sorted(
+                        missing_indicator_ids
+                    ),
+                    "unexpected_indicator_ids": sorted(
+                        unexpected_indicator_ids
+                    ),
+                },
             )
 
     def validate_answer_belongs_to_indicator(
@@ -443,10 +520,14 @@ class EvaluationService:
 
     def get_maturity_level_for_score(
         self,
-        score: float
+        score: float,
+        methodology_id: int,
     ) -> MaturityLevel:
         maturity_levels = (
             self.db.query(MaturityLevel)
+            .filter(
+                MaturityLevel.methodology_id == methodology_id
+            )
             .order_by(MaturityLevel.min_score.asc())
             .all()
         )
@@ -482,7 +563,8 @@ class EvaluationService:
     def get_maturity_level_or_error(
         self,
         maturity_level_id: int | None,
-        indicator_answer_id: int
+        indicator_answer_id: int,
+        methodology_id: int,
     ) -> MaturityLevel:
         if maturity_level_id is None:
             raise HTTPException(
@@ -493,8 +575,13 @@ class EvaluationService:
                 }
             )
 
-        maturity = self.db.query(MaturityLevel).get(
-            maturity_level_id
+        maturity = (
+            self.db.query(MaturityLevel)
+            .filter(
+                MaturityLevel.id == maturity_level_id,
+                MaturityLevel.methodology_id == methodology_id,
+            )
+            .first()
         )
 
         if not maturity:

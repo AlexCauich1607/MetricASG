@@ -25,6 +25,12 @@ class Ambit(Base):
     color = Column(String(20))
     is_removable = Column(Boolean, default=True)
 
+    methodology_id = Column(
+        Integer,
+        ForeignKey("methodologies.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
+
     indicators = relationship(
         "Indicator",
         cascade="all, delete",
@@ -42,12 +48,22 @@ class Ambit(Base):
         cascade="all, delete"
     )
 
+    methodology = relationship(
+        "Methodology",
+        back_populates="ambits",
+    )
+
 
 @event.listens_for(Ambit, "after_insert")
 def create_feedbacks_for_new_ambit(mapper, connection, target):
     
     maturity_levels = connection.execute(
-        MaturityLevel.__table__.select()
+        MaturityLevel.__table__
+        .select()
+        .where(
+            MaturityLevel.__table__.c.methodology_id
+            == target.methodology_id
+        )
     ).fetchall()
 
    

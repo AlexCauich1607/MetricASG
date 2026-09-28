@@ -27,9 +27,23 @@ class Indicator(Base):
 
 @event.listens_for(Indicator, "after_insert")
 def create_answers_for_new_indicator(mapper, connection, target):
+    ambits_table = Base.metadata.tables["ambits"]
+    maturity_levels_table = Base.metadata.tables["maturity_levels"]
+
+    methodology_id = connection.execute(
+        ambits_table
+        .select()
+        .with_only_columns(ambits_table.c.methodology_id)
+        .where(ambits_table.c.id == target.ambit_id)
+    ).scalar_one()
 
     maturity_levels = connection.execute(
-        Base.metadata.tables["maturity_levels"].select()
+        maturity_levels_table
+        .select()
+        .where(
+            maturity_levels_table.c.methodology_id
+            == methodology_id
+        )
     ).fetchall()
 
     for ml in maturity_levels:
