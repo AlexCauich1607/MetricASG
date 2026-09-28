@@ -20,6 +20,7 @@ import app.models.maturity_level_model
 import app.models.maturity_level_score_range_model
 import app.models.refresh_session_model
 import app.models.user_model
+import app.models.methodology_model
 
 
 config = context.config

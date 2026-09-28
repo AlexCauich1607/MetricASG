@@ -2,50 +2,91 @@ from sqlalchemy.orm import Session
 
 from app.database.database import SessionLocal
 from app.models.ambit_model import Ambit
+from app.models.evaluation_ambit_score_model import EvaluationAmbitScore
+from app.models.evaluation_indicator_response_model import EvaluationIndicatorResponse
+from app.models.evaluation_model import Evaluation
 from app.models.feedback_ambit_model import FeedbackAmbit
 from app.models.indicator_answer_model import IndicatorAnswer
 from app.models.indicator_model import Indicator
 from app.models.maturity_level_model import MaturityLevel
 from app.models.maturity_level_score_range_model import MaturityLevelScoreRange
+from app.models.methodology_model import Methodology, MethodologyStatus
+
+
+INITIAL_METHODOLOGY_VERSION = "1.0.0"
 
 
 def seed_database():
     db: Session = SessionLocal()
 
     try:
-    
+        methodology = (
+            db.query(Methodology)
+            .filter(
+                Methodology.version
+                == INITIAL_METHODOLOGY_VERSION
+            )
+            .first()
+        )
+
+        if not methodology:
+            active_methodology = (
+                db.query(Methodology)
+                .filter(Methodology.is_active.is_(True))
+                .first()
+            )
+
+            methodology = Methodology(
+                name="Metodología ASG",
+                version=INITIAL_METHODOLOGY_VERSION,
+                status=MethodologyStatus.PUBLISHED,
+                is_active=active_methodology is None,
+            )
+
+            db.add(methodology)
+            db.flush()
+
         ambits_data = [
             {
                 "name": "Ambiental",
                 "description": "",
                 "letter": "A",
                 "color": "#37AB48",
-                "is_removable": False
+                "is_removable": False,
             },
             {
                 "name": "Social",
                 "description": "",
                 "letter": "S",
                 "color": "#1565C0",
-                "is_removable": False
+                "is_removable": False,
             },
             {
                 "name": "Gobernanza",
                 "description": "",
                 "letter": "G",
                 "color": "#4527A0",
-                "is_removable": False
-            }
-
+                "is_removable": False,
+            },
         ]
 
         for data in ambits_data:
-            exists = db.query(Ambit).filter(
-                Ambit.letter == data["letter"]
-            ).first()
+            exists = (
+                db.query(Ambit)
+                .filter(
+                    Ambit.letter == data["letter"],
+                    Ambit.methodology_id == methodology.id,
+                )
+                .first()
+            )
 
             if not exists:
-                db.add(Ambit(**data))
+                db.add(
+                    Ambit(
+                        **data,
+                        methodology_id=methodology.id,
+                    )
+                )
 
         maturity_levels_data = [
             {
@@ -55,7 +96,7 @@ def seed_database():
                 "min_score": 6,
                 "max_score": 7.5,
                 "color": "#a6074c",
-                "is_removable": False
+                "is_removable": False,
             },
             {
                 "name": "Intermedio",
@@ -64,7 +105,7 @@ def seed_database():
                 "min_score": 7.5,
                 "max_score": 9.5,
                 "color": "#13b46e",
-                "is_removable": False
+                "is_removable": False,
             },
             {
                 "name": "Avanzado",
@@ -73,25 +114,37 @@ def seed_database():
                 "min_score": 9.5,
                 "max_score": 10,
                 "color": "#0a4057",
-                "is_removable": False
-            }
+                "is_removable": False,
+            },
         ]
 
         for data in maturity_levels_data:
-            existing = db.query(MaturityLevel).filter(
-                MaturityLevel.value == data["value"]
-            ).first()
+            existing = (
+                db.query(MaturityLevel)
+                .filter(
+                    MaturityLevel.value == data["value"],
+                    MaturityLevel.methodology_id
+                    == methodology.id,
+                )
+                .first()
+            )
 
             if existing:
                 existing.min_score = data["min_score"]
                 existing.max_score = data["max_score"]
             else:
-                db.add(MaturityLevel(**data))
+                db.add(
+                    MaturityLevel(
+                        **data,
+                        methodology_id=methodology.id,
+                    )
+                )
 
         db.commit()
 
     finally:
         db.close()
+
 
 if __name__ == "__main__":
     seed_database()

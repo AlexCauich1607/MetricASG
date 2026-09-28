@@ -29,7 +29,8 @@ def generate_schema(model: Type):
 class BaseController:
     model: Type = None
     prefix: str = None
-    
+    service_class = BaseService
+
     read_only_admin: bool =  False
     read_all_only_admin: bool = False
     create_only_admin: bool = False
@@ -81,7 +82,7 @@ class BaseController:
         ):
             import json
             filters_dict = json.loads(filters) if filters else {}
-            return BaseService(self.model, db).read_all(
+            return self.service_class(self.model, db).read_all(
                 filters=filters_dict,
                 order_by=order_by,
                 order_dir=order_dir
@@ -89,25 +90,25 @@ class BaseController:
 
         @self.router.get("/{item_id}", response_model=self.Schema, dependencies=read_dependencies)
         def read(item_id: int, db: Session = Depends(get_db)):
-            obj = BaseService(self.model, db).read(item_id)
+            obj = self.service_class(self.model, db).read(item_id)
             if not obj:
                 raise HTTPException(404, "Item not found")
             return obj
 
         @self.router.post("/", response_model=self.Schema, dependencies=create_dependencies)
         def create(data: Dict[str, Any], db: Session = Depends(get_db)):
-            return BaseService(self.model, db).create(data)
+            return self.service_class(self.model, db).create(data)
 
         @self.router.put("/{item_id}", response_model=self.Schema, dependencies=update_dependencies)
         def update(item_id: int, data: Dict[str, Any], db: Session = Depends(get_db)):
-            updated = BaseService(self.model, db).update(item_id, data)
+            updated = self.service_class(self.model, db).update(item_id, data)
             if not updated:
                 raise HTTPException(404, "Item not found")
             return updated
 
         @self.router.delete("/{item_id}", dependencies=delete_dependencies)
         def delete(item_id: int, db: Session = Depends(get_db)):
-            deleted = BaseService(self.model, db).delete(item_id)
+            deleted = self.service_class(self.model, db).delete(item_id)
             if not deleted:
                 raise HTTPException(404, "Item not found")
             return {"success": True}

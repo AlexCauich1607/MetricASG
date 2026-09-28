@@ -13,6 +13,7 @@ from .admin_controller import AdminController
 from .company_sector_controller import CompanySectorController
 from .company_size_controller import CompanySizeController
 from .company_relationship_controller import CompanyRelationshipController
+from .methodology_controller import MethodologiesController
 
 controllers = [
     UsersController(),
@@ -29,5 +30,6 @@ controllers = [
     AdminController(),
     CompanySectorController(),
     CompanySizeController(),
-    CompanyRelationshipController()
+    CompanyRelationshipController(),
+    MethodologiesController()
 ]
