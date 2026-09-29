@@ -127,6 +127,8 @@ class EvaluationService:
 
             evaluation.global_score = None
 
+            evaluation.global_maturity_level_id = None
+
         for r in responses:
             indicator = self.get_indicator_or_error(r["indicator_id"], methodology.id,)
             answer = self.get_indicator_answer_or_error(
@@ -240,6 +242,13 @@ class EvaluationService:
             global_scores
         )
 
+        global_maturity_level = self.get_maturity_level_for_score(
+            evaluation.global_score,
+            methodology.id,
+        )
+
+        evaluation.global_maturity_level_id = global_maturity_level.id
+
         user.biannual_evaluation = True
         user.next_evaluation = date.today() + relativedelta(months=6)
 
@@ -275,9 +284,13 @@ class EvaluationService:
         for ambit_score in ambit_scores:
 
 
-            maturity = self.get_maturity_level_for_score(
-                ambit_score.score,
-                evaluation.methodology_id,
+            maturity = (
+                self.db.query(MaturityLevel)
+                .filter(
+                    MaturityLevel.id == ambit_score.maturity_level_id,
+                    MaturityLevel.methodology_id == evaluation.methodology_id,
+                )
+                .first()
             )
 
             feedback = None
@@ -304,15 +317,21 @@ class EvaluationService:
                 "maturity_color": maturity.color if maturity else None,
                 "feedback": feedback
             })
-        global_level = self.get_maturity_level_for_score(
-            evaluation.global_score,
-            evaluation.methodology_id,
+        global_level = (
+            self.db.query(MaturityLevel)
+            .filter(
+                MaturityLevel.id == evaluation.global_maturity_level_id,
+                MaturityLevel.methodology_id == evaluation.methodology_id,
+            )
+            .first()
         )
         return {
             "evaluation_id": evaluation.id,
             "date": evaluation.date,
             "global_score": evaluation.global_score,
-            "global_maturity_level": global_level.name,
+            "global_maturity_level": (
+                global_level.name if global_level else None
+            ),
             "ambits": ambit_results
         }
 
@@ -342,9 +361,13 @@ class EvaluationService:
 
             for a in ambits:
                 ambit_info = (self.db.query(Ambit).filter(Ambit.id == a.ambit_id).first())
-                maturity_level = self.get_maturity_level_for_score(
-                    a.score,
-                    ev.methodology_id,
+                maturity_level = (
+                    self.db.query(MaturityLevel)
+                    .filter(
+                        MaturityLevel.id == a.maturity_level_id,
+                        MaturityLevel.methodology_id == ev.methodology_id,
+                    )
+                    .first()
                 )
                 ambit_data.append({
                     "ambit_name": ambit_info.name if ambit_info else None,

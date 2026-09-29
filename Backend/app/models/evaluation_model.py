@@ -35,6 +35,12 @@ class Evaluation(Base):
         nullable=False,
     )
 
+    global_maturity_level_id = Column(
+        Integer,
+        ForeignKey("maturity_levels.id", ondelete="RESTRICT"),
+        nullable=True,
+    )
+
     date = Column(DateTime, server_default=func.now())
     global_score = Column(Float)
     description = Column(Text)
@@ -54,6 +60,11 @@ class Evaluation(Base):
     methodology = relationship(
         "Methodology",
         back_populates="evaluations",
+    )
+
+    global_maturity_level = relationship(
+        "MaturityLevel",
+        foreign_keys=[global_maturity_level_id],
     )
 
     ambit_scores = relationship(
