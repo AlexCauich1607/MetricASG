@@ -512,13 +512,23 @@ class EvaluationService:
             submitted_indicator_ids - required_indicator_ids
         )
 
-        if missing_indicator_ids or unexpected_indicator_ids:
+        if missing_indicator_ids:
             raise HTTPException(
                 status_code=422,
                 detail={
-                    "message": "Evaluation indicators do not match methodology",
+                    "message": "Evaluation is incomplete",
                     "missing_indicator_ids": sorted(
                         missing_indicator_ids
+                    ),
+                },
+            )
+
+        if unexpected_indicator_ids:
+            raise HTTPException(
+                status_code=422,
+                detail={
+                    "message": (
+                        "Evaluation indicators do not match methodology"
                     ),
                     "unexpected_indicator_ids": sorted(
                         unexpected_indicator_ids

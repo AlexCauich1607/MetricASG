@@ -406,6 +406,30 @@ docker compose down
 
 Los datos almacenados en el volumen de PostgreSQL se conservan.
 
+### Pruebas del backend
+
+Las pruebas automatizadas del backend se ejecutan mediante `pytest` dentro del contenedor de la API.
+
+Con los servicios de Docker Compose levantados, desde la carpeta `Backend` puede ejecutarse la suite completa con un solo comando:
+
+```powershell
+docker compose exec -T api pytest
+```
+
+Este comando ejecuta todas las pruebas disponibles en el directorio `tests/`.
+
+Para ejecutar una prueba o archivo específico puede utilizarse:
+
+```powershell
+docker compose exec -T api pytest tests/<archivo>.py -v
+```
+
+Por ejemplo:
+
+```powershell
+docker compose exec -T api pytest tests/test_auth.py -v
+```
+
 #### Eliminar también los datos de PostgreSQL
 
 Si se necesita reiniciar completamente la base de datos local:
