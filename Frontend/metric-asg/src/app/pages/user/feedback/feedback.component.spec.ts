@@ -1,4 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { provideHttpClient } from '@angular/common/http';
+import { SharedModule } from '../../../shared/shared.module';
 
 import { FeedbackComponent } from './feedback.component';
 
@@ -8,7 +10,13 @@ describe('FeedbackComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      declarations: [FeedbackComponent]
+      declarations: [FeedbackComponent],
+      providers: [
+        provideHttpClient()
+      ],
+      imports: [
+        SharedModule
+      ]
     })
     .compileComponents();
 

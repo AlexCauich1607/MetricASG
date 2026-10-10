@@ -1,6 +1,9 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { provideHttpClient } from '@angular/common/http';
+import { RouterTestingModule } from '@angular/router/testing';
 
 import { AdminLayoutComponent } from './admin-layout.component';
+import { SidebarComponent } from '../../sidebar/sidebar.component';
 
 describe('AdminLayoutComponent', () => {
   let component: AdminLayoutComponent;
@@ -8,7 +11,16 @@ describe('AdminLayoutComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      declarations: [AdminLayoutComponent]
+      declarations: [
+        AdminLayoutComponent,
+        SidebarComponent
+      ],
+      imports: [
+        RouterTestingModule
+      ],
+      providers: [
+        provideHttpClient()
+      ]
     })
     .compileComponents();
 

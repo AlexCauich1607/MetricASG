@@ -9,8 +9,6 @@ import { SessionService } from '../../../shared/class/temporalStorage';
 import { ResultsComponent } from '../results/results.component';
 import { MatDialog } from '@angular/material/dialog';
 import { ReportModalComponent } from '../../modals/report-modal/report-modal.component';
-import { PdfReportTemplateComponent } from '../../../shared/pdf-template/pdf-template.component';
-import { PdfTemplateComponent } from '../../../pdf-template/pdf-template.component';
 import html2pdf from 'html2pdf.js';
 
 

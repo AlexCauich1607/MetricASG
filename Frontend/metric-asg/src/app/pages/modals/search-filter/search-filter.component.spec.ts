@@ -1,4 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 
 import { SearchFilterComponent } from './search-filter.component';
 
@@ -8,9 +9,26 @@ describe('SearchFilterComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      declarations: [SearchFilterComponent]
+      declarations: [SearchFilterComponent],
+      providers: [
+        {
+          provide: MatDialogRef,
+          useValue: {
+            close: jasmine.createSpy('close')
+          }
+        },
+        {
+          provide: MAT_DIALOG_DATA,
+          useValue: {
+            sectores: [],
+            sectores_seleccionados: [],
+            sizes: [],
+            sizes_seleccionados: []
+          }
+        }
+      ]
     })
-    .compileComponents();
+      .compileComponents();
 
     fixture = TestBed.createComponent(SearchFilterComponent);
     component = fixture.componentInstance;
