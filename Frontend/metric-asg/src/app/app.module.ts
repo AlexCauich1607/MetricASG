@@ -11,14 +11,12 @@ import { DomSanitizer } from '@angular/platform-browser';
 import { FooterComponent } from './shared/footer/footer.component';
 import { SharedModule } from './shared/shared.module';
 import { FormsModule } from '@angular/forms';
-import { PdfTemplateComponent } from './pdf-template/pdf-template.component';
 import { AuthInterceptor } from './core/interceptors/auth.interceptor';
 
 
 @NgModule({
   declarations: [
-    AppComponent,
-    PdfTemplateComponent
+    AppComponent
   ],
   imports: [
     BrowserModule,

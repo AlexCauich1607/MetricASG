@@ -1,16 +1,19 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { SharedModule } from '../shared.module';
 
 import { PdfReportTemplateComponent } from './pdf-template.component';
 
-describe('PdfTemplateComponent', () => {
+describe('PdfReportTemplateComponent', () => {
   let component: PdfReportTemplateComponent;
   let fixture: ComponentFixture<PdfReportTemplateComponent>;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      declarations: [PdfReportTemplateComponent]
+      imports: [
+        SharedModule
+      ]
     })
-    .compileComponents();
+      .compileComponents();
 
     fixture = TestBed.createComponent(PdfReportTemplateComponent);
     component = fixture.componentInstance;

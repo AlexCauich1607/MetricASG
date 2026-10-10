@@ -1,4 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { provideHttpClient } from '@angular/common/http';
+import { SharedModule } from '../../../shared/shared.module';
+import { FormsModule } from '@angular/forms';
 
 import { UsersComponent } from './users.component';
 
@@ -8,9 +11,16 @@ describe('UsersComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      declarations: [UsersComponent]
+      declarations: [UsersComponent],
+      providers: [
+        provideHttpClient()
+      ],
+      imports: [
+        SharedModule,
+        FormsModule
+      ],
     })
-    .compileComponents();
+      .compileComponents();
 
     fixture = TestBed.createComponent(UsersComponent);
     component = fixture.componentInstance;

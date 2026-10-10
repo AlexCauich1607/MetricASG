@@ -1,4 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
+import { provideHttpClient } from '@angular/common/http';
+import { ReactiveFormsModule } from '@angular/forms';
 
 import { FeedbacksFormComponent } from './feedbacks-form.component';
 
@@ -8,9 +11,27 @@ describe('FeedbacksFormComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      declarations: [FeedbacksFormComponent]
+      declarations: [FeedbacksFormComponent],
+      imports: [ReactiveFormsModule],
+      providers: [
+        provideHttpClient(),
+        {
+          provide: MAT_DIALOG_DATA,
+          useValue: {
+            id: 1,
+            nivel: 1,
+            name: 'Nivel de prueba'
+          }
+        },
+        {
+          provide: MatDialogRef,
+          useValue: {
+            close: jasmine.createSpy('close')
+          }
+        }
+      ]
     })
-    .compileComponents();
+      .compileComponents();
 
     fixture = TestBed.createComponent(FeedbacksFormComponent);
     component = fixture.componentInstance;

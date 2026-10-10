@@ -1,4 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
+import { provideHttpClient } from '@angular/common/http';
+import { ReactiveFormsModule } from '@angular/forms';
 
 import { IndicatorsFormComponent } from './indicators-form.component';
 
@@ -8,9 +11,26 @@ describe('IndicatorsFormComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      declarations: [IndicatorsFormComponent]
+      declarations: [IndicatorsFormComponent],
+      imports: [ReactiveFormsModule],
+      providers: [
+        provideHttpClient(),
+        {
+          provide: MAT_DIALOG_DATA,
+          useValue: {
+            id: 1,
+            indicator: undefined
+          }
+        },
+        {
+          provide: MatDialogRef,
+          useValue: {
+            close: jasmine.createSpy('close')
+          }
+        }
+      ]
     })
-    .compileComponents();
+      .compileComponents();
 
     fixture = TestBed.createComponent(IndicatorsFormComponent);
     component = fixture.componentInstance;
