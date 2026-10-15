@@ -25,47 +25,46 @@
 
     <div class="row g-3 mb-4 align-items-stretch">
 
-      <div class="col-sm-6 col-lg-3" *ngFor="let stat of stats">
-        <div class="card h-100 border-0 shadow-sm" [style.backgroundColor]="stat.color">
-
-          <div class="card-body text-white d-flex flex-column">
-
-
-            <small class="fw-bold mb-3">{{ stat.label }}</small>
-
-            <div class="mt-auto d-flex align-items-center justify-content-between">
-              <span class="sw-bg-sm-white p-2 rounded-2 material-icons fs-1">{{stat.icon}}</span>
-              <h3 class="fw-bold fs-1">{{ stat.value }}</h3>
+      @for (stat of stats; track stat) {
+        <div class="col-sm-6 col-lg-3">
+          <div class="card h-100 border-0 shadow-sm" [style.backgroundColor]="stat.color">
+            <div class="card-body text-white d-flex flex-column">
+              <small class="fw-bold mb-3">{{ stat.label }}</small>
+              <div class="mt-auto d-flex align-items-center justify-content-between">
+                <span class="sw-bg-sm-white p-2 rounded-2 material-icons fs-1">{{stat.icon}}</span>
+                <h3 class="fw-bold fs-1">{{ stat.value }}</h3>
+              </div>
             </div>
-
           </div>
         </div>
-
-      </div>
+      }
 
     </div>
-    <div class="row g-1 split-margin" *ngIf="loadingChart">
-      <div class="col-12 col-lg-6 ">
-        <div class="border rounded bg-white p-4 m-2 shadow-sm">
-          <h5 class="text-center fw-bold mb-3 " [style.color]="blueColor">
-            <b class="text-white px-1 rounded" [style.backgroundColor]="blueColor"><i class="bi bi-person-fill"></i></b>
-            {{usersData.name}}
-          </h5>
-          <app-bar-chart [data]="usersData.data" [scores]="usersData.value" [colors]="usersData.colors"
+    @if (loadingChart) {
+      <div class="row g-1 split-margin">
+        <div class="col-12 col-lg-6 ">
+          <div class="border rounded bg-white p-4 m-2 shadow-sm">
+            <h5 class="text-center fw-bold mb-3 " [style.color]="blueColor">
+              <b class="text-white px-1 rounded" [style.backgroundColor]="blueColor"><i class="bi bi-person-fill"></i></b>
+              {{usersData.name}}
+            </h5>
+            <app-bar-chart [data]="usersData.data" [scores]="usersData.value" [colors]="usersData.colors"
             [id]="0"></app-bar-chart>
+          </div>
         </div>
+        @for (ambito of data | keyvalue; track ambito) {
+          <div class="col-12 col-lg-6 ">
+            <div class="border rounded bg-white p-4 m-2 shadow-sm">
+              <h5 class="text-center fw-bold mb-3 " [style.color]="ambito.value.color">
+                <b class="text-white px-2 rounded" [style.backgroundColor]="ambito.value.color">{{ambito.value.letter}}</b>
+                {{ambito.value.name}}
+              </h5>
+              <app-bar-chart [data]="data.get(ambito.key)?.data??[]" [scores]="data.get(ambito.key)?.scores??[]"
+              [colors]="data.get(ambito.key)?.colors??[]" [id]="ambito.key"></app-bar-chart>
+            </div>
+          </div>
+        }
       </div>
-
-      <div class="col-12 col-lg-6 " *ngFor="let ambito of data | keyvalue">
-        <div class="border rounded bg-white p-4 m-2 shadow-sm">
-          <h5 class="text-center fw-bold mb-3 " [style.color]="ambito.value.color">
-            <b class="text-white px-2 rounded" [style.backgroundColor]="ambito.value.color">{{ambito.value.letter}}</b>
-            {{ambito.value.name}}
-          </h5>
-          <app-bar-chart [data]="data.get(ambito.key)?.data??[]" [scores]="data.get(ambito.key)?.scores??[]"
-            [colors]="data.get(ambito.key)?.colors??[]" [id]="ambito.key"></app-bar-chart>
-        </div>
-      </div>
-    </div>
+    }
   </div>
 </div>
