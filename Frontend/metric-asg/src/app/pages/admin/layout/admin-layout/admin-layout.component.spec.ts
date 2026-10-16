@@ -3,7 +3,6 @@ import { provideHttpClient, withXhr } from '@angular/common/http';
 import { RouterTestingModule } from '@angular/router/testing';
 
 import { AdminLayoutComponent } from './admin-layout.component';
-import { SidebarComponent } from '../../sidebar/sidebar.component';
 
 describe('AdminLayoutComponent', () => {
   let component: AdminLayoutComponent;
@@ -11,18 +10,15 @@ describe('AdminLayoutComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      declarations: [
-        AdminLayoutComponent
-      ],
       imports: [
-        SidebarComponent,
+        AdminLayoutComponent,
         RouterTestingModule
       ],
       providers: [
         provideHttpClient(withXhr())
       ]
     })
-      .compileComponents();
+    .compileComponents();
 
     fixture = TestBed.createComponent(AdminLayoutComponent);
     component = fixture.componentInstance;

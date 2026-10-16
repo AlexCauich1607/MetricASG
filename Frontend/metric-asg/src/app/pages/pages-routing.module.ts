@@ -1,7 +1,6 @@
 import { NgModule } from '@angular/core';
 import { RouterModule, Routes } from '@angular/router';
 import { HomeComponent } from './home/home.component';
-import { AdminLayoutComponent } from './admin/layout/admin-layout/admin-layout.component';
 import { DashboardComponent } from './admin/dashboard/dashboard.component';
 import { AmbitsComponent } from './admin/ambits/ambits.component';
 import { MaturityLevelsComponent } from './admin/maturity-levels/maturity-levels.component';
@@ -21,7 +20,9 @@ const routes: Routes = [
   { path: 'home', component: HomeComponent },
   {
     path: 'admin',
-    component: AdminLayoutComponent,
+    loadComponent: () =>
+      import('./admin/layout/admin-layout/admin-layout.component')
+        .then(m => m.AdminLayoutComponent),
     canActivate: [AuthGuard, AdminGuard],
     children: [
       { path: 'dashboard', component: DashboardComponent },
