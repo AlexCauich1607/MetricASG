@@ -12,17 +12,17 @@ describe('AdminLayoutComponent', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       declarations: [
-        AdminLayoutComponent,
-        SidebarComponent
+        AdminLayoutComponent
       ],
       imports: [
+        SidebarComponent,
         RouterTestingModule
       ],
       providers: [
         provideHttpClient(withXhr())
       ]
     })
-    .compileComponents();
+      .compileComponents();
 
     fixture = TestBed.createComponent(AdminLayoutComponent);
     component = fixture.componentInstance;

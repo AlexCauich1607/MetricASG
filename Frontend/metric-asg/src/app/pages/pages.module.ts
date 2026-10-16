@@ -53,7 +53,6 @@ import { SearchFilterComponent } from './modals/search-filter/search-filter.comp
     HomeComponent,
     AdminLayoutComponent,
     DashboardComponent,
-    SidebarComponent,
     AmbitsComponent,
     MaturityLevelsComponent,
     MaturityLevelFormComponent,
@@ -82,6 +81,7 @@ import { SearchFilterComponent } from './modals/search-filter/search-filter.comp
   imports: [
     CommonModule,
     PagesRoutingModule,
+    SidebarComponent,
     MatIconModule,
     SharedModule,
     FormsModule,
