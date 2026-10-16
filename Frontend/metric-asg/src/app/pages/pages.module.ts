@@ -3,7 +3,6 @@ import { CommonModule } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
 import { PagesRoutingModule } from './pages-routing.module';
 import { HomeComponent } from './home/home.component';
-import { LoginComponent } from './login/login.component';
 import { AdminLayoutComponent } from './admin/layout/admin-layout/admin-layout.component';
 import { DashboardComponent } from './admin/dashboard/dashboard.component';
 import { SidebarComponent } from './admin/sidebar/sidebar.component';
@@ -36,7 +35,6 @@ import { UserLayoutComponent } from './user/user-layout/user-layout.component';
 import { UserNavbarComponent } from './user/user-navbar/user-navbar.component';
 import { UsersComponent } from './admin/users/users.component';
 import { UserFormComponent } from './modals/user-form/user-form.component';
-import { SingUpComponent } from './sing-up/sing-up.component';
 
 import { MatStepperModule } from '@angular/material/stepper';
 import { CompanyComponent } from './admin/company/company.component';
@@ -54,7 +52,6 @@ import { SearchFilterComponent } from './modals/search-filter/search-filter.comp
 @NgModule({
   declarations: [
     HomeComponent,
-    LoginComponent,
     AdminLayoutComponent,
     DashboardComponent,
     SidebarComponent,
@@ -73,7 +70,6 @@ import { SearchFilterComponent } from './modals/search-filter/search-filter.comp
     UserNavbarComponent,
     UsersComponent,
     UserFormComponent,
-    SingUpComponent,
     CompanyComponent,
     SectorFormComponent,
     SizeFormComponent,

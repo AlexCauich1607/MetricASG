@@ -1,7 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideHttpClient, withXhr } from '@angular/common/http';
-import { MatStepperModule } from '@angular/material/stepper';
-import { ReactiveFormsModule, FormsModule } from '@angular/forms';
 
 import { SingUpComponent } from './sing-up.component';
 
@@ -11,15 +9,12 @@ describe('SingUpComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      declarations: [SingUpComponent],
+      imports: [
+        SingUpComponent
+      ],
       providers: [
         provideHttpClient(withXhr())
-      ],
-      imports: [
-        MatStepperModule,
-        ReactiveFormsModule,
-        FormsModule
-      ],
+      ]
     })
       .compileComponents();
 

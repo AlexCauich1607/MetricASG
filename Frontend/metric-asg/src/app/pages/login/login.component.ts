@@ -3,15 +3,17 @@ import { AuthService } from '../../services/auth.service';
 import { UserLogin } from '../../models/auth';
 import { Router } from '@angular/router';
 import { SessionService } from '../../shared/class/temporalStorage';
-import { Form, FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 
 @Component({
   selector: 'app-login',
-  standalone: false,
+  standalone: true,
+  imports: [ReactiveFormsModule],
   templateUrl: './login.component.html',
   changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './login.component.scss'
 })
+
 export class LoginComponent {
   showPassword = false;
   hasValue = false;

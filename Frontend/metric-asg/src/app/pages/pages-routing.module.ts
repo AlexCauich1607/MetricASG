@@ -1,7 +1,6 @@
 import { NgModule } from '@angular/core';
 import { RouterModule, Routes } from '@angular/router';
 import { HomeComponent } from './home/home.component';
-import { LoginComponent } from './login/login.component';
 import { AdminLayoutComponent } from './admin/layout/admin-layout/admin-layout.component';
 import { DashboardComponent } from './admin/dashboard/dashboard.component';
 import { AmbitsComponent } from './admin/ambits/ambits.component';
@@ -13,7 +12,6 @@ import { ResultsComponent } from './user/results/results.component';
 import { HistoryComponent } from './user/history/history.component';
 import { UserLayoutComponent } from './user/user-layout/user-layout.component';
 import { UsersComponent } from './admin/users/users.component';
-import { SingUpComponent } from './sing-up/sing-up.component';
 import { CompanyComponent } from './admin/company/company.component';
 import { AdminGuard } from '../core/guards/admin.guard';
 import { AuthGuard } from '../core/guards/auth.guard';
@@ -22,8 +20,6 @@ import { UserGuard } from '../core/guards/user.guard';
 const routes: Routes = [
 
   { path: 'home', component: HomeComponent },
-  { path: 'login', component: LoginComponent },
-  { path: 'sing-up', component: SingUpComponent },
   {
     path: 'admin',
     component: AdminLayoutComponent,
