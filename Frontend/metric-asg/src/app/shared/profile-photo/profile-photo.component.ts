@@ -6,7 +6,7 @@ import { MatDialog, MatDialogRef } from '@angular/material/dialog';
 
 @Component({
   selector: 'app-profile-photo',
-  standalone: false,
+  standalone: true,
   templateUrl: './profile-photo.component.html',
   changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './profile-photo.component.scss'
