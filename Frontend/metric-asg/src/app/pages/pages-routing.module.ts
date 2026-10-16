@@ -1,7 +1,6 @@
 import { NgModule } from '@angular/core';
 import { RouterModule, Routes } from '@angular/router';
 import { HomeComponent } from './home/home.component';
-import { MaturityLevelsComponent } from './admin/maturity-levels/maturity-levels.component';
 import { UserHomeComponent } from './user/user-home/user-home.component';
 import { FeedbackComponent } from './user/feedback/feedback.component';
 import { ResultsComponent } from './user/results/results.component';
@@ -35,7 +34,12 @@ const routes: Routes = [
           import('./admin/ambits/ambits.component')
             .then(m => m.AmbitsComponent)
       },
-      { path: 'maturity-levels', component: MaturityLevelsComponent },
+      {
+        path: 'maturity-levels',
+        loadComponent: () =>
+          import('./admin/maturity-levels/maturity-levels.component')
+            .then(m => m.MaturityLevelsComponent)
+      },
       { path: 'users', component: UsersComponent },
       { path: 'company', component: CompanyComponent },
       { path: '', redirectTo: 'dashboard', pathMatch: 'full' }
