@@ -17,12 +17,12 @@ import { AmbitCardComponent } from './ambit-card/ambit-card.component';
     FooterComponent,
     NavbarComponent,
     FeedbackComponent,
-    BarChartComponent,
     PdfReportTemplateComponent,
     ProfilePhotoComponent,
   ],
   imports: [
     CommonModule,
+    BarChartComponent,
     AmbitCardComponent
   ],
   exports: [
@@ -34,6 +34,6 @@ import { AmbitCardComponent } from './ambit-card/ambit-card.component';
     ProfilePhotoComponent,
     AmbitCardComponent
   ]
-  
+
 })
 export class SharedModule { }

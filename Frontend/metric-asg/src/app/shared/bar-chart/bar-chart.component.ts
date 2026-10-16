@@ -5,7 +5,7 @@ Chart.register(...registerables);
 
 @Component({
   selector: 'app-bar-chart',
-  standalone: false,
+  standalone: true,
   templateUrl: './bar-chart.component.html',
   changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './bar-chart.component.scss'
