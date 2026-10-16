@@ -1,5 +1,4 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { SharedModule } from '../shared.module';
 
 import { PdfReportTemplateComponent } from './pdf-template.component';
 
@@ -10,7 +9,7 @@ describe('PdfReportTemplateComponent', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [
-        SharedModule
+        PdfReportTemplateComponent
       ]
     })
       .compileComponents();

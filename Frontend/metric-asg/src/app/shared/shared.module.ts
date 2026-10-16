@@ -14,7 +14,6 @@ import { AmbitCardComponent } from './ambit-card/ambit-card.component';
 
 @NgModule({
   declarations: [
-    PdfReportTemplateComponent,
     ProfilePhotoComponent,
   ],
   imports: [
@@ -24,6 +23,7 @@ import { AmbitCardComponent } from './ambit-card/ambit-card.component';
     AmbitCardComponent,
     FeedbackComponent,
     NavbarComponent,
+    PdfReportTemplateComponent,
   ],
   exports: [
     FooterComponent,
