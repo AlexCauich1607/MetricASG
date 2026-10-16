@@ -1,4 +1,5 @@
 import { Component, ChangeDetectionStrategy } from '@angular/core';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { EvaluationService } from '../../../services/evaluation.service';
 import { EvaluationAmbit, EvaluationIndicator, EvaluationStructure } from '../../../models/evaluation_structure';
 import { Router } from '@angular/router';
@@ -6,7 +7,10 @@ import { EvaluationSubmitPayload } from '../../../models/evaluation_submit';
 
 @Component({
   selector: 'app-evaluation',
-  standalone: false,
+  standalone: true,
+  imports: [
+    MatProgressSpinnerModule
+  ],
   templateUrl: './evaluation.component.html',
   changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './evaluation.component.scss'

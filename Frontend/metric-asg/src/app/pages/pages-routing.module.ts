@@ -5,7 +5,6 @@ import { AdminLayoutComponent } from './admin/layout/admin-layout/admin-layout.c
 import { DashboardComponent } from './admin/dashboard/dashboard.component';
 import { AmbitsComponent } from './admin/ambits/ambits.component';
 import { MaturityLevelsComponent } from './admin/maturity-levels/maturity-levels.component';
-import { EvaluationComponent } from './user/evaluation/evaluation.component';
 import { UserHomeComponent } from './user/user-home/user-home.component';
 import { FeedbackComponent } from './user/feedback/feedback.component';
 import { ResultsComponent } from './user/results/results.component';
@@ -39,7 +38,12 @@ const routes: Routes = [
     canActivate: [AuthGuard, UserGuard],
     children: [
       { path: 'home', component: UserHomeComponent },
-      { path: 'evaluation', component: EvaluationComponent },
+      {
+        path: 'evaluation',
+        loadComponent: () =>
+          import('./user/evaluation/evaluation.component')
+            .then(m => m.EvaluationComponent)
+      },
       { path: 'feedback', component: FeedbackComponent },
       { path: 'results', component: ResultsComponent },
       { path: 'history', component: HistoryComponent },

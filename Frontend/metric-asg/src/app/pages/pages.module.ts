@@ -23,7 +23,6 @@ import { MaturityLevelFormComponent } from './modals/maturity-level-form/maturit
 import { AmbitFormComponent } from './modals/ambit-form/ambit-form.component';
 import { IndicatorsFormComponent } from './modals/indicators-form/indicators-form.component';
 import { FeedbacksFormComponent } from './modals/feedbacks-form/feedbacks-form.component';
-import { EvaluationComponent } from './user/evaluation/evaluation.component';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { UserHomeComponent } from './user/user-home/user-home.component';
@@ -61,7 +60,6 @@ import { SearchFilterComponent } from './modals/search-filter/search-filter.comp
     AmbitFormComponent,
     IndicatorsFormComponent,
     FeedbacksFormComponent,
-    EvaluationComponent,
     UserHomeComponent,
     ResultsComponent,
     FeedbackComponent,
