@@ -1,4 +1,6 @@
 import { Component, ChangeDetectionStrategy } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { SharedModule } from '../../../shared/shared.module';
 import { Ambit } from '../../../models/ambit';
 import { MaturityLevel } from '../../../models/maturity_level';
 import { AmbitService } from '../../../services/ambit.service';
@@ -13,7 +15,11 @@ import { FeedbacksFormComponent } from '../../modals/feedbacks-form/feedbacks-fo
 
 @Component({
   selector: 'app-ambits',
-  standalone: false,
+  standalone: true,
+  imports: [
+    CommonModule,
+    SharedModule
+  ],
   templateUrl: './ambits.component.html',
   changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './ambits.component.scss'

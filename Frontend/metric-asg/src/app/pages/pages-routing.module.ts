@@ -1,7 +1,6 @@
 import { NgModule } from '@angular/core';
 import { RouterModule, Routes } from '@angular/router';
 import { HomeComponent } from './home/home.component';
-import { AmbitsComponent } from './admin/ambits/ambits.component';
 import { MaturityLevelsComponent } from './admin/maturity-levels/maturity-levels.component';
 import { UserHomeComponent } from './user/user-home/user-home.component';
 import { FeedbackComponent } from './user/feedback/feedback.component';
@@ -30,7 +29,12 @@ const routes: Routes = [
           import('./admin/dashboard/dashboard.component')
             .then(m => m.DashboardComponent)
       },
-      { path: 'ambits', component: AmbitsComponent },
+      {
+        path: 'ambits',
+        loadComponent: () =>
+          import('./admin/ambits/ambits.component')
+            .then(m => m.AmbitsComponent)
+      },
       { path: 'maturity-levels', component: MaturityLevelsComponent },
       { path: 'users', component: UsersComponent },
       { path: 'company', component: CompanyComponent },

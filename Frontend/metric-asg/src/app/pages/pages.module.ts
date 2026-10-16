@@ -4,7 +4,6 @@ import { MatIconModule } from '@angular/material/icon';
 import { PagesRoutingModule } from './pages-routing.module';
 import { HomeComponent } from './home/home.component';
 import { SharedModule } from '../shared/shared.module';
-import { AmbitsComponent } from './admin/ambits/ambits.component';
 import { MaturityLevelsComponent } from './admin/maturity-levels/maturity-levels.component';
 import { FormsModule } from '@angular/forms';
 
@@ -48,7 +47,6 @@ import { SearchFilterComponent } from './modals/search-filter/search-filter.comp
 @NgModule({
   declarations: [
     HomeComponent,
-    AmbitsComponent,
     MaturityLevelsComponent,
     MaturityLevelFormComponent,
     AmbitFormComponent,
