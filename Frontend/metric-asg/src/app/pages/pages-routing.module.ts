@@ -1,7 +1,6 @@
 import { NgModule } from '@angular/core';
 import { RouterModule, Routes } from '@angular/router';
 import { HomeComponent } from './home/home.component';
-import { DashboardComponent } from './admin/dashboard/dashboard.component';
 import { AmbitsComponent } from './admin/ambits/ambits.component';
 import { MaturityLevelsComponent } from './admin/maturity-levels/maturity-levels.component';
 import { UserHomeComponent } from './user/user-home/user-home.component';
@@ -25,7 +24,12 @@ const routes: Routes = [
         .then(m => m.AdminLayoutComponent),
     canActivate: [AuthGuard, AdminGuard],
     children: [
-      { path: 'dashboard', component: DashboardComponent },
+      {
+        path: 'dashboard',
+        loadComponent: () =>
+          import('./admin/dashboard/dashboard.component')
+            .then(m => m.DashboardComponent)
+      },
       { path: 'ambits', component: AmbitsComponent },
       { path: 'maturity-levels', component: MaturityLevelsComponent },
       { path: 'users', component: UsersComponent },

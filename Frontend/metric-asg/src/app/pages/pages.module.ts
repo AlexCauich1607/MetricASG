@@ -3,7 +3,6 @@ import { CommonModule } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
 import { PagesRoutingModule } from './pages-routing.module';
 import { HomeComponent } from './home/home.component';
-import { DashboardComponent } from './admin/dashboard/dashboard.component';
 import { SharedModule } from '../shared/shared.module';
 import { AmbitsComponent } from './admin/ambits/ambits.component';
 import { MaturityLevelsComponent } from './admin/maturity-levels/maturity-levels.component';
@@ -49,7 +48,6 @@ import { SearchFilterComponent } from './modals/search-filter/search-filter.comp
 @NgModule({
   declarations: [
     HomeComponent,
-    DashboardComponent,
     AmbitsComponent,
     MaturityLevelsComponent,
     MaturityLevelFormComponent,
