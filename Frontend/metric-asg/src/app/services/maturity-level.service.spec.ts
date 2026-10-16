@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { provideHttpClient } from '@angular/common/http';
+import { provideHttpClient, withXhr } from '@angular/common/http';
 
 import { MaturityLevelService } from './maturity-level.service';
 
@@ -9,7 +9,7 @@ describe('MaturityLevelService', () => {
   beforeEach(() => {
     TestBed.configureTestingModule({
       providers: [
-        provideHttpClient()
+        provideHttpClient(withXhr())
       ]
     });
 

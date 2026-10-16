@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { provideHttpClient } from '@angular/common/http';
+import { provideHttpClient, withXhr } from '@angular/common/http';
 
 import { CompanySectorService } from './company-sector.service';
 
@@ -9,7 +9,7 @@ describe('CompanySectorService', () => {
   beforeEach(() => {
     TestBed.configureTestingModule({
       providers: [
-        provideHttpClient()
+        provideHttpClient(withXhr())
       ]
     });
 

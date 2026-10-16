@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, ChangeDetectionStrategy } from '@angular/core';
 import { ResultEvaluation } from '../../../models/evaluation_result';
 import { EvaluationService } from '../../../services/evaluation.service';
 import { SessionService } from '../../../shared/class/temporalStorage';
@@ -7,6 +7,7 @@ import { SessionService } from '../../../shared/class/temporalStorage';
   selector: 'app-feedback',
   standalone: false,
   templateUrl: './feedback.component.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './feedback.component.scss'
 })
 export class FeedbackComponent {

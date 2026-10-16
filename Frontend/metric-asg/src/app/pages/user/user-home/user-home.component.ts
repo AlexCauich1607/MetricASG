@@ -1,4 +1,4 @@
-import { Component, ComponentRef, ViewContainerRef } from '@angular/core';
+import { Component, ComponentRef, ViewContainerRef, ChangeDetectionStrategy } from '@angular/core';
 import { ResultEvaluation } from '../../../models/evaluation_result';
 import { EvaluationService } from '../../../services/evaluation.service';
 import { Chart, ChartConfiguration, registerables } from 'chart.js';
@@ -19,6 +19,7 @@ Chart.register(...registerables);
   selector: 'app-user-home',
   standalone: false,
   templateUrl: './user-home.component.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './user-home.component.scss'
 })
 export class UserHomeComponent {

@@ -1,4 +1,4 @@
-import { Component, Inject } from '@angular/core';
+import { Component, Inject, ChangeDetectionStrategy } from '@angular/core';
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 import { ResultEvaluation } from '../../../models/evaluation_result';
 
@@ -6,6 +6,7 @@ import { ResultEvaluation } from '../../../models/evaluation_result';
   selector: 'app-report-modal',
   standalone: false,
   templateUrl: './report-modal.component.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './report-modal.component.scss'
 })
 export class ReportModalComponent {

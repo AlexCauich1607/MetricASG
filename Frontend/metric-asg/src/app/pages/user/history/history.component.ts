@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, ChangeDetectionStrategy } from '@angular/core';
 import { EvaluationService } from '../../../services/evaluation.service';
 import { EvaluationHistory } from '../../../models/history_evaluations';
 import { id } from '@swimlane/ngx-charts';
@@ -16,6 +16,7 @@ export interface AmbitChart {
   selector: 'app-history',
   standalone: false,
   templateUrl: './history.component.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './history.component.scss'
 })
 export class HistoryComponent {

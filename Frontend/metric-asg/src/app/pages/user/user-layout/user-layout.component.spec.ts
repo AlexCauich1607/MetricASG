@@ -1,5 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { provideHttpClient } from '@angular/common/http';
+import { provideHttpClient, withXhr } from '@angular/common/http';
 import { RouterModule } from '@angular/router';
 import { SharedModule } from '../../../shared/shared.module';
 
@@ -17,7 +17,7 @@ describe('UserLayoutComponent', () => {
         UserNavbarComponent
       ],
       providers: [
-        provideHttpClient()
+        provideHttpClient(withXhr())
       ],
       imports: [
         RouterModule.forRoot([]),

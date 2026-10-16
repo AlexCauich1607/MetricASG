@@ -1,6 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { NO_ERRORS_SCHEMA } from '@angular/core';
-import { provideHttpClient } from '@angular/common/http';
+import { provideHttpClient, withXhr } from '@angular/common/http';
 import { MatDialogRef } from '@angular/material/dialog';
 
 import { SidebarComponent } from './sidebar.component';
@@ -15,7 +15,7 @@ describe('SidebarComponent', () => {
         SidebarComponent
       ],
       providers: [
-        provideHttpClient(),
+        provideHttpClient(withXhr()),
         {
           provide: MatDialogRef,
           useValue: {

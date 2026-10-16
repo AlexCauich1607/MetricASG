@@ -1,5 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { provideHttpClient } from '@angular/common/http';
+import { provideHttpClient, withXhr } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
 
 import { UserSettingsComponent } from './user-settings.component';
@@ -15,7 +15,7 @@ describe('UserSettingsComponent', () => {
         FormsModule
       ],
       providers: [
-        provideHttpClient()
+        provideHttpClient(withXhr())
       ]
     })
     .compileComponents();

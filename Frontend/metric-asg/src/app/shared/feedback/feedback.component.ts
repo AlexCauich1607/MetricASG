@@ -1,10 +1,11 @@
-import { Component, Input } from '@angular/core';
+import { Component, Input, ChangeDetectionStrategy } from '@angular/core';
 import { ResultAmbit } from '../../models/evaluation_result';
 
 @Component({
   selector: 'feedback-component',
   standalone: false,
   templateUrl: './feedback.component.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './feedback.component.scss'
 })
 export class FeedbackComponent {

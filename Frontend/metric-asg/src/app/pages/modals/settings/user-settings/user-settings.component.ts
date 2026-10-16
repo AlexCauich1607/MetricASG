@@ -1,4 +1,4 @@
-import { Component, Input } from '@angular/core';
+import { Component, Input, ChangeDetectionStrategy } from '@angular/core';
 import { User } from '../../../../models/user';
 import { UserService } from '../../../../services/user.service';
 import { SessionService } from '../../../../shared/class/temporalStorage';
@@ -8,6 +8,7 @@ import { FormGroup } from '@angular/forms';
   selector: 'app-user-settings',
   standalone: false,
   templateUrl: './user-settings.component.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './user-settings.component.scss'
 })
 export class UserSettingsComponent {

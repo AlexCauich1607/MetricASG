@@ -1,4 +1,4 @@
-import { Component, Input } from '@angular/core';
+import { Component, Input, ChangeDetectionStrategy } from '@angular/core';
 import { User } from '../../../../models/user';
 import { UserService } from '../../../../services/user.service';
 import { AuthService } from '../../../../services/auth.service';
@@ -9,6 +9,7 @@ import { phoneValidate } from '../../../../shared/class/validators';
   selector: 'app-contact-settings',
   standalone: false,
   templateUrl: './contact-settings.component.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './contact-settings.component.scss'
 })
 export class ContactSettingsComponent {

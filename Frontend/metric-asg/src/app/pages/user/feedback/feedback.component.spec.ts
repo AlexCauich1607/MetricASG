@@ -1,5 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { provideHttpClient } from '@angular/common/http';
+import { provideHttpClient, withXhr } from '@angular/common/http';
 import { SharedModule } from '../../../shared/shared.module';
 
 import { FeedbackComponent } from './feedback.component';
@@ -12,7 +12,7 @@ describe('FeedbackComponent', () => {
     await TestBed.configureTestingModule({
       declarations: [FeedbackComponent],
       providers: [
-        provideHttpClient()
+        provideHttpClient(withXhr())
       ],
       imports: [
         SharedModule

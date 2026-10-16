@@ -1,5 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { provideHttpClient } from '@angular/common/http';
+import { provideHttpClient, withXhr } from '@angular/common/http';
 import { MatStepperModule } from '@angular/material/stepper';
 import { ReactiveFormsModule, FormsModule } from '@angular/forms';
 
@@ -13,7 +13,7 @@ describe('SingUpComponent', () => {
     await TestBed.configureTestingModule({
       declarations: [SingUpComponent],
       providers: [
-        provideHttpClient()
+        provideHttpClient(withXhr())
       ],
       imports: [
         MatStepperModule,

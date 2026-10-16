@@ -1,5 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { provideHttpClient } from '@angular/common/http';
+import { provideHttpClient, withXhr } from '@angular/common/http';
 import { ReactiveFormsModule } from '@angular/forms';
 import { MatDialogModule } from '@angular/material/dialog';
 import { SharedModule } from '../../../shared/shared.module';
@@ -14,7 +14,7 @@ describe('MaturityLevelsComponent', () => {
     await TestBed.configureTestingModule({
       declarations: [MaturityLevelsComponent],
       providers: [
-        provideHttpClient()
+        provideHttpClient(withXhr())
       ],
       imports: [
         SharedModule,

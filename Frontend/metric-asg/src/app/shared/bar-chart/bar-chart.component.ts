@@ -1,4 +1,4 @@
-import { Component, Input, AfterViewInit, ViewChild, ElementRef } from '@angular/core';
+import { Component, Input, AfterViewInit, ViewChild, ElementRef, ChangeDetectionStrategy } from '@angular/core';
 import { Chart, ChartConfiguration, registerables } from 'chart.js';
 
 Chart.register(...registerables);
@@ -7,6 +7,7 @@ Chart.register(...registerables);
   selector: 'app-bar-chart',
   standalone: false,
   templateUrl: './bar-chart.component.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './bar-chart.component.scss'
 })
 export class BarChartComponent implements AfterViewInit {

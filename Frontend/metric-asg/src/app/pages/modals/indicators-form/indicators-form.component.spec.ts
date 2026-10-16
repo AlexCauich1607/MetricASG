@@ -1,6 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
-import { provideHttpClient } from '@angular/common/http';
+import { provideHttpClient, withXhr } from '@angular/common/http';
 import { ReactiveFormsModule } from '@angular/forms';
 
 import { IndicatorsFormComponent } from './indicators-form.component';
@@ -14,7 +14,7 @@ describe('IndicatorsFormComponent', () => {
       declarations: [IndicatorsFormComponent],
       imports: [ReactiveFormsModule],
       providers: [
-        provideHttpClient(),
+        provideHttpClient(withXhr()),
         {
           provide: MAT_DIALOG_DATA,
           useValue: {

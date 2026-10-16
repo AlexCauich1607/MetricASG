@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, ChangeDetectionStrategy } from '@angular/core';
 import { SessionService } from '../class/temporalStorage';
 import { SidebarComponent } from '../../pages/modals/settings/sidebar/sidebar.component';
 import { Dialog } from '@angular/cdk/dialog';
@@ -8,6 +8,7 @@ import { MatDialog, MatDialogRef } from '@angular/material/dialog';
   selector: 'app-profile-photo',
   standalone: false,
   templateUrl: './profile-photo.component.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './profile-photo.component.scss'
 })
 export class ProfilePhotoComponent {

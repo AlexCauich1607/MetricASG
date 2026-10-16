@@ -1,4 +1,4 @@
-import { Component, Inject } from '@angular/core';
+import { Component, Inject, ChangeDetectionStrategy } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 import { FeedbackAmbitService } from '../../../services/feedback-ambit.service';
@@ -8,6 +8,7 @@ import { FeedbackAmbit } from '../../../models/feedback_ambit';
   selector: 'app-feedbacks-form',
   standalone: false,
   templateUrl: './feedbacks-form.component.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './feedbacks-form.component.scss'
 })
 export class FeedbacksFormComponent {

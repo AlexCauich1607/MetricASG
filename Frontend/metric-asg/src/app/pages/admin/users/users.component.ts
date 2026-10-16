@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, ChangeDetectionStrategy } from '@angular/core';
 import { AdminService } from '../../../services/admin.service';
 import { AllUsers } from '../../../models/admin';
 import { User } from '../../../models/user';
@@ -17,6 +17,7 @@ import { SearchFilterComponent } from '../../modals/search-filter/search-filter.
   selector: 'app-users',
   standalone: false,
   templateUrl: './users.component.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './users.component.scss'
 })
 export class UsersComponent {

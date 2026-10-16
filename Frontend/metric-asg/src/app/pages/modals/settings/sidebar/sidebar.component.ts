@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, ChangeDetectionStrategy } from '@angular/core';
 import { UserService } from '../../../../services/user.service';
 import { User } from '../../../../models/user';
 import { SessionService } from '../../../../shared/class/temporalStorage';
@@ -8,6 +8,7 @@ import { MatDialog, MatDialogRef } from '@angular/material/dialog';
   selector: 'app-sidebar-settings',
   standalone: false,
   templateUrl: './sidebar.component.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './sidebar.component.scss'
 })
 export class SidebarComponent {

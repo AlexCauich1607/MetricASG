@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { provideHttpClient } from '@angular/common/http';
+import { provideHttpClient, withXhr } from '@angular/common/http';
 import { IndicatorService } from './indicator.service';
 
 describe('IndicatorService', () => {
@@ -8,7 +8,7 @@ describe('IndicatorService', () => {
   beforeEach(() => {
      TestBed.configureTestingModule({
       providers: [
-        provideHttpClient()
+        provideHttpClient(withXhr())
       ]
     });
     service = TestBed.inject(IndicatorService);

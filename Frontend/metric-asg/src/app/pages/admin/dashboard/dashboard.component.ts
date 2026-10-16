@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, ChangeDetectionStrategy } from '@angular/core';
 import { SessionService } from '../../../shared/class/temporalStorage';
 import { AdminService } from '../../../services/admin.service';
 import { Sumary } from '../../../models/admin';
@@ -17,6 +17,7 @@ export interface AmbitChart {
   selector: 'app-dashboard',
   standalone: false,
   templateUrl: './dashboard.component.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './dashboard.component.scss'
 })
 export class DashboardComponent {

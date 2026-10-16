@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, ChangeDetectionStrategy } from '@angular/core';
 import { CompanySector } from '../../../models/company_sector';
 import { CompanySectorService } from '../../../services/company-sector.service';
 import { CompanySize } from '../../../models/company_size';
@@ -11,6 +11,7 @@ import { SizeFormComponent } from '../../modals/size-form/size-form.component';
   selector: 'app-company',
   standalone: false,
   templateUrl: './company.component.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './company.component.scss'
 })
 export class CompanyComponent {

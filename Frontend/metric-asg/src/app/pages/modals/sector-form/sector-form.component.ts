@@ -1,4 +1,4 @@
-import { Component, Inject } from '@angular/core';
+import { Component, Inject, ChangeDetectionStrategy } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 import { CompanySectorService } from '../../../services/company-sector.service';
@@ -8,6 +8,7 @@ import { CompanySector } from '../../../models/company_sector';
   selector: 'app-sector-form',
   standalone: false,
   templateUrl: './sector-form.component.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './sector-form.component.scss'
 })
 export class SectorFormComponent {
