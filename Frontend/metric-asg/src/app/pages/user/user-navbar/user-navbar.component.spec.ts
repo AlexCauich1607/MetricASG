@@ -1,5 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { provideHttpClient } from '@angular/common/http';
+import { provideHttpClient, withXhr } from '@angular/common/http';
 
 import { UserNavbarComponent } from './user-navbar.component';
 
@@ -11,7 +11,7 @@ describe('UserNavbarComponent', () => {
     await TestBed.configureTestingModule({
       declarations: [UserNavbarComponent],
       providers: [
-        provideHttpClient()
+        provideHttpClient(withXhr())
       ]
     })
     .compileComponents();

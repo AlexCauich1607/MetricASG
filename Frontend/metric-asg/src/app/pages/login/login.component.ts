@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, ChangeDetectionStrategy } from '@angular/core';
 import { AuthService } from '../../services/auth.service';
 import { UserLogin } from '../../models/auth';
 import { Router } from '@angular/router';
@@ -9,6 +9,7 @@ import { Form, FormBuilder, FormGroup, Validators } from '@angular/forms';
   selector: 'app-login',
   standalone: false,
   templateUrl: './login.component.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './login.component.scss'
 })
 export class LoginComponent {

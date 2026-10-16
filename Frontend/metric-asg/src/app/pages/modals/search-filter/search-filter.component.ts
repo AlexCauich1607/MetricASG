@@ -1,4 +1,4 @@
-import { Component, Inject } from '@angular/core';
+import { Component, Inject, ChangeDetectionStrategy } from '@angular/core';
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 import { CompanySector } from '../../../models/company_sector';
 import { CompanySize } from '../../../models/company_size';
@@ -7,6 +7,7 @@ import { CompanySize } from '../../../models/company_size';
   selector: 'app-search-filter',
   standalone: false,
   templateUrl: './search-filter.component.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './search-filter.component.scss'
 })
 export class SearchFilterComponent {

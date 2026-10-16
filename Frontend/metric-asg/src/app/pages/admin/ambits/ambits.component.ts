@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, ChangeDetectionStrategy } from '@angular/core';
 import { Ambit } from '../../../models/ambit';
 import { MaturityLevel } from '../../../models/maturity_level';
 import { AmbitService } from '../../../services/ambit.service';
@@ -15,6 +15,7 @@ import { FeedbacksFormComponent } from '../../modals/feedbacks-form/feedbacks-fo
   selector: 'app-ambits',
   standalone: false,
   templateUrl: './ambits.component.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './ambits.component.scss'
 })
 export class AmbitsComponent {

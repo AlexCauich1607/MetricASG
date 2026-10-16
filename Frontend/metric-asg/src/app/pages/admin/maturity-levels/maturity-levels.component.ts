@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, ChangeDetectionStrategy } from '@angular/core';
 import { MaturityLevel } from '../../../models/maturity_level';
 import { MaturityLevelService } from '../../../services/maturity-level.service';
 import { MatDialog } from '@angular/material/dialog';
@@ -9,6 +9,7 @@ import { FormBuilder, FormGroup, Validators } from '@angular/forms';
   selector: 'app-maturity-levels',
   standalone: false,
   templateUrl: './maturity-levels.component.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './maturity-levels.component.scss'
 })
 export class MaturityLevelsComponent {

@@ -1,5 +1,5 @@
 import  {jsPDF} from 'jspdf';
-import { Component } from '@angular/core';
+import { Component, ChangeDetectionStrategy } from '@angular/core';
 import { ResultEvaluation } from '../../../models/evaluation_result';
 import { EvaluationService } from '../../../services/evaluation.service';
 import { SessionService } from '../../../shared/class/temporalStorage';
@@ -10,6 +10,7 @@ import html2canvas from 'html2canvas';
   selector: 'app-results',
   standalone: false,
   templateUrl: './results.component.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './results.component.scss'
 })
 export class ResultsComponent {

@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, ChangeDetectionStrategy } from '@angular/core';
 import { EvaluationService } from '../../../services/evaluation.service';
 import { EvaluationAmbit, EvaluationIndicator, EvaluationStructure } from '../../../models/evaluation_structure';
 import { Router } from '@angular/router';
@@ -8,6 +8,7 @@ import { EvaluationSubmitPayload } from '../../../models/evaluation_submit';
   selector: 'app-evaluation',
   standalone: false,
   templateUrl: './evaluation.component.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './evaluation.component.scss'
 })
 export class EvaluationComponent {

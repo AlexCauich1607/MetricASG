@@ -1,4 +1,4 @@
-import { Component, Inject } from '@angular/core';
+import { Component, Inject, ChangeDetectionStrategy } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { UserRegister } from '../../../models/auth';
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
@@ -8,6 +8,7 @@ import { AuthService } from '../../../services/auth.service';
   selector: 'app-user-form',
   standalone: false,
   templateUrl: './user-form.component.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './user-form.component.scss'
 })
 export class UserFormComponent {

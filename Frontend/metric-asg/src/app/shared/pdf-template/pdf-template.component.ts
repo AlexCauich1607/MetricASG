@@ -1,10 +1,11 @@
-import { Component, Input } from '@angular/core';
+import { Component, Input, ChangeDetectionStrategy } from '@angular/core';
 import { ResultEvaluation } from '../../models/evaluation_result';
 
 @Component({
   selector: 'app-pdf-template',
   standalone: false,
   templateUrl: './pdf-template.component.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './pdf-template.component.scss'
 })
 export class PdfReportTemplateComponent {

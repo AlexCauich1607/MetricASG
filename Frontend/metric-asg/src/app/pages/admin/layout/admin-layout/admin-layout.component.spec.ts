@@ -1,5 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { provideHttpClient } from '@angular/common/http';
+import { provideHttpClient, withXhr } from '@angular/common/http';
 import { RouterTestingModule } from '@angular/router/testing';
 
 import { AdminLayoutComponent } from './admin-layout.component';
@@ -19,7 +19,7 @@ describe('AdminLayoutComponent', () => {
         RouterTestingModule
       ],
       providers: [
-        provideHttpClient()
+        provideHttpClient(withXhr())
       ]
     })
     .compileComponents();

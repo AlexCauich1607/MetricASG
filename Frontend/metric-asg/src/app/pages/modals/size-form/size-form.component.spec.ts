@@ -1,5 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { provideHttpClient } from '@angular/common/http';
+import { provideHttpClient, withXhr } from '@angular/common/http';
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 import { ReactiveFormsModule } from '@angular/forms';
 
@@ -15,7 +15,7 @@ describe('SizeFormComponent', () => {
       declarations: [SizeFormComponent],
       imports: [ReactiveFormsModule],
       providers: [
-        provideHttpClient(),
+        provideHttpClient(withXhr()),
         {
           provide: MAT_DIALOG_DATA,
           useValue: {

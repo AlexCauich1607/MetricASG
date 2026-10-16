@@ -1,5 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { provideHttpClient } from '@angular/common/http';
+import { provideHttpClient, withXhr } from '@angular/common/http';
 import { SharedModule } from '../../../shared/shared.module';
 import { FormsModule } from '@angular/forms';
 
@@ -13,7 +13,7 @@ describe('UsersComponent', () => {
     await TestBed.configureTestingModule({
       declarations: [UsersComponent],
       providers: [
-        provideHttpClient()
+        provideHttpClient(withXhr())
       ],
       imports: [
         SharedModule,

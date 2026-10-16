@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, ChangeDetectionStrategy } from '@angular/core';
 import { SessionService } from '../../../shared/class/temporalStorage';
 import { Router } from '@angular/router';
 import { MatDialog, MatDialogRef } from '@angular/material/dialog';
@@ -11,6 +11,7 @@ import { AuthService } from '../../../services/auth.service';
   selector: 'app-user-navbar',
   standalone: false,
   templateUrl: './user-navbar.component.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './user-navbar.component.scss'
 })
 export class UserNavbarComponent {

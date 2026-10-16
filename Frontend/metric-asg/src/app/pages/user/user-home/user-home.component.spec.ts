@@ -1,5 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { provideHttpClient } from '@angular/common/http';
+import { provideHttpClient, withXhr } from '@angular/common/http';
 
 import { UserHomeComponent } from './user-home.component';
 
@@ -11,7 +11,7 @@ describe('UserHomeComponent', () => {
     await TestBed.configureTestingModule({
       declarations: [UserHomeComponent],
       providers: [
-        provideHttpClient()
+        provideHttpClient(withXhr())
       ]
     })
     .compileComponents();

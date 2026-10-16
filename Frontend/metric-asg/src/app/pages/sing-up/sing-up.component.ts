@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, ChangeDetectionStrategy } from '@angular/core';
 import { AuthService } from '../../services/auth.service';
 import { Router } from '@angular/router';
 import { UserRegister } from '../../models/auth';
@@ -13,6 +13,7 @@ import { phoneValidate } from '../../shared/class/validators';
   selector: 'app-sing-up',
   standalone: false,
   templateUrl: './sing-up.component.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './sing-up.component.scss'
 })
 export class SingUpComponent {

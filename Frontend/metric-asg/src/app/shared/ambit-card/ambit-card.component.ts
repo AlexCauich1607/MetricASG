@@ -1,9 +1,10 @@
-import { Component, Input } from '@angular/core';
+import { Component, Input, ChangeDetectionStrategy } from '@angular/core';
 
 @Component({
   selector: 'app-ambit-card',
   standalone: false,
   templateUrl: './ambit-card.component.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './ambit-card.component.scss'
 })
 export class AmbitCardComponent {
