@@ -6,7 +6,6 @@ import { FeedbackComponent } from './user/feedback/feedback.component';
 import { ResultsComponent } from './user/results/results.component';
 import { HistoryComponent } from './user/history/history.component';
 import { UserLayoutComponent } from './user/user-layout/user-layout.component';
-import { UsersComponent } from './admin/users/users.component';
 import { CompanyComponent } from './admin/company/company.component';
 import { AdminGuard } from '../core/guards/admin.guard';
 import { AuthGuard } from '../core/guards/auth.guard';
@@ -40,7 +39,12 @@ const routes: Routes = [
           import('./admin/maturity-levels/maturity-levels.component')
             .then(m => m.MaturityLevelsComponent)
       },
-      { path: 'users', component: UsersComponent },
+      {
+        path: 'users',
+        loadComponent: () =>
+          import('./admin/users/users.component')
+            .then(m => m.UsersComponent)
+      },
       { path: 'company', component: CompanyComponent },
       { path: '', redirectTo: 'dashboard', pathMatch: 'full' }
     ]

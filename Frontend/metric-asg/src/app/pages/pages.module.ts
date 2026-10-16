@@ -27,7 +27,6 @@ import { FeedbackComponent } from './user/feedback/feedback.component';
 import { HistoryComponent } from './user/history/history.component';
 import { UserLayoutComponent } from './user/user-layout/user-layout.component';
 import { UserNavbarComponent } from './user/user-navbar/user-navbar.component';
-import { UsersComponent } from './admin/users/users.component';
 import { UserFormComponent } from './modals/user-form/user-form.component';
 
 import { MatStepperModule } from '@angular/material/stepper';
@@ -56,7 +55,6 @@ import { SearchFilterComponent } from './modals/search-filter/search-filter.comp
     HistoryComponent,
     UserLayoutComponent,
     UserNavbarComponent,
-    UsersComponent,
     UserFormComponent,
     CompanyComponent,
     SectorFormComponent,
