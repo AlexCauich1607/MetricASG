@@ -30,7 +30,6 @@ import { UserNavbarComponent } from './user/user-navbar/user-navbar.component';
 import { UserFormComponent } from './modals/user-form/user-form.component';
 
 import { MatStepperModule } from '@angular/material/stepper';
-import { CompanyComponent } from './admin/company/company.component';
 import { SectorFormComponent } from './modals/sector-form/sector-form.component';
 import { SizeFormComponent } from './modals/size-form/size-form.component';
 import { ReportModalComponent } from './modals/report-modal/report-modal.component';
@@ -56,7 +55,6 @@ import { SearchFilterComponent } from './modals/search-filter/search-filter.comp
     UserLayoutComponent,
     UserNavbarComponent,
     UserFormComponent,
-    CompanyComponent,
     SectorFormComponent,
     SizeFormComponent,
     ReportModalComponent,

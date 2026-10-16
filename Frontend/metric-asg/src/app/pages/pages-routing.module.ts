@@ -6,7 +6,6 @@ import { FeedbackComponent } from './user/feedback/feedback.component';
 import { ResultsComponent } from './user/results/results.component';
 import { HistoryComponent } from './user/history/history.component';
 import { UserLayoutComponent } from './user/user-layout/user-layout.component';
-import { CompanyComponent } from './admin/company/company.component';
 import { AdminGuard } from '../core/guards/admin.guard';
 import { AuthGuard } from '../core/guards/auth.guard';
 import { UserGuard } from '../core/guards/user.guard';
@@ -45,7 +44,12 @@ const routes: Routes = [
           import('./admin/users/users.component')
             .then(m => m.UsersComponent)
       },
-      { path: 'company', component: CompanyComponent },
+      {
+        path: 'company',
+        loadComponent: () =>
+          import('./admin/company/company.component')
+            .then(m => m.CompanyComponent)
+      },
       { path: '', redirectTo: 'dashboard', pathMatch: 'full' }
     ]
   },

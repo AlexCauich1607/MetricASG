@@ -1,4 +1,6 @@
 import { Component, ChangeDetectionStrategy } from '@angular/core';
+import { SharedModule } from '../../../shared/shared.module';
+
 import { CompanySector } from '../../../models/company_sector';
 import { CompanySectorService } from '../../../services/company-sector.service';
 import { CompanySize } from '../../../models/company_size';
@@ -9,7 +11,10 @@ import { SizeFormComponent } from '../../modals/size-form/size-form.component';
 
 @Component({
   selector: 'app-company',
-  standalone: false,
+  standalone: true,
+  imports: [
+    SharedModule
+  ],
   templateUrl: './company.component.html',
   changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './company.component.scss'
