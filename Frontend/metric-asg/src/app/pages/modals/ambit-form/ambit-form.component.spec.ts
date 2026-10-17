@@ -1,7 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 import { provideHttpClient, withXhr } from '@angular/common/http';
-import { ReactiveFormsModule } from '@angular/forms';
+
 
 import { AmbitFormComponent } from './ambit-form.component';
 
@@ -11,8 +11,7 @@ describe('AmbitFormComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      declarations: [AmbitFormComponent],
-      imports: [ReactiveFormsModule],
+      imports: [AmbitFormComponent],
       providers: [
         provideHttpClient(withXhr()),
         {
