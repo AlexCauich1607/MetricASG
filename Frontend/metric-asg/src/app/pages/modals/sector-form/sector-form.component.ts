@@ -1,12 +1,15 @@
 import { Component, Inject, ChangeDetectionStrategy } from '@angular/core';
-import { FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 import { CompanySectorService } from '../../../services/company-sector.service';
 import { CompanySector } from '../../../models/company_sector';
 
 @Component({
   selector: 'app-sector-form',
-  standalone: false,
+  standalone: true,
+  imports: [
+    ReactiveFormsModule
+  ],
   templateUrl: './sector-form.component.html',
   changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './sector-form.component.scss'

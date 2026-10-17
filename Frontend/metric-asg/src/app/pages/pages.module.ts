@@ -30,7 +30,6 @@ import { UserNavbarComponent } from './user/user-navbar/user-navbar.component';
 import { UserFormComponent } from './modals/user-form/user-form.component';
 
 import { MatStepperModule } from '@angular/material/stepper';
-import { SectorFormComponent } from './modals/sector-form/sector-form.component';
 import { SizeFormComponent } from './modals/size-form/size-form.component';
 import { ReportModalComponent } from './modals/report-modal/report-modal.component';
 import { DownloadReportComponent } from './user/download-report/download-report.component';
@@ -43,7 +42,6 @@ import { ContactSettingsComponent } from './modals/settings/contact-settings/con
 @NgModule({
   declarations: [
     UserFormComponent,
-    SectorFormComponent,
     SizeFormComponent,
     DownloadReportComponent,
     UserSettingsComponent,
