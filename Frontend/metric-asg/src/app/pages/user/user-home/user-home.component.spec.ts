@@ -1,6 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideHttpClient, withXhr } from '@angular/common/http';
-
+import { provideRouter } from '@angular/router';
 import { UserHomeComponent } from './user-home.component';
 
 describe('UserHomeComponent', () => {
@@ -9,12 +9,13 @@ describe('UserHomeComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      declarations: [UserHomeComponent],
+      imports: [UserHomeComponent],
       providers: [
-        provideHttpClient(withXhr())
+        provideHttpClient(withXhr()),
+        provideRouter([])
       ]
     })
-    .compileComponents();
+      .compileComponents();
 
     fixture = TestBed.createComponent(UserHomeComponent);
     component = fixture.componentInstance;
