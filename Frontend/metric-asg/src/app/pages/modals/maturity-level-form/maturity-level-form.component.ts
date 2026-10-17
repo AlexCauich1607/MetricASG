@@ -1,13 +1,15 @@
 import { Component, Inject, ChangeDetectionStrategy } from '@angular/core';
-import { FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 import { MaturityLevel } from '../../../models/maturity_level';
 import { MaturityLevelService } from '../../../services/maturity-level.service';
 
-
 @Component({
   selector: 'app-maturity-level-form',
-  standalone: false,
+  standalone: true,
+  imports: [
+    ReactiveFormsModule
+  ],
   templateUrl: './maturity-level-form.component.html',
   changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './maturity-level-form.component.scss'
