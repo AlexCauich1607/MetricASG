@@ -2,11 +2,19 @@ import { Component, ChangeDetectionStrategy } from '@angular/core';
 import { UserService } from '../../../../services/user.service';
 import { User } from '../../../../models/user';
 import { SessionService } from '../../../../shared/class/temporalStorage';
-import { MatDialog, MatDialogRef } from '@angular/material/dialog';
+import { MatDialogRef } from '@angular/material/dialog';
+import { UserSettingsComponent } from '../user-settings/user-settings.component';
+import { CompanySettingsComponent } from '../company-settings/company-settings.component';
+import { ContactSettingsComponent } from '../contact-settings/contact-settings.component';
 
 @Component({
   selector: 'app-sidebar-settings',
-  standalone: false,
+  standalone: true,
+  imports: [
+    UserSettingsComponent,
+    CompanySettingsComponent,
+    ContactSettingsComponent
+  ],
   templateUrl: './sidebar.component.html',
   changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './sidebar.component.scss'
