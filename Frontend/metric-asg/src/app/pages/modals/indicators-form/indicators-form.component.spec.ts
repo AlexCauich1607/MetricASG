@@ -1,8 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 import { provideHttpClient, withXhr } from '@angular/common/http';
-import { ReactiveFormsModule } from '@angular/forms';
-
 import { IndicatorsFormComponent } from './indicators-form.component';
 
 describe('IndicatorsFormComponent', () => {
@@ -11,8 +9,9 @@ describe('IndicatorsFormComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      declarations: [IndicatorsFormComponent],
-      imports: [ReactiveFormsModule],
+      imports: [
+        IndicatorsFormComponent
+      ],
       providers: [
         provideHttpClient(withXhr()),
         {

@@ -43,7 +43,6 @@ import { SearchFilterComponent } from './modals/search-filter/search-filter.comp
 
 @NgModule({
   declarations: [
-    IndicatorsFormComponent,
     FeedbacksFormComponent,
     UserHomeComponent,
     ResultsComponent,
@@ -68,6 +67,7 @@ import { SearchFilterComponent } from './modals/search-filter/search-filter.comp
     MatIconModule,
     SharedModule,
     AmbitFormComponent,
+    IndicatorsFormComponent,
     FormsModule,
     MaturityLevelFormComponent,
     HomeComponent,
