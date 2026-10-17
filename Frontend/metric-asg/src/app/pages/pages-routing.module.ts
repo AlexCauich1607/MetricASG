@@ -1,18 +1,17 @@
 import { NgModule } from '@angular/core';
 import { RouterModule, Routes } from '@angular/router';
-import { HomeComponent } from './home/home.component';
-import { UserHomeComponent } from './user/user-home/user-home.component';
-import { FeedbackComponent } from './user/feedback/feedback.component';
-import { ResultsComponent } from './user/results/results.component';
-import { HistoryComponent } from './user/history/history.component';
-import { UserLayoutComponent } from './user/user-layout/user-layout.component';
 import { AdminGuard } from '../core/guards/admin.guard';
 import { AuthGuard } from '../core/guards/auth.guard';
 import { UserGuard } from '../core/guards/user.guard';
 
 const routes: Routes = [
+  {
+    path: 'home',
+    loadComponent: () =>
+      import('./home/home.component')
+        .then(m => m.HomeComponent)
+  },
 
-  { path: 'home', component: HomeComponent },
   {
     path: 'admin',
     loadComponent: () =>
@@ -53,24 +52,48 @@ const routes: Routes = [
       { path: '', redirectTo: 'dashboard', pathMatch: 'full' }
     ]
   },
+
   {
     path: 'user',
-    component: UserLayoutComponent,
+    loadComponent: () =>
+      import('./user/user-layout/user-layout.component')
+        .then(m => m.UserLayoutComponent),
     canActivate: [AuthGuard, UserGuard],
     children: [
-      { path: 'home', component: UserHomeComponent },
+      {
+        path: 'home',
+        loadComponent: () =>
+          import('./user/user-home/user-home.component')
+            .then(m => m.UserHomeComponent)
+      },
       {
         path: 'evaluation',
         loadComponent: () =>
           import('./user/evaluation/evaluation.component')
             .then(m => m.EvaluationComponent)
       },
-      { path: 'feedback', component: FeedbackComponent },
-      { path: 'results', component: ResultsComponent },
-      { path: 'history', component: HistoryComponent },
+      {
+        path: 'feedback',
+        loadComponent: () =>
+          import('./user/feedback/feedback.component')
+            .then(m => m.FeedbackComponent)
+      },
+      {
+        path: 'results',
+        loadComponent: () =>
+          import('./user/results/results.component')
+            .then(m => m.ResultsComponent)
+      },
+      {
+        path: 'history',
+        loadComponent: () =>
+          import('./user/history/history.component')
+            .then(m => m.HistoryComponent)
+      },
       { path: '', redirectTo: 'home', pathMatch: 'full' }
     ]
   },
+
   { path: '', redirectTo: 'home', pathMatch: 'full' }
 ];
 
