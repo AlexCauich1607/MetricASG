@@ -1,6 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideHttpClient, withXhr } from '@angular/common/http';
-import { FormsModule } from '@angular/forms';
 
 import { CompanySettingsComponent } from './company-settings.component';
 
@@ -10,15 +9,14 @@ describe('CompanySettingsComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      declarations: [CompanySettingsComponent],
       imports: [
-        FormsModule
+        CompanySettingsComponent
       ],
       providers: [
         provideHttpClient(withXhr())
       ]
     })
-    .compileComponents();
+      .compileComponents();
 
     fixture = TestBed.createComponent(CompanySettingsComponent);
     component = fixture.componentInstance;

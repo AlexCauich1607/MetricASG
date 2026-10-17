@@ -46,7 +46,6 @@ import { ContactSettingsComponent } from './modals/settings/contact-settings/con
     DownloadReportComponent,
     UserSettingsComponent,
     Sider,
-    CompanySettingsComponent,
     ContactSettingsComponent
   ],
   imports: [
@@ -64,6 +63,7 @@ import { ContactSettingsComponent } from './modals/settings/contact-settings/con
     UserNavbarComponent,
     UserLayoutComponent,
     ReportModalComponent,
+    CompanySettingsComponent,
     FormsModule,
     MaturityLevelFormComponent,
     HomeComponent,
