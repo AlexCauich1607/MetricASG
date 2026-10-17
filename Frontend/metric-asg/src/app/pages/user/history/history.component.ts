@@ -1,10 +1,11 @@
 import { Component, ChangeDetectionStrategy } from '@angular/core';
 import { EvaluationService } from '../../../services/evaluation.service';
 import { EvaluationHistory } from '../../../models/history_evaluations';
-import { id } from '@swimlane/ngx-charts';
 import { SwDates } from '../../../models/dates';
 import { SessionService } from '../../../shared/class/temporalStorage';
-
+import { KeyValuePipe } from '@angular/common';
+import { AmbitCardComponent } from '../../../shared/ambit-card/ambit-card.component';
+import { BarChartComponent } from '../../../shared/bar-chart/bar-chart.component';
 
 export interface AmbitChart {
   name: string,
@@ -14,7 +15,12 @@ export interface AmbitChart {
 }
 @Component({
   selector: 'app-history',
-  standalone: false,
+  standalone: true,
+  imports: [
+    AmbitCardComponent,
+    BarChartComponent,
+    KeyValuePipe
+  ],
   templateUrl: './history.component.html',
   changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './history.component.scss'
