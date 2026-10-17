@@ -43,7 +43,6 @@ import { SearchFilterComponent } from './modals/search-filter/search-filter.comp
 
 @NgModule({
   declarations: [
-    HomeComponent,
     MaturityLevelFormComponent,
     AmbitFormComponent,
     IndicatorsFormComponent,
@@ -71,6 +70,7 @@ import { SearchFilterComponent } from './modals/search-filter/search-filter.comp
     MatIconModule,
     SharedModule,
     FormsModule,
+    HomeComponent,
     MatDialogModule,
     MatButtonModule,
     MatInputModule,
@@ -81,7 +81,7 @@ import { SearchFilterComponent } from './modals/search-filter/search-filter.comp
     NgxChartsModule,
     MatStepperModule,
     MatSelectModule,
-    MatOptionModule
+    MatOptionModule,
   ],
   exports: [
     Sider
