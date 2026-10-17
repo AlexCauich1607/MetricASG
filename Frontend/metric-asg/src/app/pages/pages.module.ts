@@ -45,8 +45,7 @@ import { ContactSettingsComponent } from './modals/settings/contact-settings/con
     SizeFormComponent,
     DownloadReportComponent,
     UserSettingsComponent,
-    Sider,
-    ContactSettingsComponent
+    Sider
   ],
   imports: [
     CommonModule,
@@ -58,6 +57,7 @@ import { ContactSettingsComponent } from './modals/settings/contact-settings/con
     FeedbacksFormComponent,
     UserHomeComponent,
     ResultsComponent,
+    ContactSettingsComponent,
     FeedbackComponent,
     HistoryComponent,
     UserNavbarComponent,
