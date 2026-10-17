@@ -1,16 +1,24 @@
-import { Router } from '@angular/router';
-import { AdminGuard } from './admin.guard';
+import { TestBed } from '@angular/core/testing';
+import { ActivatedRouteSnapshot, Router, RouterStateSnapshot } from '@angular/router';
+import { adminGuard } from './admin.guard';
 import { SessionService } from '../../shared/class/temporalStorage';
 
-describe('AdminGuard', () => {
-  let guard: AdminGuard;
+describe('adminGuard', () => {
   let router: jasmine.SpyObj<Router>;
 
   beforeEach(() => {
     sessionStorage.clear();
 
     router = jasmine.createSpyObj<Router>('Router', ['navigate']);
-    guard = new AdminGuard(router);
+
+    TestBed.configureTestingModule({
+      providers: [
+        {
+          provide: Router,
+          useValue: router
+        }
+      ]
+    });
   });
 
   afterEach(() => {
@@ -21,14 +29,28 @@ describe('AdminGuard', () => {
     SessionService.setSessionItem('token', 'test-token');
     SessionService.setSessionItem('role', 'admin');
 
-    expect(guard.canActivate()).toBeTrue();
+    const result = TestBed.runInInjectionContext(() =>
+      adminGuard(
+        {} as ActivatedRouteSnapshot,
+        {} as RouterStateSnapshot
+      )
+    );
+
+    expect(result).toBeTrue();
     expect(router.navigate).not.toHaveBeenCalled();
   });
 
   it('should redirect when token does not exist', () => {
     SessionService.setSessionItem('role', 'admin');
 
-    expect(guard.canActivate()).toBeFalse();
+    const result = TestBed.runInInjectionContext(() =>
+      adminGuard(
+        {} as ActivatedRouteSnapshot,
+        {} as RouterStateSnapshot
+      )
+    );
+
+    expect(result).toBeFalse();
     expect(router.navigate).toHaveBeenCalledWith(['/']);
   });
 
@@ -36,7 +58,14 @@ describe('AdminGuard', () => {
     SessionService.setSessionItem('token', 'test-token');
     SessionService.setSessionItem('role', 'user');
 
-    expect(guard.canActivate()).toBeFalse();
+    const result = TestBed.runInInjectionContext(() =>
+      adminGuard(
+        {} as ActivatedRouteSnapshot,
+        {} as RouterStateSnapshot
+      )
+    );
+
+    expect(result).toBeFalse();
     expect(router.navigate).toHaveBeenCalledWith(['/']);
   });
 });
