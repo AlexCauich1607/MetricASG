@@ -39,7 +39,6 @@ import { UserSettingsComponent } from './modals/settings/user-settings/user-sett
 import { SidebarComponent as Sider } from './modals/settings/sidebar/sidebar.component';
 import { CompanySettingsComponent } from './modals/settings/company-settings/company-settings.component';
 import { ContactSettingsComponent } from './modals/settings/contact-settings/contact-settings.component';
-import { SearchFilterComponent } from './modals/search-filter/search-filter.component';
 
 @NgModule({
   declarations: [
@@ -50,8 +49,7 @@ import { SearchFilterComponent } from './modals/search-filter/search-filter.comp
     UserSettingsComponent,
     Sider,
     CompanySettingsComponent,
-    ContactSettingsComponent,
-    SearchFilterComponent
+    ContactSettingsComponent
   ],
   imports: [
     CommonModule,
@@ -81,7 +79,7 @@ import { SearchFilterComponent } from './modals/search-filter/search-filter.comp
     NgxChartsModule,
     MatStepperModule,
     MatSelectModule,
-    MatOptionModule,
+    MatOptionModule
   ],
   exports: [
     Sider

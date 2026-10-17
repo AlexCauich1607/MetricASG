@@ -5,7 +5,7 @@ import { CompanySize } from '../../../models/company_size';
 
 @Component({
   selector: 'app-search-filter',
-  standalone: false,
+  standalone: true,
   templateUrl: './search-filter.component.html',
   changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './search-filter.component.scss'
