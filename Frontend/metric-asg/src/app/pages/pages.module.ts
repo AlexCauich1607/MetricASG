@@ -40,9 +40,6 @@ import { CompanySettingsComponent } from './modals/settings/company-settings/com
 import { ContactSettingsComponent } from './modals/settings/contact-settings/contact-settings.component';
 
 @NgModule({
-  declarations: [
-    DownloadReportComponent,
-  ],
   imports: [
     CommonModule,
     PagesRoutingModule,
@@ -55,6 +52,7 @@ import { ContactSettingsComponent } from './modals/settings/contact-settings/con
     ResultsComponent,
     ContactSettingsComponent,
     UserSettingsComponent,
+    DownloadReportComponent,
     Sider,
     SizeFormComponent,
     UserFormComponent,
