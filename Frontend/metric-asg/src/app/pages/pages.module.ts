@@ -20,12 +20,11 @@ import { IndicatorsFormComponent } from './modals/indicators-form/indicators-for
 import { FeedbacksFormComponent } from './modals/feedbacks-form/feedbacks-form.component';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { UserHomeComponent } from './user/user-home/user-home.component';
+
 import { NgxChartsModule } from '@swimlane/ngx-charts';
-import { ResultsComponent } from './user/results/results.component';
-import { FeedbackComponent } from './user/feedback/feedback.component';
-import { HistoryComponent } from './user/history/history.component';
-import { UserLayoutComponent } from './user/user-layout/user-layout.component';
+
+
+
 import { UserNavbarComponent } from './user/user-navbar/user-navbar.component';
 import { UserFormComponent } from './modals/user-form/user-form.component';
 
@@ -48,18 +47,13 @@ import { ContactSettingsComponent } from './modals/settings/contact-settings/con
     AmbitFormComponent,
     IndicatorsFormComponent,
     FeedbacksFormComponent,
-    UserHomeComponent,
-    ResultsComponent,
     ContactSettingsComponent,
     UserSettingsComponent,
     DownloadReportComponent,
     Sider,
     SizeFormComponent,
     UserFormComponent,
-    FeedbackComponent,
-    HistoryComponent,
     UserNavbarComponent,
-    UserLayoutComponent,
     ReportModalComponent,
     CompanySettingsComponent,
     FormsModule,
