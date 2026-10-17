@@ -1,16 +1,24 @@
-import { Router } from '@angular/router';
-import { AuthGuard } from './auth.guard';
+import { TestBed } from '@angular/core/testing';
+import { ActivatedRouteSnapshot, Router, RouterStateSnapshot } from '@angular/router';
+import { authGuard } from './auth.guard';
 import { SessionService } from '../../shared/class/temporalStorage';
 
-describe('AuthGuard', () => {
-  let guard: AuthGuard;
+describe('authGuard', () => {
   let router: jasmine.SpyObj<Router>;
 
   beforeEach(() => {
     sessionStorage.clear();
 
     router = jasmine.createSpyObj<Router>('Router', ['navigate']);
-    guard = new AuthGuard(router);
+
+    TestBed.configureTestingModule({
+      providers: [
+        {
+          provide: Router,
+          useValue: router
+        }
+      ]
+    });
   });
 
   afterEach(() => {
@@ -20,12 +28,26 @@ describe('AuthGuard', () => {
   it('should allow access when token exists', () => {
     SessionService.setSessionItem('token', 'test-token');
 
-    expect(guard.canActivate()).toBeTrue();
+    const result = TestBed.runInInjectionContext(() =>
+      authGuard(
+        {} as ActivatedRouteSnapshot,
+        {} as RouterStateSnapshot
+      )
+    );
+
+    expect(result).toBeTrue();
     expect(router.navigate).not.toHaveBeenCalled();
   });
 
   it('should redirect to login when token does not exist', () => {
-    expect(guard.canActivate()).toBeFalse();
+    const result = TestBed.runInInjectionContext(() =>
+      authGuard(
+        {} as ActivatedRouteSnapshot,
+        {} as RouterStateSnapshot
+      )
+    );
+
+    expect(result).toBeFalse();
     expect(router.navigate).toHaveBeenCalledWith(['/login']);
   });
 });
