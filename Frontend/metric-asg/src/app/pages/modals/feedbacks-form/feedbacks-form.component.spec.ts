@@ -1,7 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 import { provideHttpClient, withXhr } from '@angular/common/http';
-import { ReactiveFormsModule } from '@angular/forms';
 
 import { FeedbacksFormComponent } from './feedbacks-form.component';
 
@@ -11,8 +10,9 @@ describe('FeedbacksFormComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      declarations: [FeedbacksFormComponent],
-      imports: [ReactiveFormsModule],
+      imports: [
+        FeedbacksFormComponent
+      ],
       providers: [
         provideHttpClient(withXhr()),
         {
