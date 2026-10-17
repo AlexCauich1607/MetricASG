@@ -1,9 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideHttpClient, withXhr } from '@angular/common/http';
-import { ReactiveFormsModule } from '@angular/forms';
-import { MatDialogModule } from '@angular/material/dialog';
-import { SharedModule } from '../../../shared/shared.module';
-
 import { MaturityLevelsComponent } from './maturity-levels.component';
 
 describe('MaturityLevelsComponent', () => {
@@ -12,15 +8,12 @@ describe('MaturityLevelsComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      declarations: [MaturityLevelsComponent],
+      imports: [
+        MaturityLevelsComponent
+      ],
       providers: [
         provideHttpClient(withXhr())
-      ],
-      imports: [
-        SharedModule,
-        ReactiveFormsModule,
-        MatDialogModule
-      ],
+      ]
     })
       .compileComponents();
 

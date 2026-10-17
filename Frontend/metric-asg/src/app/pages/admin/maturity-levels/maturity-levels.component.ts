@@ -1,13 +1,22 @@
 import { Component, ChangeDetectionStrategy } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { MatDialog, MatDialogModule } from '@angular/material/dialog';
+import { SharedModule } from '../../../shared/shared.module';
+
 import { MaturityLevel } from '../../../models/maturity_level';
 import { MaturityLevelService } from '../../../services/maturity-level.service';
-import { MatDialog } from '@angular/material/dialog';
 import { MaturityLevelFormComponent } from '../../modals/maturity-level-form/maturity-level-form.component';
-import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 
 @Component({
   selector: 'app-maturity-levels',
-  standalone: false,
+  standalone: true,
+  imports: [
+    CommonModule,
+    ReactiveFormsModule,
+    MatDialogModule,
+    SharedModule
+  ],
   templateUrl: './maturity-levels.component.html',
   changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './maturity-levels.component.scss'

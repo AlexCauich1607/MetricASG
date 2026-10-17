@@ -10,12 +10,12 @@ describe('LoginComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      declarations: [LoginComponent],
+      imports: [
+        LoginComponent,
+        ReactiveFormsModule
+      ],
       providers: [
         provideHttpClient(withXhr())
-      ],
-      imports: [
-        ReactiveFormsModule
       ]
     })
       .compileComponents();

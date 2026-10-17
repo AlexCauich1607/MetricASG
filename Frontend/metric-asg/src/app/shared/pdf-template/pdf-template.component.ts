@@ -1,9 +1,17 @@
 import { Component, Input, ChangeDetectionStrategy } from '@angular/core';
+import { AmbitCardComponent } from '../ambit-card/ambit-card.component';
+import { BarChartComponent } from '../bar-chart/bar-chart.component';
 import { ResultEvaluation } from '../../models/evaluation_result';
+import { FeedbackComponent } from '../feedback/feedback.component';
 
 @Component({
   selector: 'app-pdf-template',
-  standalone: false,
+  standalone: true,
+  imports: [
+    AmbitCardComponent,
+    BarChartComponent,
+    FeedbackComponent
+  ],
   templateUrl: './pdf-template.component.html',
   changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './pdf-template.component.scss'

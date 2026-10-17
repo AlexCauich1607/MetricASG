@@ -1,7 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideHttpClient, withXhr } from '@angular/common/http';
-import { SharedModule } from '../../../shared/shared.module';
-
 
 import { DashboardComponent } from './dashboard.component';
 
@@ -11,13 +9,12 @@ describe('DashboardComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      declarations: [DashboardComponent],
+      imports: [
+        DashboardComponent
+      ],
       providers: [
         provideHttpClient(withXhr())
-      ],
-      imports: [
-        SharedModule
-      ],
+      ]
     })
       .compileComponents();
 

@@ -1,6 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
-import { SharedModule } from '../../../shared/shared.module';
 
 import { ReportModalComponent } from './report-modal.component';
 
@@ -10,8 +9,9 @@ describe('ReportModalComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      declarations: [ReportModalComponent],
-      imports:[SharedModule],
+      imports: [
+        ReportModalComponent
+      ],
       providers: [
         {
           provide: MatDialogRef,

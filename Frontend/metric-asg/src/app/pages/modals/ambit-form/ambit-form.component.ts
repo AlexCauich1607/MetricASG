@@ -1,12 +1,15 @@
 import { Component, Inject, ChangeDetectionStrategy } from '@angular/core';
-import { FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 import { AmbitService } from '../../../services/ambit.service';
 import { Ambit } from '../../../models/ambit';
 
 @Component({
   selector: 'app-ambit-form',
-  standalone: false,
+  standalone: true,
+  imports: [
+    ReactiveFormsModule
+  ],
   templateUrl: './ambit-form.component.html',
   changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './ambit-form.component.scss'

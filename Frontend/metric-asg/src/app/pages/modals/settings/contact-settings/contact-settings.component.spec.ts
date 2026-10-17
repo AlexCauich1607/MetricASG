@@ -1,6 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideHttpClient, withXhr } from '@angular/common/http';
-import { FormsModule } from '@angular/forms';
 
 import { ContactSettingsComponent } from './contact-settings.component';
 
@@ -10,15 +9,14 @@ describe('ContactSettingsComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      declarations: [ContactSettingsComponent],
       imports: [
-        FormsModule
+        ContactSettingsComponent
       ],
       providers: [
         provideHttpClient(withXhr())
       ]
     })
-    .compileComponents();
+      .compileComponents();
 
     fixture = TestBed.createComponent(ContactSettingsComponent);
     component = fixture.componentInstance;

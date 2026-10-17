@@ -1,12 +1,16 @@
 import { Component, ChangeDetectionStrategy } from '@angular/core';
 import { SessionService } from '../../../shared/class/temporalStorage';
-import { Router } from '@angular/router';
+import { Router, RouterLink, RouterLinkActive } from '@angular/router';
 import { finalize } from 'rxjs';
 import { AuthService } from '../../../services/auth.service';
 
 @Component({
   selector: 'app-sidebar',
-  standalone: false,
+  standalone: true,
+  imports: [
+    RouterLink,
+    RouterLinkActive
+  ],
   templateUrl: './sidebar.component.html',
   changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './sidebar.component.scss'

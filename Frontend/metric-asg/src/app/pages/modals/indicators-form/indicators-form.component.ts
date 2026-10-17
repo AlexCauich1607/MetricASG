@@ -1,5 +1,5 @@
 import { Component, Inject, ChangeDetectionStrategy } from '@angular/core';
-import { FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { FormBuilder, FormGroup, Validators, ReactiveFormsModule, FormsModule } from '@angular/forms';
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 import { IndicatorService } from '../../../services/indicator.service';
 import { Indicator } from '../../../models/indicator';
@@ -16,7 +16,11 @@ export interface Respuestas {
 
 @Component({
   selector: 'app-indicators-form',
-  standalone: false,
+  standalone: true,
+  imports: [
+    ReactiveFormsModule,
+    FormsModule
+  ],
   templateUrl: './indicators-form.component.html',
   changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './indicators-form.component.scss'

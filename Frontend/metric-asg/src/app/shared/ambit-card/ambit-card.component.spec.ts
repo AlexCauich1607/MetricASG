@@ -8,9 +8,11 @@ describe('AmbitCardComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      declarations: [AmbitCardComponent]
+      imports: [
+        AmbitCardComponent
+      ]
     })
-    .compileComponents();
+      .compileComponents();
 
     fixture = TestBed.createComponent(AmbitCardComponent);
     component = fixture.componentInstance;

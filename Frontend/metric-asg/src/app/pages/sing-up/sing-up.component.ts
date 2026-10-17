@@ -6,12 +6,27 @@ import { CompanySector } from '../../models/company_sector';
 import { CompanySectorService } from '../../services/company-sector.service';
 import { CompanySize } from '../../models/company_size';
 import { CompanySizeService } from '../../services/company-size.service';
-import { FormBuilder, FormGroup, Validators } from '@angular/forms';
+import {
+  FormBuilder,
+  FormGroup,
+  FormsModule,
+  ReactiveFormsModule,
+  Validators
+} from '@angular/forms';
+
+import { MatStepperModule } from '@angular/material/stepper';
+import { MatButtonModule } from '@angular/material/button';
 import { phoneValidate } from '../../shared/class/validators';
 
 @Component({
   selector: 'app-sing-up',
-  standalone: false,
+  standalone: true,
+  imports: [
+    FormsModule,
+    ReactiveFormsModule,
+    MatStepperModule,
+    MatButtonModule
+  ],
   templateUrl: './sing-up.component.html',
   changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './sing-up.component.scss'

@@ -6,34 +6,32 @@ import { AppComponent } from '../app.component';
 import { FeedbackComponent } from './feedback/feedback.component';
 
 import { BarChartComponent } from './bar-chart/bar-chart.component';
-import { AmbitCardComponent } from './ambit-card/ambit-card.component';
 import { PdfReportTemplateComponent } from './pdf-template/pdf-template.component';
 import { ProfilePhotoComponent } from './profile-photo/profile-photo.component';
+import { AmbitCardComponent } from './ambit-card/ambit-card.component';
 
 
 
 @NgModule({
-  declarations: [
+  imports: [
+    CommonModule,
     FooterComponent,
-    NavbarComponent,
-    FeedbackComponent,
     BarChartComponent,
     AmbitCardComponent,
+    FeedbackComponent,
+    NavbarComponent,
     PdfReportTemplateComponent,
     ProfilePhotoComponent,
-  ],
-  imports: [
-    CommonModule
   ],
   exports: [
     FooterComponent,
     NavbarComponent,
     FeedbackComponent,
     BarChartComponent,
-    AmbitCardComponent,
     PdfReportTemplateComponent,
-    ProfilePhotoComponent
+    ProfilePhotoComponent,
+    AmbitCardComponent
   ]
-  
+
 })
 export class SharedModule { }

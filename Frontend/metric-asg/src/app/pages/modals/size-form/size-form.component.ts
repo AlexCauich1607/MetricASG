@@ -1,12 +1,15 @@
 import { Component, Inject, ChangeDetectionStrategy } from '@angular/core';
-import { FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { CompanySizeService } from '../../../services/company-size.service';
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 import { CompanySize } from '../../../models/company_size';
 
 @Component({
   selector: 'app-size-form',
-  standalone: false,
+  standalone: true,
+  imports: [
+    ReactiveFormsModule
+  ],
   templateUrl: './size-form.component.html',
   changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './size-form.component.scss'

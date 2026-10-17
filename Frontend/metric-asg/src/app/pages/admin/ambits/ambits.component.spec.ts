@@ -1,6 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideHttpClient, withXhr } from '@angular/common/http';
-import { SharedModule } from '../../../shared/shared.module';
 
 import { AmbitsComponent } from './ambits.component';
 
@@ -10,12 +9,11 @@ describe('AmbitsComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      declarations: [AmbitsComponent],
+      imports: [
+        AmbitsComponent
+      ],
       providers: [
         provideHttpClient(withXhr())
-      ],
-      imports: [
-        SharedModule
       ],
     })
       .compileComponents();

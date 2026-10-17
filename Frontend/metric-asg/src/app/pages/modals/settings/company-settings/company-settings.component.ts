@@ -1,4 +1,5 @@
 import { Component, Input, ChangeDetectionStrategy } from '@angular/core';
+import { FormsModule } from '@angular/forms';
 import { User } from '../../../../models/user';
 import { CompanySectorService } from '../../../../services/company-sector.service';
 import { CompanySector } from '../../../../models/company_sector';
@@ -8,7 +9,10 @@ import { UserService } from '../../../../services/user.service';
 
 @Component({
   selector: 'app-company-settings',
-  standalone: false,
+  standalone: true,
+  imports: [
+    FormsModule
+  ],
   templateUrl: './company-settings.component.html',
   changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './company-settings.component.scss'

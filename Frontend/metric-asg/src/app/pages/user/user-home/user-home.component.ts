@@ -6,10 +6,9 @@ import { UserService } from '../../../services/user.service';
 import { User } from '../../../models/user';
 import { Router } from '@angular/router';
 import { SessionService } from '../../../shared/class/temporalStorage';
-import { ResultsComponent } from '../results/results.component';
 import { MatDialog } from '@angular/material/dialog';
-import { ReportModalComponent } from '../../modals/report-modal/report-modal.component';
-import html2pdf from 'html2pdf.js';
+import { AmbitCardComponent } from '../../../shared/ambit-card/ambit-card.component';
+import { BarChartComponent } from '../../../shared/bar-chart/bar-chart.component';
 
 
 Chart.register(...registerables);
@@ -17,7 +16,11 @@ Chart.register(...registerables);
 
 @Component({
   selector: 'app-user-home',
-  standalone: false,
+  standalone: true,
+  imports: [
+    AmbitCardComponent,
+    BarChartComponent
+  ],
   templateUrl: './user-home.component.html',
   changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './user-home.component.scss'

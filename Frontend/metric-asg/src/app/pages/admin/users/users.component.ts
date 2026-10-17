@@ -1,8 +1,12 @@
 import { Component, ChangeDetectionStrategy } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import { MatDialog, MatDialogModule } from '@angular/material/dialog';
+import { SharedModule } from '../../../shared/shared.module';
+
 import { AdminService } from '../../../services/admin.service';
 import { AllUsers } from '../../../models/admin';
 import { User } from '../../../models/user';
-import { MatDialog } from '@angular/material/dialog';
 import { UserFormComponent } from '../../modals/user-form/user-form.component';
 import { UserRegister } from '../../../models/auth';
 import { AuthService } from '../../../services/auth.service';
@@ -15,7 +19,13 @@ import { SearchFilterComponent } from '../../modals/search-filter/search-filter.
 
 @Component({
   selector: 'app-users',
-  standalone: false,
+  standalone: true,
+  imports: [
+    CommonModule,
+    FormsModule,
+    MatDialogModule,
+    SharedModule
+  ],
   templateUrl: './users.component.html',
   changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './users.component.scss'

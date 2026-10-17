@@ -3,7 +3,7 @@ import { ResultAmbit } from '../../models/evaluation_result';
 
 @Component({
   selector: 'feedback-component',
-  standalone: false,
+  standalone: true,
   templateUrl: './feedback.component.html',
   changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './feedback.component.scss'

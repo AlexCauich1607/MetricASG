@@ -9,7 +9,7 @@ describe('HistoryComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      declarations: [HistoryComponent],
+      imports: [HistoryComponent],
       providers: [
         provideHttpClient(withXhr())
       ]

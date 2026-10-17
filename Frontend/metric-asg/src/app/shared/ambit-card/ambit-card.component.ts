@@ -2,7 +2,7 @@ import { Component, Input, ChangeDetectionStrategy } from '@angular/core';
 
 @Component({
   selector: 'app-ambit-card',
-  standalone: false,
+  standalone: true,
   templateUrl: './ambit-card.component.html',
   changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './ambit-card.component.scss'

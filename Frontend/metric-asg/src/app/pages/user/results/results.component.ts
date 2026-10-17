@@ -3,12 +3,19 @@ import { Component, ChangeDetectionStrategy } from '@angular/core';
 import { ResultEvaluation } from '../../../models/evaluation_result';
 import { EvaluationService } from '../../../services/evaluation.service';
 import { SessionService } from '../../../shared/class/temporalStorage';
-
+import { AmbitCardComponent } from '../../../shared/ambit-card/ambit-card.component';
+import { BarChartComponent } from '../../../shared/bar-chart/bar-chart.component';
 import html2canvas from 'html2canvas';
+import { FeedbackComponent } from '../../../shared/feedback/feedback.component';
 
 @Component({
   selector: 'app-results',
-  standalone: false,
+  standalone: true,
+  imports: [
+    AmbitCardComponent,
+    BarChartComponent,
+    FeedbackComponent
+  ],
   templateUrl: './results.component.html',
   changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './results.component.scss'

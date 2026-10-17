@@ -1,6 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideHttpClient, withXhr } from '@angular/common/http';
-
+import { provideRouter } from '@angular/router';
 import { UserNavbarComponent } from './user-navbar.component';
 
 describe('UserNavbarComponent', () => {
@@ -9,12 +9,15 @@ describe('UserNavbarComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      declarations: [UserNavbarComponent],
+      imports: [
+        UserNavbarComponent
+      ],
       providers: [
-        provideHttpClient(withXhr())
+        provideHttpClient(withXhr()),
+        provideRouter([])
       ]
     })
-    .compileComponents();
+      .compileComponents();
 
     fixture = TestBed.createComponent(UserNavbarComponent);
     component = fixture.componentInstance;
