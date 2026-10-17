@@ -42,7 +42,6 @@ import { ContactSettingsComponent } from './modals/settings/contact-settings/con
 @NgModule({
   declarations: [
     UserFormComponent,
-    SizeFormComponent,
     DownloadReportComponent,
   ],
   imports: [
@@ -58,6 +57,7 @@ import { ContactSettingsComponent } from './modals/settings/contact-settings/con
     ContactSettingsComponent,
     UserSettingsComponent,
     Sider,
+    SizeFormComponent,
     FeedbackComponent,
     HistoryComponent,
     UserNavbarComponent,

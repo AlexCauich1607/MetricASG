@@ -1,10 +1,8 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideHttpClient, withXhr } from '@angular/common/http';
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
-import { ReactiveFormsModule } from '@angular/forms';
 
 import { SizeFormComponent } from './size-form.component';
-
 
 describe('SizeFormComponent', () => {
   let component: SizeFormComponent;
@@ -12,8 +10,7 @@ describe('SizeFormComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      declarations: [SizeFormComponent],
-      imports: [ReactiveFormsModule],
+      imports: [SizeFormComponent],
       providers: [
         provideHttpClient(withXhr()),
         {
