@@ -17,7 +17,7 @@ const routes: Routes = [
   {
     path: '',
     loadChildren: () =>
-      import('./pages/pages.module').then(m => m.PagesModule)
+      import('./pages/pages.routes').then(m => m.pagesRoutes)
   },
   { path: '**', redirectTo: '/home' },
 ];

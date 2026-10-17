@@ -1,10 +1,9 @@
-import { NgModule } from '@angular/core';
-import { RouterModule, Routes } from '@angular/router';
-import { AdminGuard } from '../core/guards/admin.guard';
+import { Routes } from '@angular/router';
 import { AuthGuard } from '../core/guards/auth.guard';
+import { AdminGuard } from '../core/guards/admin.guard';
 import { UserGuard } from '../core/guards/user.guard';
 
-const routes: Routes = [
+export const pagesRoutes: Routes = [
   {
     path: 'home',
     loadComponent: () =>
@@ -96,9 +95,3 @@ const routes: Routes = [
 
   { path: '', redirectTo: 'home', pathMatch: 'full' }
 ];
-
-@NgModule({
-  imports: [RouterModule.forChild(routes)],
-  exports: [RouterModule]
-})
-export class PagesRoutingModule { }
