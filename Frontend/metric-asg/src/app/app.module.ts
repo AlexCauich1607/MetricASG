@@ -14,9 +14,9 @@ import { FormsModule } from '@angular/forms';
 import { AuthInterceptor } from './core/interceptors/auth.interceptor';
 
 
+
 @NgModule({
   declarations: [
-    AppComponent
   ],
   imports: [
     BrowserModule,
@@ -24,7 +24,8 @@ import { AuthInterceptor } from './core/interceptors/auth.interceptor';
     MatIconModule,
     HttpClientModule,
     SharedModule,
-    FormsModule
+    FormsModule,
+    AppComponent
   ],
 
   providers: [

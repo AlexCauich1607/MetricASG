@@ -1,10 +1,17 @@
 import { Component, ChangeDetectionStrategy } from '@angular/core';
-import { NavigationEnd, Router } from '@angular/router';
+import { NavigationEnd, Router, RouterOutlet } from '@angular/router';
+import { NavbarComponent } from './shared/navbar/navbar.component';
+import { FooterComponent } from './shared/footer/footer.component';
 
 @Component({
   selector: 'app-root',
+  standalone: true,
+  imports: [
+    NavbarComponent,
+    FooterComponent,
+    RouterOutlet
+  ],
   templateUrl: './app.component.html',
-  standalone: false,
   changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './app.component.css'
 })

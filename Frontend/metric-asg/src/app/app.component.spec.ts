@@ -1,20 +1,16 @@
 import { TestBed } from '@angular/core/testing';
-import { CommonModule } from '@angular/common';
-import { RouterModule } from '@angular/router';
-import { SharedModule } from './shared/shared.module';
+import { provideRouter } from '@angular/router';
 import { AppComponent } from './app.component';
 
 describe('AppComponent', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [
-        CommonModule,
-        RouterModule.forRoot([]),
-        SharedModule
-      ],
-      declarations: [
         AppComponent
       ],
+      providers: [
+        provideRouter([])
+      ]
     }).compileComponents();
   });
 
