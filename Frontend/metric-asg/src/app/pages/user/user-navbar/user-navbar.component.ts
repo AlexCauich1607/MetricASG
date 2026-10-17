@@ -1,15 +1,18 @@
 import { Component, ChangeDetectionStrategy } from '@angular/core';
+import { RouterLink, RouterLinkActive, Router } from '@angular/router';
 import { SessionService } from '../../../shared/class/temporalStorage';
-import { Router } from '@angular/router';
-import { MatDialog, MatDialogRef } from '@angular/material/dialog';
-import { AdminLayoutComponent } from '../../admin/layout/admin-layout/admin-layout.component';
+import { MatDialog } from '@angular/material/dialog';
 import { SidebarComponent } from '../../modals/settings/sidebar/sidebar.component';
 import { finalize } from 'rxjs';
 import { AuthService } from '../../../services/auth.service';
 
 @Component({
   selector: 'app-user-navbar',
-  standalone: false,
+  standalone: true,
+  imports: [
+    RouterLink,
+    RouterLinkActive
+  ],
   templateUrl: './user-navbar.component.html',
   changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './user-navbar.component.scss'

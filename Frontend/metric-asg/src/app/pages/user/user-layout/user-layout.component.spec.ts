@@ -1,10 +1,8 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideHttpClient, withXhr } from '@angular/common/http';
-import { RouterModule } from '@angular/router';
-import { SharedModule } from '../../../shared/shared.module';
+import { provideRouter } from '@angular/router';
 
 import { UserLayoutComponent } from './user-layout.component';
-import { UserNavbarComponent } from '../user-navbar/user-navbar.component';
 
 describe('UserLayoutComponent', () => {
   let component: UserLayoutComponent;
@@ -12,16 +10,12 @@ describe('UserLayoutComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      declarations: [
-        UserLayoutComponent,
-        UserNavbarComponent
+      imports: [
+        UserLayoutComponent
       ],
       providers: [
-        provideHttpClient(withXhr())
-      ],
-      imports: [
-        RouterModule.forRoot([]),
-        SharedModule
+        provideHttpClient(withXhr()),
+        provideRouter([])
       ]
     })
     .compileComponents();
