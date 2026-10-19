@@ -1,7 +1,16 @@
-import { Component, ChangeDetectionStrategy } from '@angular/core';
+import {
+  Component,
+  ChangeDetectionStrategy,
+  computed,
+  signal
+} from '@angular/core';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { EvaluationService } from '../../../services/evaluation.service';
-import { EvaluationAmbit, EvaluationIndicator, EvaluationStructure } from '../../../models/evaluation_structure';
+import {
+  EvaluationAmbit,
+  EvaluationIndicator,
+  EvaluationStructure
+} from '../../../models/evaluation_structure';
 import { Router } from '@angular/router';
 import { EvaluationSubmitPayload } from '../../../models/evaluation_submit';
 
@@ -16,123 +25,191 @@ import { EvaluationSubmitPayload } from '../../../models/evaluation_submit';
   styleUrl: './evaluation.component.scss'
 })
 export class EvaluationComponent {
-  structure!: EvaluationStructure;
-  loading = true;
-  responses: Map<number, number> = new Map();
-  completadas: Map<number, number> = new Map();
-  fondo = "#6d2828ff"
+  structure = signal<EvaluationStructure | null>(null);
+  loading = signal(true);
 
-  ambit = 0;
-  question = 0;
-  progreso = 0;
+  responses = signal<Map<number, number>>(new Map());
+  completadas = signal<Map<number, number>>(new Map());
+
+  ambit = signal(0);
+  question = signal(0);
+
+  readonly currentAmbit = computed<EvaluationAmbit | null>(() => {
+    const structure = this.structure();
+    return structure?.ambits[this.ambit()] ?? null;
+  });
+
+  readonly currentQuestion = computed<EvaluationIndicator | null>(() => {
+    const ambit = this.currentAmbit();
+    return ambit?.indicators[this.question()] ?? null;
+  });
+
+  readonly progreso = computed(() => {
+    const ambit = this.currentAmbit();
+
+    if (!ambit) {
+      return 0;
+    }
+
+    const completadas = this.completadas().get(ambit.id) ?? 0;
+    const total = ambit.indicators.length;
+
+    if (total === 0) {
+      return 0;
+    }
+
+    return Math.round(completadas * (100 / total));
+  });
+
+  readonly totalQuestions = computed(() => {
+    const structure = this.structure();
+
+    if (!structure) {
+      return 0;
+    }
+
+    return structure.ambits.reduce(
+      (total, ambit) => total + ambit.indicators.length,
+      0
+    );
+  });
+
+  fondo = '#6d2828ff';
+
   mesActual = '';
   anioActual = '';
   mesFuturo = '';
   anioFuturo = '';
 
-
-  constructor(private evaluationService: EvaluationService, private router: Router) { }
+  constructor(
+    private evaluationService: EvaluationService,
+    private router: Router
+  ) {}
 
   ngOnInit(): void {
     this.loadSurvey();
     this.getPeriodo();
   }
 
-  getAmbit(): EvaluationAmbit {
-    return this.structure.ambits[this.ambit];
-  }
-  getQuestion(): EvaluationIndicator {
-    return this.structure.ambits[this.ambit].indicators[this.question];
-  }
-  nextQuestion() {
-    if ((this.question + 1) < this.getAmbit().indicators.length) {
-      this.question += 1;
-    } else {
-      if (this.ambit < this.structure.ambits.length - 1) {
-        this.ambit += 1;
-        this.question = 0;
-      }
+  nextQuestion(): void {
+    const currentAmbit = this.currentAmbit();
+    const structure = this.structure();
 
+    if (!currentAmbit || !structure) {
+      return;
     }
-    this.actualizarProgreso();
+
+    if (this.question() + 1 < currentAmbit.indicators.length) {
+      this.question.update(value => value + 1);
+    } else if (this.ambit() < structure.ambits.length - 1) {
+      this.ambit.update(value => value + 1);
+      this.question.set(0);
+    }
   }
+
   capitalizar(texto: string): string {
-    if (!texto) return texto;
+    if (!texto) {
+      return texto;
+    }
+
     return texto.charAt(0).toUpperCase() + texto.slice(1);
   }
-  getPeriodo() {
+
+  getPeriodo(): void {
     const hoy = new Date();
 
-    this.mesActual = hoy.toLocaleString('es-ES', { month: 'long' });
+    this.mesActual = hoy.toLocaleString('es-ES', {
+      month: 'long'
+    });
+
     this.mesActual = this.capitalizar(this.mesActual);
-    this.anioActual = hoy.toLocaleString('es-ES', { year: 'numeric' });
+
+    this.anioActual = hoy.toLocaleString('es-ES', {
+      year: 'numeric'
+    });
+
     const futura = new Date(hoy);
+
     futura.setMonth(hoy.getMonth() - 5);
-    this.mesFuturo = futura.toLocaleString('es-ES', { month: 'long' })
+
+    this.mesFuturo = futura.toLocaleString('es-ES', {
+      month: 'long'
+    });
+
     this.mesFuturo = this.capitalizar(this.mesFuturo);
-    this.anioFuturo = futura.toLocaleString('es-ES', { year: 'numeric' });
 
+    this.anioFuturo = futura.toLocaleString('es-ES', {
+      year: 'numeric'
+    });
   }
 
-  beforeQuestion() {
-    if ((this.question - 1) >= 0) {
-      this.question -= 1;
-    } else {
-      if (this.ambit > 0) {
-        this.ambit -= 1;
-        this.question = this.getAmbit().indicators.length - 1;
-      }
+  beforeQuestion(): void {
+    const currentAmbit = this.currentAmbit();
 
+    if (!currentAmbit) {
+      return;
     }
-    this.actualizarProgreso();
+
+    if (this.question() - 1 >= 0) {
+      this.question.update(value => value - 1);
+    } else if (this.ambit() > 0) {
+      this.ambit.update(value => value - 1);
+
+      const previousAmbit = this.currentAmbit();
+
+      if (previousAmbit) {
+        this.question.set(previousAmbit.indicators.length - 1);
+      }
+    }
   }
 
-  loadSurvey() {
+  loadSurvey(): void {
     this.evaluationService.getEvaluation().subscribe({
-      next: (res) => {
-        this.structure = res;
-        this.loading = false;
+      next: res => {
+        this.structure.set(res);
+        this.loading.set(false);
       },
       error: () => {
-        this.loading = false;
+        this.loading.set(false);
       }
     });
   }
-  selectAnswer(indicatorId: number, answerId: number, ambit_id: number) {
-    if (this.responses.get(indicatorId)) {
-      this.responses.set(indicatorId, answerId);
-    } else {
-      this.responses.set(indicatorId, answerId);
-      const valor = this.completadas.get(ambit_id) ?? 0;
-      this.completadas.set(ambit_id, valor + 1);
-      this.actualizarProgreso();
+
+  selectAnswer(
+    indicatorId: number,
+    answerId: number,
+    ambitId: number
+  ): void {
+    const currentResponses = this.responses();
+
+    if (currentResponses.has(indicatorId)) {
+      const updatedResponses = new Map(currentResponses);
+      updatedResponses.set(indicatorId, answerId);
+      this.responses.set(updatedResponses);
+      return;
     }
+
+    const updatedResponses = new Map(currentResponses);
+    updatedResponses.set(indicatorId, answerId);
+    this.responses.set(updatedResponses);
+
+    const currentCompletadas = this.completadas();
+    const updatedCompletadas = new Map(currentCompletadas);
+    const valor = updatedCompletadas.get(ambitId) ?? 0;
+
+    updatedCompletadas.set(ambitId, valor + 1);
+    this.completadas.set(updatedCompletadas);
   }
 
+  submit(): void {
+    console.log(this.responses().size);
+    console.log(this.responses());
+    console.log(this.totalQuestions());
 
-  getAllQuestionsLeght(): number {
-    let cont = 0;
-    this.structure.ambits.forEach(a => {
-      cont += a.indicators.length;
-    })
-    return cont;
-  }
-  actualizarProgreso() {
-
-    let complet = this.completadas.get(this.getAmbit().id) ?? 0;
-
-    let total = this.getAmbit().indicators.length;
-
-    this.progreso = Math.round(complet * (100 / total));
-  }
-  submit() {
-    console.log(this.responses.size)
-    console.log(this.responses)
-    console.log(this.getAllQuestionsLeght())
-    if (this.responses.size == this.getAllQuestionsLeght()) {
-      if (confirm("¿Desea enviar esta evaluación?")) {
+    if (this.responses().size === this.totalQuestions()) {
+      if (confirm('¿Desea enviar esta evaluación?')) {
         const payload: EvaluationSubmitPayload = {
-          responses: Array.from(this.responses.entries()).map(
+          responses: Array.from(this.responses().entries()).map(
             ([indicator_id, indicator_answer_id]) => ({
               indicator_id,
               indicator_answer_id
@@ -143,37 +220,31 @@ export class EvaluationComponent {
         this.evaluationService.submitEvaluation(payload).subscribe(() => {
           alert('Evaluación enviada correctamente');
           this.router.navigate(['/user/results']);
-        })
+        });
       }
-
     } else {
       alert('Tiene preguntas sin responder');
     }
   }
 
-
-
-
-
   hexToRgb(hex: string): { r: number; g: number; b: number } {
-    // Eliminar el # si existe
     hex = hex.replace(/^#/, '');
 
-    // Validar formato
     if (!/^[0-9A-F]{3}$|^[0-9A-F]{6}$/i.test(hex)) {
-      throw new Error('Formato HEX inválido. Use formato #RGB o #RRGGBB');
+      throw new Error(
+        'Formato HEX inválido. Use formato #RGB o #RRGGBB'
+      );
     }
 
-    let r: number, g: number, b: number;
+    let r: number;
+    let g: number;
+    let b: number;
 
-    // Si es formato corto (#RGB)
     if (hex.length === 3) {
       r = parseInt(hex[0] + hex[0], 16);
       g = parseInt(hex[1] + hex[1], 16);
       b = parseInt(hex[2] + hex[2], 16);
-    }
-    // Si es formato largo (#RRGGBB)
-    else {
+    } else {
       r = parseInt(hex.substring(0, 2), 16);
       g = parseInt(hex.substring(2, 4), 16);
       b = parseInt(hex.substring(4, 6), 16);
@@ -181,22 +252,24 @@ export class EvaluationComponent {
 
     return { r, g, b };
   }
+
   hexToRgbString(hex: string): string {
-    // Remover #
     hex = hex.replace('#', '');
 
-    // Expandir formato corto
     if (hex.length === 3) {
-      hex = hex[0] + hex[0] + hex[1] + hex[1] + hex[2] + hex[2];
+      hex =
+        hex[0] +
+        hex[0] +
+        hex[1] +
+        hex[1] +
+        hex[2] +
+        hex[2];
     }
 
-    // Convertir a decimal
     const r = parseInt(hex.substring(0, 2), 16);
     const g = parseInt(hex.substring(2, 4), 16);
     const b = parseInt(hex.substring(4, 6), 16);
 
-    // IMPORTANTE: Retornar como string "r, g, b"
     return `${r}, ${g}, ${b}`;
   }
-
 }
