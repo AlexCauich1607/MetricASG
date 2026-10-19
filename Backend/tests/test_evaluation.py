@@ -1,6 +1,11 @@
-import pytest
+import uuid
+from unittest.mock import patch
+from datetime import date
 
+import pytest
 from fastapi import HTTPException
+from sqlalchemy.exc import OperationalError, IntegrityError
+
 
 from app.core.roles import UserRole
 from app.models.ambit_model import Ambit
@@ -8,6 +13,7 @@ from app.models.evaluation_ambit_score_model import EvaluationAmbitScore
 from app.models.evaluation_indicator_response_model import (
     EvaluationIndicatorResponse,
 )
+
 from app.models.evaluation_model import Evaluation, EvaluationStatus
 from app.models.indicator_answer_model import IndicatorAnswer
 from app.models.indicator_model import Indicator
@@ -18,7 +24,6 @@ from app.models.methodology_model import (
 )
 from app.models.user_model import User
 from app.services.evaluations_service import EvaluationService
-from sqlalchemy.exc import IntegrityError
 
 
 def create_evaluation_data(db_session):
@@ -126,18 +131,17 @@ def create_evaluation_data(db_session):
     db_session.add_all(indicators)
     db_session.flush()
 
-    answers = (
-        db_session.query(IndicatorAnswer)
-        .filter(
-            IndicatorAnswer.indicator_id.in_(
-                [indicator.id for indicator in indicators]
-            ),
-            IndicatorAnswer.maturity_level_id
-            == maturity_levels[1].id,
+    answers = [
+        IndicatorAnswer(
+            indicator_id=indicator.id,
+            maturity_level_id=maturity_levels[1].id,
+            text=f"Test answer for indicator {indicator.id}",
         )
-        .order_by(IndicatorAnswer.indicator_id)
-        .all()
-    )
+        for indicator in indicators
+    ]
+
+    db_session.add_all(answers)
+    db_session.flush()
 
     user = User(
         name="Evaluation",
@@ -335,3 +339,554 @@ def test_evaluation_rejects_duplicate_indicator_responses(db_session):
         db_session.flush()
 
     db_session.rollback()
+
+def test_save_draft_creates_partial_evaluation(db_session):
+    data = create_evaluation_data(db_session)
+    service = EvaluationService(db_session)
+
+    responses = build_responses(data)[:2]
+
+    result = service.save_draft(
+        {"responses": responses},
+        data["user"].id,
+    )
+
+    evaluation = (
+        db_session.query(Evaluation)
+        .filter(Evaluation.id == result["evaluation_id"])
+        .one()
+    )
+
+    saved_responses = (
+        db_session.query(EvaluationIndicatorResponse)
+        .filter(
+            EvaluationIndicatorResponse.evaluation_id
+            == evaluation.id
+        )
+        .order_by(EvaluationIndicatorResponse.indicator_id)
+        .all()
+    )
+
+    ambit_scores = (
+        db_session.query(EvaluationAmbitScore)
+        .filter(EvaluationAmbitScore.evaluation_id == evaluation.id)
+        .all()
+    )
+
+    assert result["status"] == EvaluationStatus.DRAFT.value
+    assert evaluation.status == EvaluationStatus.DRAFT
+    assert evaluation.user_id == data["user"].id
+    assert evaluation.methodology_id == data["methodology"].id
+
+    assert evaluation.global_score is None
+    assert evaluation.global_maturity_level_id is None
+
+    assert len(saved_responses) == 2
+
+    for saved, submitted in zip(saved_responses, responses):
+        assert saved.indicator_id == submitted["indicator_id"]
+        assert saved.indicator_answer_id == submitted["indicator_answer_id"]
+
+    assert ambit_scores == []
+
+def test_save_draft_is_idempotent(db_session):
+    data = create_evaluation_data(db_session)
+    service = EvaluationService(db_session)
+
+    payload = {
+        "responses": build_responses(data)[:2],
+    }
+
+    first_result = service.save_draft(
+        payload,
+        data["user"].id,
+    )
+
+    second_result = service.save_draft(
+        payload,
+        data["user"].id,
+    )
+
+    assert (
+        first_result["evaluation_id"]
+        == second_result["evaluation_id"]
+    )
+
+    evaluations = (
+        db_session.query(Evaluation)
+        .filter(
+            Evaluation.user_id == data["user"].id,
+            Evaluation.methodology_id == data["methodology"].id,
+            Evaluation.status == EvaluationStatus.DRAFT,
+        )
+        .all()
+    )
+
+    assert len(evaluations) == 1
+
+    saved_responses = (
+        db_session.query(EvaluationIndicatorResponse)
+        .filter(
+            EvaluationIndicatorResponse.evaluation_id
+            == first_result["evaluation_id"]
+        )
+        .all()
+    )
+
+    assert len(saved_responses) == 2
+
+    saved_answers = {
+        response.indicator_id: response.indicator_answer_id
+        for response in saved_responses
+    }
+
+    expected_answers = {
+        response["indicator_id"]: response["indicator_answer_id"]
+        for response in payload["responses"]
+    }
+
+    assert saved_answers == expected_answers
+
+def test_save_draft_updates_existing_response(db_session):
+    data = create_evaluation_data(db_session)
+    service = EvaluationService(db_session)
+
+    initial_responses = build_responses(data)[:2]
+
+    first_result = service.save_draft(
+        {"responses": initial_responses},
+        data["user"].id,
+    )
+
+    indicator = data["indicators"][0]
+    new_answer = IndicatorAnswer(
+        indicator_id=indicator.id,
+        maturity_level_id=data["maturity_levels"][2].id,
+        text="Updated test answer",
+    )
+
+    db_session.add(new_answer)
+    db_session.flush()
+
+    updated_responses = [
+        {
+            "indicator_id": indicator.id,
+            "indicator_answer_id": new_answer.id,
+        },
+        initial_responses[1],
+    ]
+
+    second_result = service.save_draft(
+        {"responses": updated_responses},
+        data["user"].id,
+    )
+
+    assert (
+        first_result["evaluation_id"]
+        == second_result["evaluation_id"]
+    )
+
+    saved_responses = (
+        db_session.query(EvaluationIndicatorResponse)
+        .filter(
+            EvaluationIndicatorResponse.evaluation_id
+            == first_result["evaluation_id"]
+        )
+        .all()
+    )
+
+    assert len(saved_responses) == 2
+
+    saved_by_indicator = {
+        response.indicator_id: response
+        for response in saved_responses
+    }
+
+    updated = saved_by_indicator[indicator.id]
+
+    assert updated.indicator_answer_id == new_answer.id
+    assert updated.maturity_level_id == data["maturity_levels"][2].id
+    assert updated.score == data["maturity_levels"][2].value
+
+    unchanged = saved_by_indicator[initial_responses[1]["indicator_id"]]
+
+    assert (
+        unchanged.indicator_answer_id
+        == initial_responses[1]["indicator_answer_id"]
+    )
+
+def test_save_draft_preserves_responses_on_validation_error(db_session):
+    data = create_evaluation_data(db_session)
+    service = EvaluationService(db_session)
+
+    initial_responses = build_responses(data)[:2]
+
+    result = service.save_draft(
+        {"responses": initial_responses},
+        data["user"].id,
+    )
+
+    evaluation_id = result["evaluation_id"]
+
+    invalid_responses = [
+        initial_responses[0],
+        {
+            "indicator_id": data["indicators"][1].id,
+            "indicator_answer_id": 999999999,
+        },
+    ]
+
+    with pytest.raises(HTTPException) as exc_info:
+        service.save_draft(
+            {"responses": invalid_responses},
+            data["user"].id,
+        )
+
+    assert exc_info.value.status_code == 422
+
+    db_session.expire_all()
+
+    saved_responses = (
+        db_session.query(EvaluationIndicatorResponse)
+        .filter(
+            EvaluationIndicatorResponse.evaluation_id
+            == evaluation_id
+        )
+        .all()
+    )
+
+    saved_answers = {
+        response.indicator_id: response.indicator_answer_id
+        for response in saved_responses
+    }
+
+    expected_answers = {
+        response["indicator_id"]: response["indicator_answer_id"]
+        for response in initial_responses
+    }
+
+    assert saved_answers == expected_answers
+
+def test_save_draft_preserves_response_ids(db_session):
+    data = create_evaluation_data(db_session)
+    service = EvaluationService(db_session)
+
+    payload = {
+        "responses": build_responses(data)[:2],
+    }
+
+    result = service.save_draft(
+        payload,
+        data["user"].id,
+    )
+
+    evaluation_id = result["evaluation_id"]
+
+    initial_responses = (
+        db_session.query(EvaluationIndicatorResponse)
+        .filter(
+            EvaluationIndicatorResponse.evaluation_id
+            == evaluation_id
+        )
+        .all()
+    )
+
+    initial_ids = {
+        response.indicator_id: response.id
+        for response in initial_responses
+    }
+
+    service.save_draft(
+        payload,
+        data["user"].id,
+    )
+
+    updated_responses = (
+        db_session.query(EvaluationIndicatorResponse)
+        .filter(
+            EvaluationIndicatorResponse.evaluation_id
+            == evaluation_id
+        )
+        .all()
+    )
+
+    updated_ids = {
+        response.indicator_id: response.id
+        for response in updated_responses
+    }
+
+    assert updated_ids == initial_ids
+
+def test_save_draft_removes_unselected_responses(db_session):
+    data = create_evaluation_data(db_session)
+    service = EvaluationService(db_session)
+
+    initial_responses = build_responses(data)
+
+    first_result = service.save_draft(
+        {"responses": initial_responses},
+        data["user"].id,
+    )
+
+    evaluation_id = first_result["evaluation_id"]
+
+    remaining_responses = initial_responses[:2]
+
+    second_result = service.save_draft(
+        {"responses": remaining_responses},
+        data["user"].id,
+    )
+
+    assert second_result["evaluation_id"] == evaluation_id
+
+    saved_responses = (
+        db_session.query(EvaluationIndicatorResponse)
+        .filter(
+            EvaluationIndicatorResponse.evaluation_id
+            == evaluation_id
+        )
+        .all()
+    )
+
+    assert len(saved_responses) == 2
+
+    saved_answers = {
+        response.indicator_id: response.indicator_answer_id
+        for response in saved_responses
+    }
+
+    expected_answers = {
+        response["indicator_id"]: response["indicator_answer_id"]
+        for response in remaining_responses
+    }
+
+    assert saved_answers == expected_answers
+
+    removed_indicator_id = initial_responses[2]["indicator_id"]
+
+    assert removed_indicator_id not in saved_answers
+
+def test_evaluation_rejects_duplicate_drafts(db_session):
+    data = create_evaluation_data(db_session)
+
+    first_draft = Evaluation(
+        user_id=data["user"].id,
+        methodology_id=data["methodology"].id,
+        date=date.today(),
+        status=EvaluationStatus.DRAFT,
+    )
+
+    db_session.add(first_draft)
+    db_session.flush()
+
+    second_draft = Evaluation(
+        user_id=data["user"].id,
+        methodology_id=data["methodology"].id,
+        date=date.today(),
+        status=EvaluationStatus.DRAFT,
+    )
+
+    db_session.add(second_draft)
+
+    with pytest.raises(IntegrityError):
+        db_session.flush()
+
+    db_session.rollback()
+
+def test_save_draft_rolls_back_on_database_error(db_session):
+    data = create_evaluation_data(db_session)
+    service = EvaluationService(db_session)
+
+    payload = {
+        "responses": build_responses(data)[:2],
+    }
+
+    database_error = OperationalError(
+        "COMMIT",
+        {},
+        Exception("Simulated database error"),
+    )
+
+    with patch.object(
+        db_session,
+        "commit",
+        side_effect=database_error,
+    ), patch.object(
+        db_session,
+        "rollback",
+        wraps=db_session.rollback,
+    ) as mock_rollback:
+
+        with pytest.raises(OperationalError):
+            service.save_draft(
+                payload,
+                data["user"].id,
+            )
+
+        mock_rollback.assert_called_once()
+
+def test_save_draft_returns_409_on_duplicate_draft(db_session):
+    data = create_evaluation_data(db_session)
+    service = EvaluationService(db_session)
+
+    payload = {
+        "responses": build_responses(data)[:2],
+    }
+
+    class SimulatedDatabaseError(Exception):
+        def __init__(self):
+            self.diag = type(
+                "Diagnostic",
+                (),
+                {
+                    "constraint_name":
+                    "uq_evaluations_user_methodology_draft"
+                },
+            )()
+
+    database_error = IntegrityError(
+        "INSERT INTO evaluations",
+        {},
+        SimulatedDatabaseError(),
+    )
+
+    with patch.object(
+        db_session,
+        "flush",
+        side_effect=database_error,
+    ), patch.object(
+        db_session,
+        "rollback",
+        wraps=db_session.rollback,
+    ) as mock_rollback:
+
+        with pytest.raises(HTTPException) as exc_info:
+            service.save_draft(
+                payload,
+                data["user"].id,
+            )
+
+        assert exc_info.value.status_code == 409
+
+        mock_rollback.assert_called_once()
+
+def test_evaluation_row_lock_prevents_concurrent_access():
+    from sqlalchemy import text
+    from sqlalchemy.exc import OperationalError
+    from tests.conftest import engine
+
+    user_id = None
+
+    try:
+        # Prepare committed test data
+        with engine.begin() as connection:
+            methodology_id = connection.execute(
+                text(
+                    """
+                    SELECT id
+                    FROM methodologies
+                    ORDER BY id
+                    LIMIT 1
+                    """
+                )
+            ).scalar_one()
+
+            user_id = connection.execute(
+                text(
+                    """
+                    INSERT INTO users (
+                        company_name,
+                        email,
+                        password,
+                        role
+                    )
+                    VALUES (
+                        'Concurrency Test Company',
+                        :email,
+                        'test-password',
+                        'USER'
+                    )
+                    RETURNING id
+                    """
+                ),
+                {
+                    "email": (
+                        f"concurrency-test-{uuid.uuid4().hex}@example.com"
+                    )
+                },
+            ).scalar_one()
+
+            evaluation_id = connection.execute(
+                text(
+                    """
+                    INSERT INTO evaluations (
+                        user_id,
+                        methodology_id,
+                        status
+                    )
+                    VALUES (
+                        :user_id,
+                        :methodology_id,
+                        'DRAFT'
+                    )
+                    RETURNING id
+                    """
+                ),
+                {
+                    "user_id": user_id,
+                    "methodology_id": methodology_id,
+                },
+            ).scalar_one()
+
+        # Connection A acquires the row lock
+        with engine.connect() as connection_a:
+            with connection_a.begin():
+                connection_a.execute(
+                    text(
+                        """
+                        SELECT id
+                        FROM evaluations
+                        WHERE id = :evaluation_id
+                        FOR UPDATE
+                        """
+                    ),
+                    {"evaluation_id": evaluation_id},
+                ).scalar_one()
+
+                # Connection B attempts the same lock
+                with engine.connect() as connection_b:
+                    with connection_b.begin():
+                        connection_b.execute(
+                            text("SET LOCAL lock_timeout = '500ms'")
+                        )
+
+                        with pytest.raises(OperationalError) as exc_info:
+                            connection_b.execute(
+                                text(
+                                    """
+                                    SELECT id
+                                    FROM evaluations
+                                    WHERE id = :evaluation_id
+                                    FOR UPDATE
+                                    """
+                                ),
+                                {"evaluation_id": evaluation_id},
+                            )
+
+                        assert (
+                            getattr(exc_info.value.orig, "pgcode", None)
+                            == "55P03"
+                        )
+
+    finally:
+        if user_id is not None:
+            with engine.begin() as connection:
+                connection.execute(
+                    text(
+                        """
+                        DELETE FROM users
+                        WHERE id = :user_id
+                        """
+                    ),
+                    {"user_id": user_id},
+                )
