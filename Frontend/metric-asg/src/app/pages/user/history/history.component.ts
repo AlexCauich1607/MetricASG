@@ -68,7 +68,7 @@ export class HistoryComponent {
   }
   loadHistory(): void {
     this.loadingChart = false;
-    this.historyService.getEvaluationHistory(this.user_id).subscribe({
+    this.historyService.getEvaluationHistory().subscribe({
       next: (value) => {
         this.historial = value;
         this.historial.history.forEach(e => {

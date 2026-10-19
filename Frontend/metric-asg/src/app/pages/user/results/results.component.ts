@@ -58,7 +58,7 @@ export class ResultsComponent {
   }
 
   loadResults() {
-    this.resultService.getLastEvaluationResult(this.id_user).subscribe({
+    this.resultService.getLastEvaluationResult().subscribe({
       next: (data) => {
         this.results = data;
         this.getPeriodo(this.results.date);

@@ -52,7 +52,7 @@ export class UserHomeComponent {
   }
 
   loadUser() {
-    this.userService.getById(this.id_user).subscribe({
+    this.userService.getMe().subscribe({
       next: (value) => {
         this.user = value;
         if (this.formatDateDDMMYYString(this.user.joined) == this.formatDateDDMMYYString(this.user.next_evaluation)) {
@@ -94,7 +94,7 @@ export class UserHomeComponent {
   }
 
   loadResults() {
-    this.resultService.getLastEvaluationResult(this.id_user).subscribe({
+    this.resultService.getLastEvaluationResult().subscribe({
       next: (data) => {
         this.results = data;
         this.getPeriodo(this.results.date);
