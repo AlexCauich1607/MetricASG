@@ -101,14 +101,13 @@ describe('EvaluationService', () => {
   });
 
   it('should get the last evaluation result', () => {
-    const id = 15;
 
-    service.getLastEvaluationResult(id).subscribe(response => {
+    service.getLastEvaluationResult().subscribe(response => {
       expect(response).toBeTruthy();
     });
 
     const request = httpTestingController.expectOne(
-      `http://localhost:8000/api/evaluations/results/${id}`
+      `http://localhost:8000/api/evaluations/results/me`
     );
 
     expect(request.request.method).toBe('GET');
@@ -117,14 +116,13 @@ describe('EvaluationService', () => {
   });
 
   it('should get the evaluation history', () => {
-    const id = 15;
 
-    service.getEvaluationHistory(id).subscribe(response => {
+    service.getEvaluationHistory().subscribe(response => {
       expect(response).toBeTruthy();
     });
 
     const request = httpTestingController.expectOne(
-      `http://localhost:8000/api/evaluations/history/${id}`
+      `http://localhost:8000/api/evaluations/history/me`
     );
 
     expect(request.request.method).toBe('GET');

@@ -74,7 +74,7 @@ describe('ResultsComponent', () => {
 
     expect(
       evaluationServiceSpy.getLastEvaluationResult
-    ).toHaveBeenCalledWith(component.id_user);
+    ).toHaveBeenCalledWith();
 
     expect(component.results).toEqual(mockResults);
   });
