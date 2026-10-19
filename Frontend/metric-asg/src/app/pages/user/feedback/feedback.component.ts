@@ -26,7 +26,7 @@ export class FeedbackComponent {
   }
 
   loadFeedbacks() {
-    this.evaluationService.getLastEvaluationResult(this.id).subscribe({
+    this.evaluationService.getLastEvaluationResult().subscribe({
       next: (value) => {
         this.results = value;
       }, error: (err) => {

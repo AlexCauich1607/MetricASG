@@ -33,14 +33,14 @@ export class EvaluationService extends BaseService<Evaluation> {
       payload
     );
   }
-  getLastEvaluationResult(id: number): Observable<ResultEvaluation> {
+  getLastEvaluationResult(): Observable<ResultEvaluation> {
     return this.http.get<ResultEvaluation>(
-      `http://localhost:8000/api/evaluations/results/${id}`,
+      `http://localhost:8000/api/evaluations/results/me`,
     );
   }
-  getEvaluationHistory(id: number): Observable<EvaluationHistory> {
+  getEvaluationHistory(): Observable<EvaluationHistory> {
     return this.http.get<EvaluationHistory>(
-      `http://localhost:8000/api/evaluations/history/${id}`,
+      `http://localhost:8000/api/evaluations/history/me`,
     );
   }
 }

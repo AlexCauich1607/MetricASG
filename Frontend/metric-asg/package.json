@@ -21,13 +21,10 @@
     "@angular/platform-browser-dynamic": "^22.2.3",
     "@angular/router": "^22.2.3",
     "@fortawesome/fontawesome-free": "^7.1.0",
-    "@swimlane/ngx-charts": "^25.0.3",
     "bootstrap": "^5.3.8",
     "chart.js": "^4.5.1",
     "html2canvas": "^1.4.1",
-    "html2pdf.js": "^0.12.1",
     "jspdf": "^4.0.0",
-    "ng2-charts": "^8.0.0",
     "rxjs": "~7.8.0",
     "tslib": "^2.3.0",
     "zone.js": "~0.15.0"

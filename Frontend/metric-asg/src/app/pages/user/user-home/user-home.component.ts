@@ -52,7 +52,7 @@ export class UserHomeComponent {
   }
 
   loadUser() {
-    this.userService.getById(this.id_user).subscribe({
+    this.userService.getMe().subscribe({
       next: (value) => {
         this.user = value;
         if (this.formatDateDDMMYYString(this.user.joined) == this.formatDateDDMMYYString(this.user.next_evaluation)) {
@@ -94,7 +94,7 @@ export class UserHomeComponent {
   }
 
   loadResults() {
-    this.resultService.getLastEvaluationResult(this.id_user).subscribe({
+    this.resultService.getLastEvaluationResult().subscribe({
       next: (data) => {
         this.results = data;
         this.getPeriodo(this.results.date);
@@ -160,56 +160,6 @@ export class UserHomeComponent {
   }
 
   downloadPdf() {
-    /*
-    const dialogRef = this.dialog.open(ReportModalComponent, {
-      data: {
-        width: '600px',
-        name: this.user?.company_name,
-        results: this.results,
-      }
-    });
-
-    dialogRef.afterClosed().subscribe();
-    */
-   /*
-    // 1. Crear el componente dinámicamente
-    const componentRef: ComponentRef<PdfReportTemplateComponent> =
-      this.vcr.createComponent(PdfReportTemplateComponent);
-
-    // 2. Pasar datos
-    componentRef.instance.name = this.user?.name ?? '';
-    componentRef.instance.results = this.results;
-
-    // 3. Forzar render fuera de pantalla y tamaño A4
-    const element = componentRef.location.nativeElement as HTMLElement;
-    element.style.position = 'absolute';
-    element.style.top = '-9999px';
-    element.style.left = '-9999px';
-    element.style.width = '794px'; // A4 exacto
-
-    // 4. Esperar render REAL
-    requestAnimationFrame(() => {
-      setTimeout(() => {
-        html2pdf()
-          .from(element)
-          .set({
-            margin: 0,
-            filename: 'factura.pdf',
-            html2canvas: {
-              scale: 2,
-              scrollY: 0,
-              useCORS: true
-            },
-            jsPDF: {
-              unit: 'px',
-              format: [794, 1123],
-              orientation: 'portrait'
-            }
-          })
-          .save()
-          .then(() => componentRef.destroy());
-      }, 100);
-    });*/
     this.router.navigate(['/user/results']);
   }
 }
