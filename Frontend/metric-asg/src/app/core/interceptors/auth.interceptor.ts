@@ -1,81 +1,100 @@
-import { Injectable } from '@angular/core';
+import { inject } from '@angular/core';
 import {
-  HttpInterceptor,
-  HttpRequest,
-  HttpHandler,
-  HttpEvent
+  HttpEvent,
+  HttpHandlerFn,
+  HttpInterceptorFn,
+  HttpRequest
 } from '@angular/common/http';
-import { BehaviorSubject, catchError, filter, Observable, switchMap, take, throwError } from 'rxjs';
+import {
+  BehaviorSubject,
+  catchError,
+  filter,
+  Observable,
+  switchMap,
+  take,
+  throwError
+} from 'rxjs';
 import { SessionService } from '../../shared/class/temporalStorage';
 import { AuthService } from '../../services/auth.service';
 
-@Injectable()
-export class AuthInterceptor implements HttpInterceptor {
-  private isRefreshing = false;
-  private refreshSubject = new BehaviorSubject<string | null>(null);
-  constructor(private auth: AuthService) {}
+let isRefreshing = false;
+let refreshSubject = new BehaviorSubject<string | null>(null);
 
-  intercept(
-    req: HttpRequest<any>,
-    next: HttpHandler
-  ): Observable<HttpEvent<any>> {
+export const authInterceptor: HttpInterceptorFn = (
+  req: HttpRequest<unknown>,
+  next: HttpHandlerFn
+): Observable<HttpEvent<unknown>> => {
+  const auth = inject(AuthService);
 
-    const token = SessionService.getSessionItem('token');
-   
-    if (token) { 
-      req = req.clone({
-        setHeaders: {
-          Authorization: `Bearer ${token}`
-        }
-      });
-    }
+  if (req.url.endsWith('/refresh-token')) {
+    return next(req);
+  }
 
-    return next.handle(req).pipe(
+  const token = SessionService.getSessionItem('token');
+
+  if (token) {
+    req = req.clone({
+      setHeaders: {
+        Authorization: `Bearer ${token}`
+      }
+    });
+  }
+
+  return next(req).pipe(
+    catchError(err => {
+      if (err.status === 401) {
+        return handle401(req, next, auth);
+      }
+
+      return throwError(() => err);
+    })
+  );
+};
+
+function handle401(
+  req: HttpRequest<unknown>,
+  next: HttpHandlerFn,
+  auth: AuthService
+): Observable<HttpEvent<unknown>> {
+  if (!isRefreshing) {
+    isRefreshing = true;
+    refreshSubject.next(null);
+
+    return auth.refreshToken().pipe(
+      switchMap(res => {
+        SessionService.setSessionItem('token', res.token);
+        refreshSubject.next(res.token);
+        isRefreshing = false;
+
+        return next(
+          req.clone({
+            setHeaders: {
+              Authorization: `Bearer ${res.token}`
+            }
+          })
+        );
+      }),
       catchError(err => {
-        if (err.status === 401) {
-          return this.handle401(req, next);
-        }
+        isRefreshing = false;
+        refreshSubject.error(err);
+        refreshSubject = new BehaviorSubject<string | null>(null);
+
         return throwError(() => err);
       })
     );
   }
-  private handle401(req: HttpRequest<any>, next: HttpHandler) {
 
-    if (!this.isRefreshing) {
-      this.isRefreshing = true;
-      this.refreshSubject.next(null);
-
-      return this.auth.refreshToken().pipe(
-        switchMap(res => {
-          this.isRefreshing = false;
-          SessionService.setSessionItem("token", res.token)
-          this.refreshSubject.next(res.token);
-
-          return next.handle(
-            req.clone({
-              setHeaders: {
-                Authorization: `Bearer ${res.token}`
-              }
-            })
-          );
-        }),
-        catchError(err => {
-          this.isRefreshing = false;
-          return throwError(() => err);
+  return refreshSubject.pipe(
+    filter(token => token !== null),
+    take(1),
+    switchMap(token =>
+      next(
+        req.clone({
+          setHeaders: {
+            Authorization: `Bearer ${token}`
+          }
         })
-      );
-    }
-
-    return this.refreshSubject.pipe(
-      filter(token => token !== null),
-      take(1),
-      switchMap(token =>
-        next.handle(
-          req.clone({
-            setHeaders: { Authorization: `Bearer ${token}` }
-          })
-        )
       )
-    );
-  }
+    )
+  );
 }
