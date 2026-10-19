@@ -18,6 +18,7 @@ from app.models.methodology_model import (
 )
 from app.models.user_model import User
 from app.services.evaluations_service import EvaluationService
+from sqlalchemy.exc import IntegrityError
 
 
 def create_evaluation_data(db_session):
@@ -306,3 +307,31 @@ def test_submit_evaluation_rejects_answer_from_other_indicator(
         exc_info.value.detail["indicator_answer_id"]
         == data["answers"][1].id
     )
+
+def test_evaluation_rejects_duplicate_indicator_responses(db_session):
+    data = create_evaluation_data(db_session)
+    service = EvaluationService(db_session)
+
+    result = service.submit_evaluation(
+        {"responses": build_responses(data)},
+        data["user"].id,
+    )
+
+    evaluation_id = result["evaluation_id"]
+    indicator = data["indicators"][0]
+    answer = data["answers"][0]
+
+    duplicate_response = EvaluationIndicatorResponse(
+        evaluation_id=evaluation_id,
+        indicator_id=indicator.id,
+        indicator_answer_id=answer.id,
+        maturity_level_id=answer.maturity_level_id,
+        score=8,
+    )
+
+    db_session.add(duplicate_response)
+
+    with pytest.raises(IntegrityError):
+        db_session.flush()
+
+    db_session.rollback()
