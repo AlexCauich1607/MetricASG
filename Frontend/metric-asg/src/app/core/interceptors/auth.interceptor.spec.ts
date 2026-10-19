@@ -1,11 +1,15 @@
-import { HttpRequest, HttpResponse } from '@angular/common/http';
+import { TestBed } from '@angular/core/testing';
+import {
+  HttpRequest,
+  HttpResponse,
+  HttpHandlerFn
+} from '@angular/common/http';
 import { AuthService } from '../../services/auth.service';
 import { SessionService } from '../../shared/class/temporalStorage';
-import { AuthInterceptor } from './auth.interceptor';
+import { authInterceptor } from './auth.interceptor';
 import { Observable, of, throwError } from 'rxjs';
 
 describe('AuthInterceptor', () => {
-  let interceptor: AuthInterceptor;
   let authService: jasmine.SpyObj<AuthService>;
 
   beforeEach(() => {
@@ -16,29 +20,43 @@ describe('AuthInterceptor', () => {
       ['refreshToken']
     );
 
-    interceptor = new AuthInterceptor(authService);
+    TestBed.configureTestingModule({
+      providers: [
+        {
+          provide: AuthService,
+          useValue: authService
+        }
+      ]
+    });
   });
 
   afterEach(() => {
     sessionStorage.clear();
   });
 
+  function executeInterceptor(
+    request: HttpRequest<any>,
+    next: HttpHandlerFn
+  ): Observable<any> {
+    return TestBed.runInInjectionContext(() =>
+      authInterceptor(request, next)
+    );
+  }
+
   it('should add authorization header when token exists', () => {
     SessionService.setSessionItem('token', 'test-token');
 
     const request = new HttpRequest('GET', '/api/test');
 
-    const next = {
-      handle: jasmine.createSpy('handle').and.returnValue(
-        of(new HttpResponse({ status: 200 }))
-      )
-    };
+    const next = jasmine.createSpy('next').and.returnValue(
+      of(new HttpResponse({ status: 200 }))
+    );
 
-    interceptor.intercept(request, next).subscribe();
+    executeInterceptor(request, next).subscribe();
 
-    expect(next.handle).toHaveBeenCalled();
+    expect(next).toHaveBeenCalled();
 
-    const interceptedRequest = next.handle.calls.mostRecent()
+    const interceptedRequest = next.calls.mostRecent()
       .args[0] as HttpRequest<any>;
 
     expect(
@@ -49,17 +67,15 @@ describe('AuthInterceptor', () => {
   it('should not add authorization header when token does not exist', () => {
     const request = new HttpRequest('GET', '/api/test');
 
-    const next = {
-      handle: jasmine.createSpy('handle').and.returnValue(
-        of(new HttpResponse({ status: 200 }))
-      )
-    };
+    const next = jasmine.createSpy('next').and.returnValue(
+      of(new HttpResponse({ status: 200 }))
+    );
 
-    interceptor.intercept(request, next).subscribe();
+    executeInterceptor(request, next).subscribe();
 
-    expect(next.handle).toHaveBeenCalled();
+    expect(next).toHaveBeenCalled();
 
-    const interceptedRequest = next.handle.calls.mostRecent()
+    const interceptedRequest = next.calls.mostRecent()
       .args[0] as HttpRequest<any>;
 
     expect(
@@ -75,15 +91,13 @@ describe('AuthInterceptor', () => {
       message: 'Internal server error'
     };
 
-    const next = {
-      handle: jasmine.createSpy('handle').and.returnValue(
-        throwError(() => error)
-      )
-    };
+    const next = jasmine.createSpy('next').and.returnValue(
+      throwError(() => error)
+    );
 
     let receivedError: any;
 
-    interceptor.intercept(request, next).subscribe({
+    executeInterceptor(request, next).subscribe({
       error: err => {
         receivedError = err;
       }
@@ -91,6 +105,33 @@ describe('AuthInterceptor', () => {
 
     expect(receivedError).toBe(error);
     expect(authService.refreshToken).not.toHaveBeenCalled();
+  });
+
+  it('should propagate 403 errors without refreshing the token', () => {
+    SessionService.setSessionItem('token', 'test-token');
+
+    const forbiddenError = {
+      status: 403,
+      message: 'Forbidden'
+    };
+
+    const request = new HttpRequest('GET', '/api/test');
+
+    const next = jasmine.createSpy('next').and.returnValue(
+      throwError(() => forbiddenError)
+    );
+
+    let receivedError: any;
+
+    executeInterceptor(request, next).subscribe({
+      error: error => {
+        receivedError = error;
+      }
+    });
+
+    expect(receivedError).toBe(forbiddenError);
+    expect(authService.refreshToken).not.toHaveBeenCalled();
+    expect(next).toHaveBeenCalledTimes(1);
   });
 
   it('should refresh token and retry request after 401', () => {
@@ -104,36 +145,36 @@ describe('AuthInterceptor', () => {
 
     let requestCount = 0;
 
-    const next = {
-      handle: jasmine.createSpy('handle').and.callFake(
-        (req: HttpRequest<any>): Observable<any> => {
-          requestCount++;
+    const next = jasmine.createSpy('next').and.callFake(
+      (req: HttpRequest<any>): Observable<any> => {
+        requestCount++;
 
-          if (requestCount === 1) {
-            expect(
-              req.headers.get('Authorization')
-            ).toBe('Bearer old-token');
-
-            return throwError(() => ({
-              status: 401
-            }));
-          }
-
+        if (requestCount === 1) {
           expect(
             req.headers.get('Authorization')
-          ).toBe('Bearer new-token');
+          ).toBe('Bearer old-token');
 
-          return of(new HttpResponse({
-            status: 200,
-            body: { success: true }
+          return throwError(() => ({
+            status: 401
           }));
         }
-      )
-    };
+
+        expect(
+          req.headers.get('Authorization')
+        ).toBe('Bearer new-token');
+
+        return of(
+          new HttpResponse({
+            status: 200,
+            body: { success: true }
+          })
+        );
+      }
+    );
 
     let response: any;
 
-    interceptor.intercept(request, next).subscribe({
+    executeInterceptor(request, next).subscribe({
       next: value => {
         response = value;
       }
@@ -141,7 +182,7 @@ describe('AuthInterceptor', () => {
 
     expect(authService.refreshToken).toHaveBeenCalledTimes(1);
     expect(SessionService.getSessionItem('token')).toBe('new-token');
-    expect(next.handle).toHaveBeenCalledTimes(2);
+    expect(next).toHaveBeenCalledTimes(2);
     expect(response.status).toBe(200);
   });
 
@@ -159,17 +200,15 @@ describe('AuthInterceptor', () => {
 
     const request = new HttpRequest('GET', '/api/test');
 
-    const next = {
-      handle: jasmine.createSpy('handle').and.returnValue(
-        throwError(() => ({
-          status: 401
-        }))
-      )
-    };
+    const next = jasmine.createSpy('next').and.returnValue(
+      throwError(() => ({
+        status: 401
+      }))
+    );
 
     let receivedError: any;
 
-    interceptor.intercept(request, next).subscribe({
+    executeInterceptor(request, next).subscribe({
       error: error => {
         receivedError = error;
       }
@@ -177,6 +216,6 @@ describe('AuthInterceptor', () => {
 
     expect(authService.refreshToken).toHaveBeenCalledTimes(1);
     expect(receivedError).toBe(refreshError);
-    expect(next.handle).toHaveBeenCalledTimes(1);
+    expect(next).toHaveBeenCalledTimes(1);
   });
 });

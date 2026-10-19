@@ -4,14 +4,18 @@ import { MatIconModule } from '@angular/material/icon';
 import { AppRoutingModule } from './app-routing.module';
 import { AppComponent } from './app.component';
 import { NavbarComponent } from './shared/navbar/navbar.component';
-import { HTTP_INTERCEPTORS, HttpClient, HttpClientModule } from '@angular/common/http';
+import {
+  provideHttpClient,
+  withInterceptors,
+  withXhr
+} from '@angular/common/http';
 
 import { MatIconRegistry } from '@angular/material/icon';
 import { DomSanitizer } from '@angular/platform-browser';
 import { FooterComponent } from './shared/footer/footer.component';
 import { SharedModule } from './shared/shared.module';
 import { FormsModule } from '@angular/forms';
-import { AuthInterceptor } from './core/interceptors/auth.interceptor';
+import { authInterceptor } from './core/interceptors/auth.interceptor';
 
 
 
@@ -22,18 +26,16 @@ import { AuthInterceptor } from './core/interceptors/auth.interceptor';
     BrowserModule,
     AppRoutingModule,
     MatIconModule,
-    HttpClientModule,
     SharedModule,
     FormsModule,
     AppComponent
   ],
 
   providers: [
-    {
-      provide: HTTP_INTERCEPTORS,
-      useClass: AuthInterceptor,
-      multi: true
-    }
+    provideHttpClient(
+      withInterceptors([authInterceptor]),
+      withXhr()
+    )
   ],
   bootstrap: [AppComponent]
 })
