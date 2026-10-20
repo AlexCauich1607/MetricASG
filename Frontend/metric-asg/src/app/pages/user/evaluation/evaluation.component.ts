@@ -1,8 +1,10 @@
+import { Subject, debounceTime, takeUntil } from 'rxjs';
 import {
   Component,
   ChangeDetectionStrategy,
   computed,
-  signal
+  signal,
+  HostListener
 } from '@angular/core';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { EvaluationService } from '../../../services/evaluation.service';
@@ -30,6 +32,22 @@ export class EvaluationComponent {
 
   responses = signal<Map<number, number>>(new Map());
   completadas = signal<Map<number, number>>(new Map());
+
+  readonly autosaveStatus = signal<
+    'idle' | 'pending' | 'saving' | 'saved' | 'error'
+  >('idle');
+
+  private readonly autosaveChanges$ = new Subject<void>();
+  readonly submitting = signal(false);
+  private finalizing = false;
+  private evaluationSubmitted = false;
+  private submitPending = false;
+  private destroyed = false;
+  private readonly destroy$ = new Subject<void>();
+
+  private savingDraft = false;
+  private pendingDraft = false;
+  private draftReady = false;
 
   ambit = signal(0);
   question = signal(0);
@@ -81,16 +99,184 @@ export class EvaluationComponent {
   mesFuturo = '';
   anioFuturo = '';
 
+
+
   constructor(
     private evaluationService: EvaluationService,
     private router: Router
-  ) {}
+  ) { }
 
   ngOnInit(): void {
     this.loadSurvey();
     this.getPeriodo();
+
+    this.autosaveChanges$
+      .pipe(
+        debounceTime(800),
+        takeUntil(this.destroy$)
+      )
+      .subscribe(() => {
+        this.draftReady = true;
+        this.saveDraft();
+      });
   }
 
+  ngOnDestroy(): void {
+    this.destroyed = true;
+
+    this.destroy$.next();
+    this.destroy$.complete();
+    this.autosaveChanges$.complete();
+  }
+
+  private saveDraft(): void {
+    if (
+      this.finalizing ||
+      this.savingDraft ||
+      !this.pendingDraft ||
+      !this.draftReady
+    ) {
+      return;
+    }
+
+    this.savingDraft = true;
+    this.pendingDraft = false;
+    this.draftReady = false;
+    this.autosaveStatus.set('saving');
+
+    const payload: EvaluationSubmitPayload = {
+      responses: Array.from(this.responses().entries()).map(
+        ([indicator_id, indicator_answer_id]) => ({
+          indicator_id,
+          indicator_answer_id
+        })
+      )
+    };
+
+    this.evaluationService.saveDraft(payload).subscribe({
+      next: () => {
+        if (this.destroyed) {
+          return;
+        }
+
+        this.savingDraft = false;
+
+
+        if (this.finalizing) {
+          this.submitFinalEvaluation();
+          return;
+        }
+
+        if (this.pendingDraft) {
+          this.autosaveStatus.set('pending');
+          this.saveDraft();
+        } else {
+          this.autosaveStatus.set('saved');
+        }
+      },
+      error: () => {
+        if (this.destroyed) {
+          return;
+        }
+
+        this.savingDraft = false;
+
+        this.pendingDraft = true;
+        this.autosaveStatus.set('error');
+
+        if (this.finalizing) {
+          this.submitFinalEvaluation();
+        }
+      }
+    });
+  }
+
+  retrySaveDraft(): void {
+    if (this.autosaveStatus() !== 'error') {
+      return;
+    }
+
+    this.pendingDraft = true;
+    this.draftReady = true;
+
+    this.saveDraft();
+  }
+
+  private submitFinalEvaluation(): void {
+    if (!this.finalizing || !this.submitPending || this.savingDraft) {
+      return;
+    }
+
+    this.submitPending = false;
+
+    const payload: EvaluationSubmitPayload = {
+      responses: Array.from(this.responses().entries()).map(
+        ([indicator_id, indicator_answer_id]) => ({
+          indicator_id,
+          indicator_answer_id
+        })
+      )
+    };
+
+    this.evaluationService.submitEvaluation(payload).subscribe({
+      next: () => {
+        this.evaluationSubmitted = true;
+        this.router.navigate(['/user/results']);
+      },
+      error: () => {
+        this.finalizing = false;
+        this.submitting.set(false);
+
+        this.pendingDraft = true;
+        this.draftReady = false;
+        this.autosaveStatus.set('pending');
+        this.autosaveChanges$.next();
+      }
+    });
+  }
+
+  canLeaveEvaluation(): boolean {
+    if (this.evaluationSubmitted) {
+      return true;
+    }
+
+    if (this.finalizing) {
+      return false;
+    }
+
+    const status = this.autosaveStatus();
+
+    if (
+      status === 'pending' ||
+      status === 'saving' ||
+      status === 'error'
+    ) {
+      return confirm(
+        'Hay respuestas que todavía no se han guardado. ' +
+        '¿Desea abandonar la evaluación?'
+      );
+    }
+
+    return true;
+  }
+
+  @HostListener('window:beforeunload', ['$event'])
+  onBeforeUnload(event: BeforeUnloadEvent): void {
+    const status = this.autosaveStatus();
+
+    if (
+      !this.evaluationSubmitted &&
+      (
+        this.finalizing ||
+        status === 'pending' ||
+        status === 'saving' ||
+        status === 'error'
+      )
+    ) {
+      event.preventDefault();
+      event.returnValue = '';
+    }
+  }
   nextQuestion(): void {
     const currentAmbit = this.currentAmbit();
     const structure = this.structure();
@@ -180,51 +366,55 @@ export class EvaluationComponent {
     answerId: number,
     ambitId: number
   ): void {
-    const currentResponses = this.responses();
-
-    if (currentResponses.has(indicatorId)) {
-      const updatedResponses = new Map(currentResponses);
-      updatedResponses.set(indicatorId, answerId);
-      this.responses.set(updatedResponses);
+    if (this.finalizing) {
       return;
     }
+
+    const currentResponses = this.responses();
+
+    if (currentResponses.get(indicatorId) === answerId) {
+      return;
+    }
+
+    const isNewAnswer = !currentResponses.has(indicatorId);
 
     const updatedResponses = new Map(currentResponses);
     updatedResponses.set(indicatorId, answerId);
     this.responses.set(updatedResponses);
 
-    const currentCompletadas = this.completadas();
-    const updatedCompletadas = new Map(currentCompletadas);
-    const valor = updatedCompletadas.get(ambitId) ?? 0;
+    if (isNewAnswer) {
+      const updatedCompletadas = new Map(this.completadas());
+      const valor = updatedCompletadas.get(ambitId) ?? 0;
 
-    updatedCompletadas.set(ambitId, valor + 1);
-    this.completadas.set(updatedCompletadas);
+      updatedCompletadas.set(ambitId, valor + 1);
+      this.completadas.set(updatedCompletadas);
+    }
+
+    this.pendingDraft = true;
+    this.draftReady = false;
+    this.autosaveStatus.set('pending');
+    this.autosaveChanges$.next();
   }
 
   submit(): void {
-    console.log(this.responses().size);
-    console.log(this.responses());
-    console.log(this.totalQuestions());
-
-    if (this.responses().size === this.totalQuestions()) {
-      if (confirm('¿Desea enviar esta evaluación?')) {
-        const payload: EvaluationSubmitPayload = {
-          responses: Array.from(this.responses().entries()).map(
-            ([indicator_id, indicator_answer_id]) => ({
-              indicator_id,
-              indicator_answer_id
-            })
-          )
-        };
-
-        this.evaluationService.submitEvaluation(payload).subscribe(() => {
-          alert('Evaluación enviada correctamente');
-          this.router.navigate(['/user/results']);
-        });
-      }
-    } else {
-      alert('Tiene preguntas sin responder');
+    if (this.finalizing || this.submitting()) {
+      return;
     }
+
+    if (this.responses().size !== this.totalQuestions()) {
+      alert('Tiene preguntas sin responder');
+      return;
+    }
+
+    if (!confirm('¿Desea enviar esta evaluación?')) {
+      return;
+    }
+
+    this.finalizing = true;
+    this.submitting.set(true);
+    this.submitPending = true;
+
+    this.submitFinalEvaluation();
   }
 
   hexToRgb(hex: string): { r: number; g: number; b: number } {
