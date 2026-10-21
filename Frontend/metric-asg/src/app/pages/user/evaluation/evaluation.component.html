@@ -9,146 +9,182 @@
       Semestre {{mesFuturo}} {{anioFuturo != anioActual ? anioFuturo : ""}}
       - {{mesActual}} {{anioActual}}
     </h6>
+    <div class="d-flex justify-content-center align-items-center gap-2 mb-3 sw-fs-7" role="status" aria-live="polite">
+      @switch (autosaveStatus()) {
+      @case ('pending') {
+      <span class="text-secondary">
+        <i class="bi bi-clock"></i>
+        Cambios pendientes de guardar
+      </span>
+      }
 
+      @case ('saving') {
+      <span class="text-secondary">
+        <span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>
+        Guardando respuestas...
+      </span>
+      }
+
+      @case ('saved') {
+      <span class="text-success">
+        <i class="bi bi-check-circle-fill"></i>
+        Respuestas guardadas
+      </span>
+      }
+
+      @case ('error') {
+      <span class="text-danger">
+        <i class="bi bi-exclamation-circle-fill"></i>
+        No se pudieron guardar las respuestas
+      </span>
+
+      <button type="button" class="btn btn-sm btn-outline-danger" (click)="retrySaveDraft()">
+        Reintentar
+      </button>
+      }
+      }
+    </div>
+
+    @if (loading()) {
+    <div class="d-flex justify-content-center align-items-center py-5">
+      <div class="text-center">
+        <div class="spinner-border text-my-purple mb-3" role="status">
+          <span class="visually-hidden">Cargando evaluación...</span>
+        </div>
+
+        <p class="sw-gris mb-0">
+          Recuperando evaluación...
+        </p>
+      </div>
+    </div>
+    } @else if (loadError()) {
+    <div class="border rounded p-5 shadow-sm bg-white text-center">
+      <i class="bi bi-exclamation-circle text-danger fs-1"></i>
+
+      <h5 class="text-my-purple fw-bold mt-3">
+        No se pudo recuperar la evaluación
+      </h5>
+
+      <p class="sw-gris">
+        No fue posible cargar la evaluación o recuperar las respuestas guardadas.
+        Comprueba tu conexión e inténtalo nuevamente.
+      </p>
+
+      <button type="button" class="btn btn-my-purple" (click)="loadSurvey()">
+        <i class="bi bi-arrow-clockwise me-2"></i>
+        Reintentar
+      </button>
+    </div>
+    } @else {
     @if (currentAmbit(); as currentAmbit) {
-      @if (currentQuestion(); as currentQuestion) {
+    @if (currentQuestion(); as currentQuestion) {
 
-        <div
-          class="border rounded p-5 borde-izq shadow-sm bg-white"
-          [style.--borde-color]="currentAmbit.color"
-        >
+    <div class="border rounded p-5 borde-izq shadow-sm bg-white" [style.--borde-color]="currentAmbit.color">
 
-          <div class="d-flex align-items-stretch justify-content-between mb-5">
-            <div>
-              <div>
-                <p
-                  class="fw-bold"
-                  [style.color]="currentAmbit.color"
-                >
-                  <b
-                    class="text-white px-2 py-1 rounded"
-                    [style.backgroundColor]="currentAmbit.color"
-                  >
-                    {{currentAmbit.letter}}
-                  </b>
-                  {{currentAmbit.name}}
-                </p>
-              </div>
+      <div class="d-flex align-items-stretch justify-content-between mb-5">
+        <div>
+          <div>
+            <p class="fw-bold" [style.color]="currentAmbit.color">
+              <b class="text-white px-2 py-1 rounded" [style.backgroundColor]="currentAmbit.color">
+                {{currentAmbit.letter}}
+              </b>
+              {{currentAmbit.name}}
+            </p>
+          </div>
 
-              <p class="text-my-purple fs-5">
-                <strong>
-                  {{question() + 1}}. {{currentQuestion.question}}
-                </strong>
-              </p>
+          <p class="text-my-purple fs-5">
+            <strong>
+              {{question() + 1}}. {{currentQuestion.question}}
+            </strong>
+          </p>
 
-              @for (
-                answer of currentQuestion.answers;
-                track answer.id;
-                let i = $index
-              ) {
-                <div>
-                  <label
-                    class="mb-2 py-2 px-3 answer-input"
-                    [style.--bg-color]="hexToRgbString(currentAmbit.color)"
-                    [class]="
+          @for (
+          answer of currentQuestion.answers;
+          track answer.id;
+          let i = $index
+          ) {
+          <div>
+            <label class="mb-2 py-2 px-3 answer-input" [style.--bg-color]="hexToRgbString(currentAmbit.color)" [class]="
                       responses().get(currentQuestion.id) === answer.id
                         ? 'answer-select'
                         : ''
-                    "
-                  >
-                    <input
-                      type="radio"
-                      [name]="'indicator-' + currentQuestion.id"
-                      [checked]="
+                    ">
+              <input type="radio" [name]="'indicator-' + currentQuestion.id" [checked]="
                         responses().get(currentQuestion.id) === answer.id
-                      "
-                      (change)="
+                      " (change)="
                         selectAnswer(
                           currentQuestion.id,
                           answer.id,
                           currentAmbit.id
                         )
-                      "
-                    />
+                      " />
 
-                    {{answer.text}}
-                  </label>
-                </div>
-              }
-            </div>
-
-            <div class="d-flex align-items-start ms-4">
-              <div class="sw-v-center sw-bg-blue-light py-2 px-3 rounded">
-                <p class="sw-fs-7 mt-1 mb-1 fw-bold">
-                  Progreso
-                </p>
-
-                <mat-progress-spinner
-                  class="sw-spinner ms-1"
-                  mode="determinate"
-                  [value]="progreso()"
-                  diameter="40"
-                  strokeWidth="10"
-                  [style.--track-color]="fondo"
-                  [style.--mat-progress-spinner-active-indicator-color]="
-                    currentAmbit.color
-                  "
-                >
-                </mat-progress-spinner>
-
-                <p class="sw-fs-7 ms-3 mt-1 mb-0">
-                  {{progreso()}}%
-                </p>
-              </div>
-            </div>
+              {{answer.text}}
+            </label>
           </div>
-
-          <div class="d-flex align-items-stretch justify-content-between">
-
-            @if (ambit() === 0 && question() === 0) {
-              <div></div>
-            }
-
-            @if (ambit() > 0 || question() > 0) {
-              <button
-                class="btn btn-my-purple pe-4"
-                (click)="beforeQuestion()"
-              >
-                <i class="bi bi-chevron-left"></i>
-                Anterior
-              </button>
-            }
-
-            @if (
-              ambit() < structure()!.ambits.length - 1 ||
-              question() < currentAmbit.indicators.length - 1
-            ) {
-              <button
-                class="btn btn-my-purple ps-4"
-                (click)="nextQuestion()"
-              >
-                Siguiente
-                <i class="bi bi-chevron-right"></i>
-              </button>
-            }
-
-            @if (
-              ambit() === structure()!.ambits.length - 1 &&
-              question() === currentAmbit.indicators.length - 1
-            ) {
-              <button
-                class="btn btn-my-purple ps-3"
-                (click)="submit()"
-              >
-                <i class="bi bi-send-fill"></i>
-                Enviar evaluación
-              </button>
-            }
-
-          </div>
+          }
         </div>
 
-      }
+        <div class="d-flex align-items-start ms-4">
+          <div class="sw-v-center sw-bg-blue-light py-2 px-3 rounded">
+            <p class="sw-fs-7 mt-1 mb-1 fw-bold">
+              Progreso
+            </p>
+
+            <mat-progress-spinner class="sw-spinner ms-1" mode="determinate" [value]="progreso()" diameter="40"
+              strokeWidth="10" [style.--track-color]="fondo" [style.--mat-progress-spinner-active-indicator-color]="
+                    currentAmbit.color
+                  ">
+            </mat-progress-spinner>
+
+            <p class="sw-fs-7 ms-3 mt-1 mb-0">
+              {{progreso()}}%
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div class="d-flex align-items-stretch justify-content-between">
+
+        @if (ambit() === 0 && question() === 0) {
+        <div></div>
+        }
+
+        @if (ambit() > 0 || question() > 0) {
+        <button class="btn btn-my-purple pe-4" (click)="beforeQuestion()">
+          <i class="bi bi-chevron-left"></i>
+          Anterior
+        </button>
+        }
+
+        @if (
+        ambit() < structure()!.ambits.length - 1 || question() < currentAmbit.indicators.length - 1 ) { <button
+          class="btn btn-my-purple ps-4" (click)="nextQuestion()">
+          Siguiente
+          <i class="bi bi-chevron-right"></i>
+          </button>
+          }
+
+          @if (
+          ambit() === structure()!.ambits.length - 1 &&
+          question() === currentAmbit.indicators.length - 1
+          ) {
+          <button class="btn btn-my-purple ps-3" (click)="submit()" [disabled]="loading() || loadError() || submitting()">
+            <i class="bi bi-send-fill"></i>
+            @if (submitting()) {
+            <span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>
+            Enviando evaluación...
+            } @else {
+            Enviar evaluación
+            }
+          </button>
+          }
+
+      </div>
+    </div>
+
+    }
+    }
     }
   </div>
 </div>

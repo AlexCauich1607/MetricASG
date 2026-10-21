@@ -7,6 +7,7 @@ import { Observable } from 'rxjs';
 import { EvaluationSubmitPayload } from '../models/evaluation_submit';
 import { ResultEvaluation } from '../models/evaluation_result';
 import { EvaluationHistory } from '../models/history_evaluations';
+import { EvaluationDraft } from '../models/evaluation_draft';
 
 @Injectable({
   providedIn: 'root'
@@ -24,6 +25,12 @@ export class EvaluationService extends BaseService<Evaluation> {
     return this.http.post(
       `http://localhost:8000/api/evaluations/draft`,
       payload
+    );
+  }
+
+  getDraft(): Observable<EvaluationDraft | null> {
+    return this.http.get<EvaluationDraft | null>(
+      `http://localhost:8000/api/${this.endpoint}/draft`
     );
   }
 

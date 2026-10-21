@@ -2,6 +2,7 @@ import { Routes } from '@angular/router';
 import { authGuard } from '../core/guards/auth.guard';
 import { adminGuard } from '../core/guards/admin.guard';
 import { userGuard } from '../core/guards/user.guard';
+import { evaluationExitGuard } from '../core/guards/evaluation-exit.guard';
 
 export const pagesRoutes: Routes = [
   {
@@ -69,7 +70,8 @@ export const pagesRoutes: Routes = [
         path: 'evaluation',
         loadComponent: () =>
           import('./user/evaluation/evaluation.component')
-            .then(m => m.EvaluationComponent)
+            .then(m => m.EvaluationComponent),
+        canDeactivate: [evaluationExitGuard]
       },
       {
         path: 'feedback',
