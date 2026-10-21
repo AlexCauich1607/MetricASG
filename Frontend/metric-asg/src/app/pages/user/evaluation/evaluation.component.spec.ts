@@ -1,4 +1,9 @@
-import { ComponentFixture, TestBed } from '@angular/core/testing';
+import {
+  ComponentFixture,
+  TestBed,
+  fakeAsync,
+  tick
+} from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { of, Subject, throwError } from 'rxjs';
 
@@ -34,16 +39,22 @@ describe('EvaluationComponent', () => {
     ]
   };
 
+  let getDraftSpy: jasmine.Spy;
   let saveDraftSpy: jasmine.Spy;
   let submitEvaluationSpy: jasmine.Spy;
 
   const evaluationServiceMock = {
     getEvaluation: () => of(evaluationStructure),
+    getDraft: () => getDraftSpy(),
     saveDraft: (...args: unknown[]) => saveDraftSpy(...args),
     submitEvaluation: (...args: unknown[]) => submitEvaluationSpy(...args)
   };
 
   beforeEach(async () => {
+    getDraftSpy = jasmine.createSpy('getDraft').and.returnValue(
+      of(null)
+    );
+
     saveDraftSpy = jasmine.createSpy('saveDraft').and.returnValue(
       of({
         evaluation_id: 1,
@@ -101,37 +112,35 @@ describe('EvaluationComponent', () => {
     }, 950);
   });
 
-  it('should save only the latest answer after rapid changes', (done) => {
+  it('should save only the latest answer after rapid changes', fakeAsync(() => {
     component.selectAnswer(1, 1, 1);
 
-    setTimeout(() => {
-      component.selectAnswer(1, 2, 1);
+    tick(200);
 
-      expect(saveDraftSpy).not.toHaveBeenCalled();
-      expect(component.autosaveStatus()).toBe('pending');
-    }, 200);
+    component.selectAnswer(1, 2, 1);
 
-    setTimeout(() => {
-      expect(saveDraftSpy).not.toHaveBeenCalled();
-    }, 850);
+    expect(saveDraftSpy).not.toHaveBeenCalled();
+    expect(component.autosaveStatus()).toBe('pending');
 
-    setTimeout(() => {
-      expect(saveDraftSpy).toHaveBeenCalledTimes(1);
+    tick(650);
 
-      expect(saveDraftSpy).toHaveBeenCalledWith({
-        responses: [
-          {
-            indicator_id: 1,
-            indicator_answer_id: 2
-          }
-        ]
-      });
+    expect(saveDraftSpy).not.toHaveBeenCalled();
 
-      expect(component.autosaveStatus()).toBe('saved');
+    tick(150);
 
-      done();
-    }, 1150);
-  });
+    expect(saveDraftSpy).toHaveBeenCalledTimes(1);
+
+    expect(saveDraftSpy).toHaveBeenCalledWith({
+      responses: [
+        {
+          indicator_id: 1,
+          indicator_answer_id: 2
+        }
+      ]
+    });
+
+    expect(component.autosaveStatus()).toBe('saved');
+  }));
 
   it('should save pending changes after the active request completes', (done) => {
     const firstRequest = new Subject<{
@@ -438,7 +447,7 @@ describe('EvaluationComponent', () => {
       done();
     }, 950);
   });
-  it('should keep pending status when changes await debounce', (done) => {
+  it('should keep pending status when changes await debounce', fakeAsync(() => {
     const firstRequest = new Subject<{
       evaluation_id: number;
       status: string;
@@ -454,36 +463,160 @@ describe('EvaluationComponent', () => {
 
     component.selectAnswer(1, 1, 1);
 
-    setTimeout(() => {
-      expect(saveDraftSpy).toHaveBeenCalledTimes(1);
+    tick(800);
 
-      component.selectAnswer(1, 2, 1);
+    expect(saveDraftSpy).toHaveBeenCalledTimes(1);
+    expect(component.autosaveStatus()).toBe('saving');
 
-      firstRequest.next({
+    component.selectAnswer(1, 2, 1);
+
+    firstRequest.next({
+      evaluation_id: 1,
+      status: 'DRAFT'
+    });
+    firstRequest.complete();
+
+    expect(saveDraftSpy).toHaveBeenCalledTimes(1);
+    expect(component.autosaveStatus()).toBe('pending');
+
+    tick(800);
+
+    expect(saveDraftSpy).toHaveBeenCalledTimes(2);
+
+    expect(saveDraftSpy.calls.mostRecent().args[0]).toEqual({
+      responses: [
+        {
+          indicator_id: 1,
+          indicator_answer_id: 2
+        }
+      ]
+    });
+
+    expect(component.autosaveStatus()).toBe('saved');
+  }));
+  it('should restore saved draft responses and progress', () => {
+    getDraftSpy.and.returnValue(
+      of({
         evaluation_id: 1,
-        status: 'DRAFT'
-      });
-      firstRequest.complete();
-
-      expect(saveDraftSpy).toHaveBeenCalledTimes(1);
-      expect(component.autosaveStatus()).toBe('pending');
-    }, 850);
-
-    setTimeout(() => {
-      expect(saveDraftSpy).toHaveBeenCalledTimes(2);
-
-      expect(saveDraftSpy.calls.mostRecent().args[0]).toEqual({
+        status: 'draft',
         responses: [
           {
             indicator_id: 1,
-            indicator_answer_id: 2
+            indicator_answer_id: 1
           }
         ]
-      });
+      })
+    );
 
-      expect(component.autosaveStatus()).toBe('saved');
+    component.loadSurvey();
 
-      done();
-    }, 1750);
+    expect(component.loading()).toBeFalse();
+    expect(component.loadError()).toBeFalse();
+
+    expect(component.responses().get(1)).toBe(1);
+    expect(component.completadas().get(1)).toBe(1);
+    expect(component.progreso()).toBe(100);
+
+    expect(component.autosaveStatus()).toBe('saved');
+
+    expect(saveDraftSpy).not.toHaveBeenCalled();
+  });
+  it('should initialize an empty evaluation when no draft exists', () => {
+    getDraftSpy.and.returnValue(of(null));
+
+    component.loadSurvey();
+
+    expect(component.loading()).toBeFalse();
+    expect(component.loadError()).toBeFalse();
+
+    expect(component.responses().size).toBe(0);
+    expect(component.completadas().size).toBe(0);
+    expect(component.progreso()).toBe(0);
+
+    expect(component.autosaveStatus()).toBe('idle');
+
+    expect(saveDraftSpy).not.toHaveBeenCalled();
+  });
+  it('should prevent changes when draft recovery fails', () => {
+    getDraftSpy.and.returnValue(
+      throwError(() => new Error('Simulated recovery error'))
+    );
+
+    component.loadSurvey();
+
+    expect(component.loading()).toBeFalse();
+    expect(component.loadError()).toBeTrue();
+
+    expect(component.responses().size).toBe(0);
+    expect(component.autosaveStatus()).toBe('idle');
+
+    component.selectAnswer(1, 1, 1);
+
+    expect(component.responses().size).toBe(0);
+    expect(component.completadas().size).toBe(0);
+
+    expect(saveDraftSpy).not.toHaveBeenCalled();
+  });
+  it('should retry draft recovery after a failed request', () => {
+    getDraftSpy.and.returnValues(
+      throwError(() => new Error('Simulated recovery error')),
+      of({
+        evaluation_id: 1,
+        status: 'draft',
+        responses: [
+          {
+            indicator_id: 1,
+            indicator_answer_id: 1
+          }
+        ]
+      })
+    );
+
+    component.loadSurvey();
+
+    expect(component.loadError()).toBeTrue();
+    expect(component.responses().size).toBe(0);
+
+    component.loadSurvey();
+
+    expect(component.loading()).toBeFalse();
+    expect(component.loadError()).toBeFalse();
+
+    expect(component.responses().get(1)).toBe(1);
+    expect(component.completadas().get(1)).toBe(1);
+    expect(component.progreso()).toBe(100);
+
+    expect(component.autosaveStatus()).toBe('saved');
+    expect(saveDraftSpy).not.toHaveBeenCalled();
+  });
+
+  it('should ignore invalid draft responses', () => {
+    getDraftSpy.and.returnValue(
+      of({
+        evaluation_id: 1,
+        status: 'draft',
+        responses: [
+          {
+            indicator_id: 1,
+            indicator_answer_id: 999
+          },
+          {
+            indicator_id: 999,
+            indicator_answer_id: 1
+          }
+        ]
+      })
+    );
+
+    component.loadSurvey();
+
+    expect(component.loading()).toBeFalse();
+    expect(component.loadError()).toBeFalse();
+
+    expect(component.responses().size).toBe(0);
+    expect(component.completadas().size).toBe(0);
+    expect(component.progreso()).toBe(0);
+
+    expect(saveDraftSpy).not.toHaveBeenCalled();
   });
 });

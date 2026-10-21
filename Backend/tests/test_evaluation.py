@@ -6,7 +6,8 @@ import pytest
 from fastapi import HTTPException
 from sqlalchemy.exc import OperationalError, IntegrityError
 
-
+from app.main import app
+from app.services.token_service import get_current_user
 from app.core.roles import UserRole
 from app.models.ambit_model import Ambit
 from app.models.evaluation_ambit_score_model import EvaluationAmbitScore
@@ -890,3 +891,119 @@ def test_evaluation_row_lock_prevents_concurrent_access():
                     ),
                     {"user_id": user_id},
                 )
+
+def test_get_draft_returns_saved_responses(db_session):
+    data = create_evaluation_data(db_session)
+    service = EvaluationService(db_session)
+
+    responses = build_responses(data)[:2]
+
+    saved_draft = service.save_draft(
+        {"responses": responses},
+        data["user"].id,
+    )
+
+    result = service.get_draft(data["user"].id)
+
+    assert result is not None
+    assert result["evaluation_id"] == saved_draft["evaluation_id"]
+    assert result["status"] == EvaluationStatus.DRAFT.value
+    assert result["responses"] == responses
+
+def test_get_draft_returns_none_when_no_draft_exists(db_session):
+    data = create_evaluation_data(db_session)
+    service = EvaluationService(db_session)
+
+    result = service.get_draft(data["user"].id)
+
+    assert result is None
+
+def test_get_draft_does_not_return_another_users_draft(db_session):
+    data = create_evaluation_data(db_session)
+    service = EvaluationService(db_session)
+
+    responses = build_responses(data)[:2]
+
+    service.save_draft(
+        {"responses": responses},
+        data["user"].id,
+    )
+
+    other_user = User(
+        name="Other",
+        lastname="User",
+        position="Tester",
+        company_name="Other Test Company",
+        email="other-evaluation-user@test.local",
+        phone="9999999998",
+        password="test-password",
+        role=UserRole.USER,
+        active=True,
+    )
+
+    db_session.add(other_user)
+    db_session.flush()
+
+    result = service.get_draft(other_user.id)
+
+    assert result is None
+
+def test_get_draft_does_not_return_another_methodology_draft(db_session):
+    data = create_evaluation_data(db_session)
+    service = EvaluationService(db_session)
+
+    responses = build_responses(data)[:2]
+
+    service.save_draft(
+        {"responses": responses},
+        data["user"].id,
+    )
+
+    data["methodology"].is_active = False
+
+    new_methodology = Methodology(
+        name="New Evaluation Test Methodology",
+        version="TEST-EVALUATION-2",
+        status=MethodologyStatus.PUBLISHED,
+        is_active=True,
+    )
+
+    db_session.add(new_methodology)
+    db_session.flush()
+
+    result = service.get_draft(data["user"].id)
+
+    assert result is None
+
+def test_get_draft_requires_authentication(client):
+    response = client.get("/api/evaluations/draft")
+
+    assert response.status_code == 401
+
+def test_get_draft_endpoint_returns_authenticated_users_draft(
+    client,
+    db_session,
+):
+    data = create_evaluation_data(db_session)
+    service = EvaluationService(db_session)
+
+    responses = build_responses(data)[:2]
+
+    saved_draft = service.save_draft(
+        {"responses": responses},
+        data["user"].id,
+    )
+
+    app.dependency_overrides[get_current_user] = lambda: data["user"]
+
+    try:
+        response = client.get("/api/evaluations/draft")
+
+        assert response.status_code == 200
+        assert response.json() == {
+            "evaluation_id": saved_draft["evaluation_id"],
+            "status": EvaluationStatus.DRAFT.value,
+            "responses": responses,
+        }
+    finally:
+        app.dependency_overrides.pop(get_current_user, None)

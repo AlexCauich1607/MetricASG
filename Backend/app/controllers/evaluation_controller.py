@@ -44,6 +44,16 @@ class EvaluationsController(BaseController):
                 payload.model_dump(),
                 current_user.id
             )
+
+        @self.router.get("/draft")
+        def get_draft(
+            current_user: User = Depends(get_current_user),
+            db: Session = Depends(get_db)
+        ):
+            return EvaluationService(db).get_draft(
+                current_user.id
+            )
+
         @self.router.post("/submit")
         def submit_evaluation(
             payload: EvaluationSubmitRequest,
@@ -64,6 +74,7 @@ class EvaluationsController(BaseController):
                 current_user.id
             )
 
+
         @self.router.get("/history/me")
         def get_history(
             current_user: User = Depends(get_current_user),
@@ -72,3 +83,15 @@ class EvaluationsController(BaseController):
             return EvaluationService(db).get_evaluation_history(
                 current_user.id
             )
+
+
+                # Register specific GET routes before the inherited dynamic route.
+        dynamic_route = next(
+            route
+            for route in self.router.routes
+            if route.path == "/api/evaluations/{item_id}"
+            and "GET" in route.methods
+        )
+
+        self.router.routes.remove(dynamic_route)
+        self.router.routes.append(dynamic_route)

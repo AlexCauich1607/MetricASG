@@ -223,6 +223,53 @@ class EvaluationService:
             "status": evaluation.status.value,
         }
 
+    def get_draft(self, user_id: int):
+        user = self.db.query(User).filter(
+            User.id == user_id
+        ).first()
+
+        if not user:
+            raise HTTPException(
+                status_code=404,
+                detail="User not found"
+            )
+
+        methodology = MethodologyService(self.db).get_active()
+
+        evaluation = (
+            self.db.query(Evaluation)
+            .filter(
+                Evaluation.user_id == user_id,
+                Evaluation.methodology_id == methodology.id,
+                Evaluation.status == EvaluationStatus.DRAFT,
+            )
+            .first()
+        )
+
+        if not evaluation:
+            return None
+
+        responses = (
+            self.db.query(EvaluationIndicatorResponse)
+            .filter(
+                EvaluationIndicatorResponse.evaluation_id == evaluation.id
+            )
+            .order_by(EvaluationIndicatorResponse.indicator_id)
+            .all()
+        )
+
+        return {
+            "evaluation_id": evaluation.id,
+            "status": evaluation.status.value,
+            "responses": [
+                {
+                    "indicator_id": response.indicator_id,
+                    "indicator_answer_id": response.indicator_answer_id,
+                }
+                for response in responses
+            ],
+        }
+
     def submit_evaluation(self, payload: dict, user_id: int):
         responses = payload["responses"]
         user = self.db.query(User).filter(User.id == user_id).first()

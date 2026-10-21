@@ -1,4 +1,4 @@
-import { Subject, debounceTime, takeUntil } from 'rxjs';
+import { Subject, debounceTime, forkJoin, takeUntil } from 'rxjs';
 import {
   Component,
   ChangeDetectionStrategy,
@@ -29,6 +29,7 @@ import { EvaluationSubmitPayload } from '../../../models/evaluation_submit';
 export class EvaluationComponent {
   structure = signal<EvaluationStructure | null>(null);
   loading = signal(true);
+  readonly loadError = signal(false);
 
   responses = signal<Map<number, number>>(new Map());
   completadas = signal<Map<number, number>>(new Map());
@@ -350,12 +351,67 @@ export class EvaluationComponent {
   }
 
   loadSurvey(): void {
-    this.evaluationService.getEvaluation().subscribe({
-      next: res => {
-        this.structure.set(res);
+    this.loading.set(true);
+    this.loadError.set(false);
+
+    forkJoin({
+      structure: this.evaluationService.getEvaluation(),
+      draft: this.evaluationService.getDraft()
+    }).pipe(
+      takeUntil(this.destroy$)
+    ).subscribe({
+      next: ({ structure, draft }) => {
+        this.structure.set(structure);
+
+        const validIndicators = new Map<number, {
+          ambitId: number;
+          answerIds: Set<number>;
+        }>();
+
+        for (const ambit of structure.ambits) {
+          for (const indicator of ambit.indicators) {
+            validIndicators.set(indicator.id, {
+              ambitId: ambit.id,
+              answerIds: new Set(
+                indicator.answers.map(answer => answer.id)
+              )
+            });
+          }
+        }
+
+        const restoredResponses = new Map<number, number>();
+        const restoredCompletadas = new Map<number, number>();
+
+        for (const response of draft?.responses ?? []) {
+          const indicator = validIndicators.get(response.indicator_id);
+
+          if (
+            !indicator ||
+            !indicator.answerIds.has(response.indicator_answer_id) ||
+            restoredResponses.has(response.indicator_id)
+          ) {
+            continue;
+          }
+
+          restoredResponses.set(
+            response.indicator_id,
+            response.indicator_answer_id
+          );
+
+          restoredCompletadas.set(
+            indicator.ambitId,
+            (restoredCompletadas.get(indicator.ambitId) ?? 0) + 1
+          );
+        }
+
+        this.responses.set(restoredResponses);
+        this.completadas.set(restoredCompletadas);
+
+        this.autosaveStatus.set(draft ? 'saved' : 'idle');
         this.loading.set(false);
       },
       error: () => {
+        this.loadError.set(true);
         this.loading.set(false);
       }
     });
@@ -366,7 +422,7 @@ export class EvaluationComponent {
     answerId: number,
     ambitId: number
   ): void {
-    if (this.finalizing) {
+    if (this.finalizing || this.loading() || this.loadError()) {
       return;
     }
 
@@ -397,7 +453,12 @@ export class EvaluationComponent {
   }
 
   submit(): void {
-    if (this.finalizing || this.submitting()) {
+    if (
+      this.finalizing ||
+      this.submitting() ||
+      this.loading() ||
+      this.loadError()
+    ) {
       return;
     }
 
