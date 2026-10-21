@@ -281,90 +281,121 @@ class EvaluationService:
         self.validate_duplicate_indicators(responses)
         self.validate_evaluation_completeness(responses,methodology.id)
 
-        evaluation = Evaluation(
-            user_id=user_id,
-            methodology_id=methodology.id,
-            date=date.today(),
-            status=EvaluationStatus.COMPLETED
-        )
+        try:
+            evaluation = (
+                self.db.query(Evaluation)
+                .filter(
+                    Evaluation.user_id == user_id,
+                    Evaluation.methodology_id == methodology.id,
+                    Evaluation.status == EvaluationStatus.DRAFT,
+                )
+                .with_for_update()
+                .first()
+            )
 
-        self.db.add(evaluation)
-        self.db.flush()
+            if evaluation is None:
+                evaluation = Evaluation(
+                    user_id=user_id,
+                    methodology_id=methodology.id,
+                    date=date.today(),
+                    status=EvaluationStatus.COMPLETED,
+                )
+
+                self.db.add(evaluation)
+                self.db.flush()
+            else:
+                self.db.query(EvaluationIndicatorResponse).filter(
+                    EvaluationIndicatorResponse.evaluation_id == evaluation.id
+                ).delete(synchronize_session=False)
+
+                self.db.query(EvaluationAmbitScore).filter(
+                    EvaluationAmbitScore.evaluation_id == evaluation.id
+                ).delete(synchronize_session=False)
 
 
-        ambit_scores = defaultdict(list)
+            ambit_scores = defaultdict(list)
 
 
-        for r in responses:
-            indicator = self.get_indicator_or_error(r["indicator_id"],
+            for r in responses:
+                indicator = self.get_indicator_or_error(r["indicator_id"],
+                    methodology.id,
+                )
+                answer = self.get_indicator_answer_or_error(
+                    r["indicator_answer_id"]
+                )
+
+                self.validate_answer_belongs_to_indicator(
+                    indicator,
+                    answer
+                )
+
+                maturity = self.get_maturity_level_or_error(
+                    answer.maturity_level_id,
+                    answer.id,
+                    methodology.id
+                )
+
+                response = EvaluationIndicatorResponse(
+                    evaluation_id=evaluation.id,
+                    indicator_id=indicator.id,
+                    indicator_answer_id=answer.id,
+                    maturity_level_id=maturity.id,
+                    score=maturity.value,
+                )
+
+                self.db.add(response)
+
+                ambit_scores[indicator.ambit_id].append(maturity.value)
+
+
+            global_scores = []
+
+
+            for ambit_id, scores in ambit_scores.items():
+                avg_score = self.calculate_ambit_score(scores)
+                maturity_level = self.get_maturity_level_for_score(
+                    avg_score,
+                    methodology.id,
+                )
+                ambit_score = EvaluationAmbitScore(
+                    evaluation_id=evaluation.id,
+                    ambit_id=ambit_id,
+                    score=avg_score,
+                    maturity_level_id = maturity_level.id,
+                )
+
+                self.db.add(ambit_score)
+                global_scores.append(avg_score)
+
+
+            evaluation.global_score = self.calculate_global_score(
+                global_scores
+            )
+
+            global_maturity_level = self.get_maturity_level_for_score(
+                evaluation.global_score,
                 methodology.id,
             )
-            answer = self.get_indicator_answer_or_error(
-                r["indicator_answer_id"]
-            )
 
-            self.validate_answer_belongs_to_indicator(
-                indicator,
-                answer
-            )
+            evaluation.global_maturity_level_id = global_maturity_level.id
 
-            maturity = self.get_maturity_level_or_error(
-                answer.maturity_level_id,
-                answer.id,
-                methodology.id
-            )
+            evaluation.status = EvaluationStatus.COMPLETED
 
-            response = EvaluationIndicatorResponse(
-                evaluation_id=evaluation.id,
-                indicator_id=indicator.id,
-                maturity_level_id=maturity.id,
-                score=maturity.value
-            )
+            user.biannual_evaluation = True
 
-            self.db.add(response)
+            user.next_evaluation = date.today() + relativedelta(months=6)
 
-            ambit_scores[indicator.ambit_id].append(maturity.value)
+            self.db.commit()
 
-
-        global_scores = []
-
-
-        for ambit_id, scores in ambit_scores.items():
-            avg_score = self.calculate_ambit_score(scores)
-            maturity_level = self.get_maturity_level_for_score(
-                avg_score,
-                methodology.id,
-            )
-            ambit_score = EvaluationAmbitScore(
-                evaluation_id=evaluation.id,
-                ambit_id=ambit_id,
-                score=avg_score,
-                maturity_level_id = maturity_level.id,
-            )
-
-            self.db.add(ambit_score)
-            global_scores.append(avg_score)
-
-
-        evaluation.global_score = self.calculate_global_score(
-            global_scores
-        )
-
-        global_maturity_level = self.get_maturity_level_for_score(
-            evaluation.global_score,
-            methodology.id,
-        )
-
-        evaluation.global_maturity_level_id = global_maturity_level.id
-
-        user.biannual_evaluation = True
-        user.next_evaluation = date.today() + relativedelta(months=6)
-
-        self.db.commit()
+        except Exception:
+            self.db.rollback()
+            raise
 
         return {
             "evaluation_id": evaluation.id,
-            "global_score": evaluation.global_score
+            "global_score": evaluation.global_score,
+            "global_maturity_level_id": evaluation.global_maturity_level_id,
+            "status": evaluation.status.value,
         }
 
     def get_latest_results(self, user_id: int):

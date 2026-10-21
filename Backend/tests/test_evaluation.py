@@ -1007,3 +1007,223 @@ def test_get_draft_endpoint_returns_authenticated_users_draft(
         }
     finally:
         app.dependency_overrides.pop(get_current_user, None)
+
+def test_submit_evaluation_reuses_existing_draft(db_session):
+    data = create_evaluation_data(db_session)
+    service = EvaluationService(db_session)
+
+    responses = build_responses(data)
+
+    saved_draft = service.save_draft(
+        {"responses": responses[:2]},
+        data["user"].id,
+    )
+
+    draft_id = saved_draft["evaluation_id"]
+
+    result = service.submit_evaluation(
+        {"responses": responses},
+        data["user"].id,
+    )
+
+    evaluation = db_session.get(Evaluation, draft_id)
+
+    assert evaluation is not None
+    assert result["evaluation_id"] == draft_id
+    assert evaluation.status == EvaluationStatus.COMPLETED
+
+    assert db_session.query(Evaluation).filter(
+        Evaluation.user_id == data["user"].id,
+        Evaluation.methodology_id == data["methodology"].id,
+    ).count() == 1
+
+    assert service.get_draft(data["user"].id) is None
+
+def test_submit_evaluation_replaces_draft_responses(db_session):
+    data = create_evaluation_data(db_session)
+    service = EvaluationService(db_session)
+
+    responses = build_responses(data)
+
+    saved_draft = service.save_draft(
+        {"responses": responses[:2]},
+        data["user"].id,
+    )
+
+    draft_id = saved_draft["evaluation_id"]
+
+    service.submit_evaluation(
+        {"responses": responses},
+        data["user"].id,
+    )
+
+    saved_responses = (
+        db_session.query(EvaluationIndicatorResponse)
+        .filter(
+            EvaluationIndicatorResponse.evaluation_id == draft_id
+        )
+        .all()
+    )
+
+    assert len(saved_responses) == len(responses)
+
+    saved_answers = {
+        response.indicator_id: response.indicator_answer_id
+        for response in saved_responses
+    }
+
+    expected_answers = {
+        response["indicator_id"]: response["indicator_answer_id"]
+        for response in responses
+    }
+
+    assert saved_answers == expected_answers
+
+def test_submit_evaluation_without_existing_draft(db_session):
+    data = create_evaluation_data(db_session)
+    service = EvaluationService(db_session)
+
+    responses = build_responses(data)
+
+    result = service.submit_evaluation(
+        {"responses": responses},
+        data["user"].id,
+    )
+
+    evaluation = db_session.get(
+        Evaluation,
+        result["evaluation_id"],
+    )
+
+    assert evaluation is not None
+    assert evaluation.status == EvaluationStatus.COMPLETED
+
+    assert evaluation.user_id == data["user"].id
+    assert evaluation.methodology_id == data["methodology"].id
+
+    saved_responses = (
+        db_session.query(EvaluationIndicatorResponse)
+        .filter(
+            EvaluationIndicatorResponse.evaluation_id == evaluation.id
+        )
+        .all()
+    )
+
+    assert len(saved_responses) == len(responses)
+
+    expected_answers = {
+        response["indicator_id"]: response["indicator_answer_id"]
+        for response in responses
+    }
+
+    actual_answers = {
+        response.indicator_id: response.indicator_answer_id
+        for response in saved_responses
+    }
+
+    assert actual_answers == expected_answers
+    assert service.get_draft(data["user"].id) is None
+
+
+def test_submit_evaluation_rolls_back_when_calculation_fails(
+    db_session,
+):
+    data = create_evaluation_data(db_session)
+    service = EvaluationService(db_session)
+
+    responses = build_responses(data)
+
+    saved_draft = service.save_draft(
+        {"responses": responses[:2]},
+        data["user"].id,
+    )
+
+    draft_id = saved_draft["evaluation_id"]
+
+    with patch.object(
+        service,
+        "calculate_global_score",
+        side_effect=RuntimeError("Simulated calculation error"),
+    ):
+        with patch.object(
+            db_session,
+            "rollback",
+            wraps=db_session.rollback,
+        ) as rollback_spy:
+            with pytest.raises(
+                RuntimeError,
+                match="Simulated calculation error",
+            ):
+                service.submit_evaluation(
+                    {"responses": responses},
+                    data["user"].id,
+                )
+
+            rollback_spy.assert_called_once()
+
+    evaluation = db_session.get(Evaluation, draft_id)
+
+    assert evaluation is not None
+    assert evaluation.status == EvaluationStatus.DRAFT
+
+    saved_responses = (
+        db_session.query(EvaluationIndicatorResponse)
+        .filter(
+            EvaluationIndicatorResponse.evaluation_id == draft_id
+        )
+        .all()
+    )
+
+    expected_answers = {
+        response["indicator_id"]: response["indicator_answer_id"]
+        for response in responses[:2]
+    }
+
+    actual_answers = {
+        response.indicator_id: response.indicator_answer_id
+        for response in saved_responses
+    }
+
+    assert actual_answers == expected_answers
+
+def test_submit_evaluation_calculates_scores_from_draft(db_session):
+    data = create_evaluation_data(db_session)
+    service = EvaluationService(db_session)
+
+    responses = build_responses(data)
+
+    saved_draft = service.save_draft(
+        {"responses": responses[:2]},
+        data["user"].id,
+    )
+
+    result = service.submit_evaluation(
+        {"responses": responses},
+        data["user"].id,
+    )
+
+    evaluation = db_session.get(
+        Evaluation,
+        saved_draft["evaluation_id"],
+    )
+
+    assert evaluation is not None
+    assert result["evaluation_id"] == evaluation.id
+    assert evaluation.status == EvaluationStatus.COMPLETED
+
+    assert evaluation.global_score is not None
+    assert evaluation.global_maturity_level_id is not None
+
+    ambit_scores = (
+        db_session.query(EvaluationAmbitScore)
+        .filter(
+            EvaluationAmbitScore.evaluation_id == evaluation.id
+        )
+        .all()
+    )
+
+    assert len(ambit_scores) == len(data["ambits"])
+
+    for ambit_score in ambit_scores:
+        assert ambit_score.score is not None
+        assert ambit_score.maturity_level_id is not None
