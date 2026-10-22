@@ -84,6 +84,11 @@ class User(Base):
         passive_deletes=True
     )
 
+    evidences = relationship(
+        "EvaluationEvidence",
+        back_populates="user",
+    )
+
     @validates("role")
     def validate_role(self, key, value):
         if isinstance(value, UserRole):
