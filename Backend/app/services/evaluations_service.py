@@ -9,6 +9,8 @@ from ..models.feedback_ambit_model import FeedbackAmbit
 
 from ..models.user_model import User
 
+from ..models.evaluation_evidence_model import EvaluationEvidence
+
 from ..models.evaluation_ambit_score_model import EvaluationAmbitScore
 from ..models.evaluation_indicator_response_model import EvaluationIndicatorResponse
 from ..models.evaluation_model import Evaluation, EvaluationStatus
@@ -193,9 +195,16 @@ class EvaluationService:
                     response.maturity_level_id = r["maturity_level_id"]
                     response.score = r["score"]
 
+
             for indicator_id, response in existing_responses.items():
                 if indicator_id not in submitted_indicator_ids:
+                    self.db.query(EvaluationEvidence).filter(
+                        EvaluationEvidence.evaluation_id == evaluation.id,
+                        EvaluationEvidence.indicator_id == indicator_id,
+                    ).delete(synchronize_session=False)
+
                     self.db.delete(response)
+
 
             self.db.commit()
 

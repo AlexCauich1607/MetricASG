@@ -14,6 +14,7 @@ from .company_sector_controller import CompanySectorController
 from .company_size_controller import CompanySizeController
 from .company_relationship_controller import CompanyRelationshipController
 from .methodology_controller import MethodologiesController
+from .evidence_controller import EvidenceController
 
 controllers = [
     UsersController(),
@@ -31,5 +32,6 @@ controllers = [
     CompanySectorController(),
     CompanySizeController(),
     CompanyRelationshipController(),
-    MethodologiesController()
+    MethodologiesController(),
+    EvidenceController()
 ]
