@@ -15,12 +15,14 @@ import {
 } from '../../../models/evaluation_structure';
 import { Router } from '@angular/router';
 import { EvaluationSubmitPayload } from '../../../models/evaluation_submit';
+import { EvaluationEvidencesComponent } from '../evaluation-evidences/evaluation-evidences.component';
 
 @Component({
   selector: 'app-evaluation',
   standalone: true,
   imports: [
-    MatProgressSpinnerModule
+    MatProgressSpinnerModule,
+    EvaluationEvidencesComponent
   ],
   templateUrl: './evaluation.component.html',
   changeDetection: ChangeDetectionStrategy.Eager,
@@ -32,6 +34,7 @@ export class EvaluationComponent {
   readonly loadError = signal(false);
 
   responses = signal<Map<number, number>>(new Map());
+  readonly savedResponses = signal<Map<number, number>>(new Map());
   completadas = signal<Map<number, number>>(new Map());
 
   readonly autosaveStatus = signal<
@@ -45,10 +48,11 @@ export class EvaluationComponent {
   private submitPending = false;
   private destroyed = false;
   private readonly destroy$ = new Subject<void>();
-
+  readonly evaluationId = signal<number | null>(null);
   private savingDraft = false;
   private pendingDraft = false;
   private draftReady = false;
+  readonly evidenceOperationPending = signal(false);
 
   ambit = signal(0);
   question = signal(0);
@@ -79,6 +83,26 @@ export class EvaluationComponent {
 
     return Math.round(completadas * (100 / total));
   });
+
+
+  readonly canEditCurrentEvidence = computed(() => {
+    const indicator = this.currentQuestion();
+
+    if (!indicator || this.evaluationId() === null) {
+      return false;
+    }
+
+    const selectedAnswer = this.responses().get(indicator.id);
+    const savedAnswer = this.savedResponses().get(indicator.id);
+
+    return (
+      selectedAnswer !== undefined &&
+      selectedAnswer === savedAnswer &&
+      this.autosaveStatus() === 'saved' &&
+      !this.submitting()
+    );
+  });
+
 
   readonly totalQuestions = computed(() => {
     const structure = this.structure();
@@ -130,6 +154,10 @@ export class EvaluationComponent {
     this.autosaveChanges$.complete();
   }
 
+  onEvidenceOperationPending(pending: boolean): void {
+    this.evidenceOperationPending.set(pending);
+  }
+
   private saveDraft(): void {
     if (
       this.finalizing ||
@@ -153,9 +181,12 @@ export class EvaluationComponent {
         })
       )
     };
+    const submittedResponses = new Map(this.responses());
 
     this.evaluationService.saveDraft(payload).subscribe({
-      next: () => {
+      next: (result) => {
+        this.evaluationId.set(result.evaluation_id);
+        this.savedResponses.set(submittedResponses);
         if (this.destroyed) {
           return;
         }
@@ -279,6 +310,9 @@ export class EvaluationComponent {
     }
   }
   nextQuestion(): void {
+    if (this.evidenceOperationPending()) {
+      return;
+    }
     const currentAmbit = this.currentAmbit();
     const structure = this.structure();
 
@@ -331,6 +365,9 @@ export class EvaluationComponent {
   }
 
   beforeQuestion(): void {
+    if (this.evidenceOperationPending()) {
+      return;
+    }
     const currentAmbit = this.currentAmbit();
 
     if (!currentAmbit) {
@@ -361,6 +398,7 @@ export class EvaluationComponent {
       takeUntil(this.destroy$)
     ).subscribe({
       next: ({ structure, draft }) => {
+        this.evaluationId.set(draft?.evaluation_id ?? null);
         this.structure.set(structure);
 
         const validIndicators = new Map<number, {
@@ -405,6 +443,7 @@ export class EvaluationComponent {
         }
 
         this.responses.set(restoredResponses);
+        this.savedResponses.set(new Map(restoredResponses));
         this.completadas.set(restoredCompletadas);
 
         this.autosaveStatus.set(draft ? 'saved' : 'idle');
@@ -422,7 +461,12 @@ export class EvaluationComponent {
     answerId: number,
     ambitId: number
   ): void {
-    if (this.finalizing || this.loading() || this.loadError()) {
+    if (
+      this.finalizing ||
+      this.loading() ||
+      this.loadError() ||
+      this.evidenceOperationPending()
+    ) {
       return;
     }
 
