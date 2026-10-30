@@ -1,7 +1,10 @@
 
 import pytest
-from fastapi import HTTPException
+from fastapi import HTTPException, UploadFile
+from starlette.datastructures import Headers
+from sqlalchemy.exc import SQLAlchemyError
 
+from unittest.mock import patch
 from app.models.methodology_model import Methodology
 from app.models.evaluation_evidence_request import EvidenceCreateRequest
 from app.models.ambit_model import Ambit
@@ -26,7 +29,10 @@ from tests.test_evaluation_evidence import create_evidence_data
 from app.models.methodology_model import Methodology
 from app.models.ambit_model import Ambit
 from app.models.indicator_model import Indicator
+from io import BytesIO
 
+from app.services.evidence_storage_service import EvidenceStorageService
+from tests.test_evidence_storage_service import create_valid_pdf
 
 def test_get_owned_evaluation(db_session):
     data = create_evidence_data(db_session)
@@ -995,49 +1001,518 @@ def test_reject_delete_evidence_in_completed_evaluation(db_session):
     )
 
 
-def test_reject_delete_file_evidence_without_storage(db_session):
+def test_delete_file_evidence_removes_record_and_file(
+    db_session,
+    tmp_path,
+):
     data = create_evidence_data(db_session)
 
     evaluation = data["evaluation"]
     user = data["user"]
+    indicator = data["indicators"][0]
+
+    storage = EvidenceStorageService(
+        storage_path=tmp_path,
+    )
+
+    content = create_valid_pdf()
+
+    storage_key = storage.save_file(
+        "document.pdf",
+        content,
+        "application/pdf",
+    )
 
     evidence = EvaluationEvidence(
         evaluation_id=evaluation.id,
-        indicator_id=data["indicators"][0].id,
+        indicator_id=indicator.id,
         user_id=user.id,
         type=EvidenceType.FILE,
-        storage_key="evidences/test/document.pdf",
+        content=None,
+        storage_key=storage_key,
         original_filename="document.pdf",
         mime_type="application/pdf",
-        file_size=1024,
+        file_size=len(content),
     )
 
     db_session.add(evidence)
     db_session.commit()
 
     evidence_id = evidence.id
+    file_path = storage.get_file(storage_key)
+
+    assert file_path.exists()
 
     service = EvidenceService(db_session)
 
-    with pytest.raises(HTTPException) as exc_info:
-        service.delete_evidence(
-            evaluation_id=evaluation.id,
-            evidence_id=evidence_id,
-            user_id=user.id,
-        )
-
-    assert exc_info.value.status_code == 409
-    assert (
-        exc_info.value.detail
-        == "File evidence deletion requires storage integration"
+    service.delete_evidence(
+        evaluation_id=evaluation.id,
+        evidence_id=evidence_id,
+        user_id=user.id,
+        storage=storage,
     )
 
-    preserved_evidence = db_session.get(
+    assert db_session.get(
         EvaluationEvidence,
         evidence_id,
+    ) is None
+
+    assert not file_path.exists()
+
+
+@pytest.mark.anyio
+async def test_create_file_evidence(db_session, tmp_path):
+    data = create_evidence_data(db_session)
+
+    evaluation = data["evaluation"]
+    indicator = data["indicators"][0]
+    user = data["user"]
+
+    response = EvaluationIndicatorResponse(
+        evaluation_id=evaluation.id,
+        indicator_id=indicator.id,
+        indicator_answer_id=data["answers"][0].id,
+        maturity_level_id=data["maturity_levels"][0].id,
+        score=data["maturity_levels"][0].value,
     )
 
-    assert preserved_evidence is not None
-    assert preserved_evidence.storage_key == (
-        "evidences/test/document.pdf"
+    db_session.add(response)
+    db_session.flush()
+
+    storage = EvidenceStorageService(
+        storage_path=tmp_path,
     )
+
+    content = create_valid_pdf()
+
+    upload = UploadFile(
+        file=BytesIO(content),
+        filename="evidencia.pdf",
+        headers=Headers({
+            "content-type": "application/pdf",
+        }),
+    )
+
+    service = EvidenceService(db_session)
+
+    try:
+        evidence = await service.create_file_evidence(
+            evaluation_id=evaluation.id,
+            indicator_id=indicator.id,
+            user_id=user.id,
+            upload=upload,
+            storage=storage,
+        )
+
+        assert evidence.id is not None
+        assert evidence.type == EvidenceType.FILE
+        assert evidence.content is None
+        assert evidence.original_filename == "evidencia.pdf"
+        assert evidence.mime_type == "application/pdf"
+        assert evidence.file_size == len(content)
+        assert evidence.storage_key is not None
+
+        file_path = storage.get_file(evidence.storage_key)
+
+        assert file_path.read_bytes() == content
+
+        saved_evidence = db_session.get(
+            EvaluationEvidence,
+            evidence.id,
+        )
+
+        assert saved_evidence is not None
+
+    finally:
+        await upload.close()
+
+
+@pytest.mark.anyio
+async def test_create_file_evidence_rejects_other_user(
+    db_session,
+    tmp_path,
+):
+    data = create_evidence_data(db_session)
+
+    evaluation = data["evaluation"]
+    indicator = data["indicators"][0]
+    user = data["user"]
+
+    storage = EvidenceStorageService(
+        storage_path=tmp_path,
+    )
+
+    upload = UploadFile(
+        file=BytesIO(create_valid_pdf()),
+        filename="evidencia.pdf",
+        headers=Headers({
+            "content-type": "application/pdf",
+        }),
+    )
+
+    try:
+        with pytest.raises(HTTPException) as exc_info:
+            await EvidenceService(
+                db_session
+            ).create_file_evidence(
+                evaluation_id=evaluation.id,
+                indicator_id=indicator.id,
+                user_id=user.id + 99999,
+                upload=upload,
+                storage=storage,
+            )
+
+        assert exc_info.value.status_code == 404
+        assert list(tmp_path.iterdir()) == []
+
+        evidence_count = (
+            db_session.query(EvaluationEvidence)
+            .filter(
+                EvaluationEvidence.evaluation_id
+                == evaluation.id,
+            )
+            .count()
+        )
+
+        assert evidence_count == 0
+
+    finally:
+        await upload.close()
+
+
+@pytest.mark.anyio
+async def test_create_file_evidence_rejects_completed_evaluation(
+    db_session,
+    tmp_path,
+):
+    data = create_evidence_data(db_session)
+
+    evaluation = data["evaluation"]
+    indicator = data["indicators"][0]
+    user = data["user"]
+
+    evaluation.status = EvaluationStatus.COMPLETED
+    db_session.flush()
+
+    storage = EvidenceStorageService(
+        storage_path=tmp_path,
+    )
+
+    upload = UploadFile(
+        file=BytesIO(create_valid_pdf()),
+        filename="evidencia.pdf",
+        headers=Headers({
+            "content-type": "application/pdf",
+        }),
+    )
+
+    try:
+        with pytest.raises(HTTPException) as exc_info:
+            await EvidenceService(
+                db_session
+            ).create_file_evidence(
+                evaluation_id=evaluation.id,
+                indicator_id=indicator.id,
+                user_id=user.id,
+                upload=upload,
+                storage=storage,
+            )
+
+        assert exc_info.value.status_code == 409
+        assert exc_info.value.detail == (
+            "Cannot modify evidence of a completed evaluation"
+        )
+
+        assert list(tmp_path.iterdir()) == []
+
+        evidence_count = (
+            db_session.query(EvaluationEvidence)
+            .filter(
+                EvaluationEvidence.evaluation_id == evaluation.id,
+            )
+            .count()
+        )
+
+        assert evidence_count == 0
+
+    finally:
+        await upload.close()
+
+
+@pytest.mark.anyio
+async def test_create_file_evidence_rejects_missing_response(
+    db_session,
+    tmp_path,
+):
+    data = create_evidence_data(db_session)
+
+    evaluation = data["evaluation"]
+    indicator = data["indicators"][0]
+    user = data["user"]
+
+    storage = EvidenceStorageService(
+        storage_path=tmp_path,
+    )
+
+    upload = UploadFile(
+        file=BytesIO(create_valid_pdf()),
+        filename="evidencia.pdf",
+        headers=Headers({
+            "content-type": "application/pdf",
+        }),
+    )
+
+    try:
+        with pytest.raises(HTTPException) as exc_info:
+            await EvidenceService(db_session).create_file_evidence(
+                evaluation_id=evaluation.id,
+                indicator_id=indicator.id,
+                user_id=user.id,
+                upload=upload,
+                storage=storage,
+            )
+
+        assert exc_info.value.status_code == 422
+        assert exc_info.value.detail == (
+            "Indicator has no saved response in this evaluation"
+        )
+
+        assert list(tmp_path.iterdir()) == []
+
+        evidence_count = (
+            db_session.query(EvaluationEvidence)
+            .filter(
+                EvaluationEvidence.evaluation_id == evaluation.id,
+            )
+            .count()
+        )
+
+        assert evidence_count == 0
+
+    finally:
+        await upload.close()
+
+
+@pytest.mark.anyio
+async def test_create_file_evidence_rejects_evidence_limit(
+    db_session,
+    tmp_path,
+):
+    data = create_evidence_data(db_session)
+
+    evaluation = data["evaluation"]
+    indicator = data["indicators"][0]
+    user = data["user"]
+
+    response = EvaluationIndicatorResponse(
+        evaluation_id=evaluation.id,
+        indicator_id=indicator.id,
+        indicator_answer_id=data["answers"][0].id,
+        maturity_level_id=data["maturity_levels"][0].id,
+        score=data["maturity_levels"][0].value,
+    )
+
+    db_session.add(response)
+
+    for index in range(5):
+        db_session.add(
+            EvaluationEvidence(
+                evaluation_id=evaluation.id,
+                indicator_id=indicator.id,
+                user_id=user.id,
+                type=EvidenceType.COMMENT,
+                content=f"Evidencia inicial {index + 1}",
+            )
+        )
+
+    db_session.commit()
+
+    storage = EvidenceStorageService(
+        storage_path=tmp_path,
+    )
+
+    upload = UploadFile(
+        file=BytesIO(create_valid_pdf()),
+        filename="evidencia.pdf",
+        headers=Headers({
+            "content-type": "application/pdf",
+        }),
+    )
+
+    try:
+        with pytest.raises(HTTPException) as exc_info:
+            await EvidenceService(db_session).create_file_evidence(
+                evaluation_id=evaluation.id,
+                indicator_id=indicator.id,
+                user_id=user.id,
+                upload=upload,
+                storage=storage,
+            )
+
+        assert exc_info.value.status_code == 409
+        assert exc_info.value.detail == (
+            "Maximum of 5 evidences per indicator reached"
+        )
+
+        assert list(tmp_path.iterdir()) == []
+
+        evidence_count = (
+            db_session.query(EvaluationEvidence)
+            .filter(
+                EvaluationEvidence.evaluation_id == evaluation.id,
+                EvaluationEvidence.indicator_id == indicator.id,
+            )
+            .count()
+        )
+
+        assert evidence_count == 5
+
+    finally:
+        await upload.close()
+
+
+@pytest.mark.anyio
+async def test_create_file_evidence_cleans_file_on_commit_failure(
+    db_session,
+    tmp_path,
+):
+    data = create_evidence_data(db_session)
+
+    evaluation = data["evaluation"]
+    indicator = data["indicators"][0]
+    user = data["user"]
+
+    response = EvaluationIndicatorResponse(
+        evaluation_id=evaluation.id,
+        indicator_id=indicator.id,
+        indicator_answer_id=data["answers"][0].id,
+        maturity_level_id=data["maturity_levels"][0].id,
+        score=data["maturity_levels"][0].value,
+    )
+
+    db_session.add(response)
+    db_session.commit()
+
+    storage = EvidenceStorageService(
+        storage_path=tmp_path,
+    )
+
+    upload = UploadFile(
+        file=BytesIO(create_valid_pdf()),
+        filename="evidencia.pdf",
+        headers=Headers({
+            "content-type": "application/pdf",
+        }),
+    )
+
+    service = EvidenceService(db_session)
+
+    try:
+        with patch.object(
+            db_session,
+            "commit",
+            side_effect=SQLAlchemyError(
+                "Simulated database commit failure"
+            ),
+        ):
+            with pytest.raises(SQLAlchemyError):
+                await service.create_file_evidence(
+                    evaluation_id=evaluation.id,
+                    indicator_id=indicator.id,
+                    user_id=user.id,
+                    upload=upload,
+                    storage=storage,
+                )
+
+        assert list(tmp_path.iterdir()) == []
+
+        evidence_count = (
+            db_session.query(EvaluationEvidence)
+            .filter(
+                EvaluationEvidence.evaluation_id == evaluation.id,
+                EvaluationEvidence.indicator_id == indicator.id,
+            )
+            .count()
+        )
+
+        assert evidence_count == 0
+
+    finally:
+        await upload.close()
+
+
+@pytest.mark.anyio
+async def test_create_file_evidence_preserves_file_on_refresh_failure(
+    db_session,
+    tmp_path,
+):
+    data = create_evidence_data(db_session)
+
+    evaluation = data["evaluation"]
+    indicator = data["indicators"][0]
+    user = data["user"]
+
+    response = EvaluationIndicatorResponse(
+        evaluation_id=evaluation.id,
+        indicator_id=indicator.id,
+        indicator_answer_id=data["answers"][0].id,
+        maturity_level_id=data["maturity_levels"][0].id,
+        score=data["maturity_levels"][0].value,
+    )
+
+    db_session.add(response)
+    db_session.commit()
+
+    storage = EvidenceStorageService(
+        storage_path=tmp_path,
+    )
+
+    content = create_valid_pdf()
+
+    upload = UploadFile(
+        file=BytesIO(content),
+        filename="evidencia.pdf",
+        headers=Headers({
+            "content-type": "application/pdf",
+        }),
+    )
+
+    service = EvidenceService(db_session)
+
+    try:
+        with patch.object(
+            db_session,
+            "refresh",
+            side_effect=SQLAlchemyError(
+                "Simulated refresh failure"
+            ),
+        ):
+            with pytest.raises(SQLAlchemyError):
+                await service.create_file_evidence(
+                    evaluation_id=evaluation.id,
+                    indicator_id=indicator.id,
+                    user_id=user.id,
+                    upload=upload,
+                    storage=storage,
+                )
+
+        saved_evidence = (
+            db_session.query(EvaluationEvidence)
+            .filter(
+                EvaluationEvidence.evaluation_id == evaluation.id,
+                EvaluationEvidence.indicator_id == indicator.id,
+                EvaluationEvidence.type == EvidenceType.FILE,
+            )
+            .one()
+        )
+
+        assert saved_evidence.storage_key is not None
+
+        file_path = storage.get_file(
+            saved_evidence.storage_key
+        )
+
+        assert file_path.read_bytes() == content
+
+    finally:
+        await upload.close()

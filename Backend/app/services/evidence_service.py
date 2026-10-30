@@ -1,6 +1,8 @@
-from fastapi import HTTPException, status
+from fastapi import HTTPException, status, UploadFile
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import SQLAlchemyError
+
+from app.services.evidence_storage_service import EvidenceStorageService
 
 from app.models.evaluation_evidence_request import EvidenceCreateRequest
 from app.models.evaluation_evidence_model import (
@@ -176,6 +178,83 @@ class EvidenceService:
             raise
 
 
+    async def create_file_evidence(
+        self,
+        evaluation_id: int,
+        indicator_id: int,
+        user_id: int,
+        upload: UploadFile,
+        storage: EvidenceStorageService,
+    ) -> EvaluationEvidence:
+        storage_key = None
+
+        try:
+            evaluation = (
+                self.db.query(Evaluation)
+                .filter(
+                    Evaluation.id == evaluation_id,
+                    Evaluation.user_id == user_id,
+                )
+                .with_for_update()
+                .first()
+            )
+
+            if evaluation is None:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="Evaluation not found",
+                )
+
+            self.validate_evaluation_editable(evaluation)
+
+            self.validate_indicator_response(
+                evaluation,
+                indicator_id,
+            )
+
+            self.validate_evidence_limit(
+                evaluation.id,
+                indicator_id,
+            )
+
+            storage_key, file_size = await storage.save_upload_file(
+                upload
+            )
+
+            evidence = EvaluationEvidence(
+                evaluation_id=evaluation.id,
+                indicator_id=indicator_id,
+                user_id=user_id,
+                type=EvidenceType.FILE,
+                content=None,
+                storage_key=storage_key,
+                original_filename=upload.filename,
+                mime_type=upload.content_type,
+                file_size=file_size,
+            )
+
+            self.db.add(evidence)
+            self.db.commit()
+
+        except BaseException:
+            self.db.rollback()
+
+            if storage_key is not None:
+                try:
+                    storage.delete_file(storage_key)
+                except FileNotFoundError:
+                    pass
+
+            raise
+
+        # El commit ya finalizó correctamente.
+        # A partir de aquí no debemos eliminar el archivo.
+        self.db.refresh(evidence)
+
+        return evidence
+
+
+
     def list_evidences(
         self,
         evaluation_id: int,
@@ -233,12 +312,16 @@ class EvidenceService:
         return evidence
 
 
+
     def delete_evidence(
         self,
         evaluation_id: int,
         evidence_id: int,
         user_id: int,
+        storage: EvidenceStorageService | None = None,
     ) -> None:
+        storage_key = None
+
         try:
             evaluation = (
                 self.db.query(Evaluation)
@@ -274,18 +357,29 @@ class EvidenceService:
                 )
 
             if evidence.type == EvidenceType.FILE:
-                raise HTTPException(
-                    status_code=status.HTTP_409_CONFLICT,
-                    detail="File evidence deletion requires storage integration",
-                )
+                if storage is None:
+                    raise HTTPException(
+                        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                        detail="Evidence storage is not configured",
+                    )
+
+                storage_key = evidence.storage_key
+
+                if not storage_key:
+                    raise HTTPException(
+                        status_code=status.HTTP_409_CONFLICT,
+                        detail="File evidence has no storage reference",
+                    )
 
             self.db.delete(evidence)
             self.db.commit()
 
-        except HTTPException:
+        except BaseException:
             self.db.rollback()
             raise
 
-        except SQLAlchemyError:
-            self.db.rollback()
-            raise
+        if storage_key is not None:
+            try:
+                storage.delete_file(storage_key)
+            except FileNotFoundError:
+                pass

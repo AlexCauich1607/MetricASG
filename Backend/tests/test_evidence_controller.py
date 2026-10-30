@@ -12,7 +12,17 @@ from app.models.evaluation_evidence_model import (
     EvidenceType,
 )
 
+from io import BytesIO
+
 from app.models.evaluation_model import EvaluationStatus
+from fastapi.testclient import TestClient
+
+from app.controllers.evidence_controller import (
+    get_evidence_storage_service,
+    stream_evidence_file,
+)
+from app.services.evidence_storage_service import EvidenceStorageService
+from tests.test_evidence_storage_service import create_valid_pdf
 
 @pytest.mark.parametrize(
     "method, path",
@@ -618,3 +628,410 @@ def test_evidence_endpoints_reject_nonexistent_evidence_http(
 
     assert response.status_code == 404
     assert response.json()["detail"] == "Evidence not found"
+
+
+
+def test_upload_file_evidence_http(
+    client,
+    db_session,
+    tmp_path,
+):
+    data = create_evidence_data(db_session)
+
+    evaluation = data["evaluation"]
+    indicator = data["indicators"][0]
+    user = data["user"]
+
+    response = EvaluationIndicatorResponse(
+        evaluation_id=evaluation.id,
+        indicator_id=indicator.id,
+        indicator_answer_id=data["answers"][0].id,
+        maturity_level_id=data["maturity_levels"][0].id,
+        score=data["maturity_levels"][0].value,
+    )
+
+    db_session.add(response)
+    db_session.commit()
+
+    storage = EvidenceStorageService(
+        storage_path=tmp_path,
+    )
+
+    app.dependency_overrides[
+        get_current_user
+    ] = lambda: user
+
+    app.dependency_overrides[
+        get_evidence_storage_service
+    ] = lambda: storage
+
+    content = create_valid_pdf()
+
+    try:
+        result = client.post(
+            f"/api/evaluations/{evaluation.id}/evidences/upload",
+            data={
+                "indicator_id": str(indicator.id),
+            },
+            files={
+                "file": (
+                    "evidencia.pdf",
+                    content,
+                    "application/pdf",
+                ),
+            },
+        )
+
+        assert result.status_code == 201, result.text
+
+        body = result.json()
+
+        assert body["type"] == EvidenceType.FILE.value
+        assert body["original_filename"] == "evidencia.pdf"
+        assert body["mime_type"] == "application/pdf"
+        assert body["file_size"] == len(content)
+
+        saved_evidence = db_session.get(
+            EvaluationEvidence,
+            body["id"],
+        )
+
+        assert saved_evidence is not None
+        assert saved_evidence.type == EvidenceType.FILE
+        assert saved_evidence.storage_key is not None
+
+        file_path = storage.get_file(
+            saved_evidence.storage_key
+        )
+
+        assert file_path.read_bytes() == content
+
+        download_result = client.get(
+            f"/api/evaluations/{evaluation.id}/evidences/"
+            f"{saved_evidence.id}/download"
+        )
+
+        assert download_result.status_code == 200
+        assert download_result.content == content
+
+        assert (
+            download_result.headers["content-type"]
+            == "application/octet-stream"
+        )
+
+        assert (
+            "attachment"
+            in download_result.headers["content-disposition"]
+        )
+
+        assert (
+            "evidencia.pdf"
+            in download_result.headers["content-disposition"]
+        )
+
+        assert (
+            download_result.headers["x-content-type-options"]
+            == "nosniff"
+        )
+
+        # Eliminar la evidencia mediante HTTP.
+        delete_result = client.delete(
+            f"/api/evaluations/{evaluation.id}/evidences/"
+            f"{saved_evidence.id}"
+        )
+
+        assert delete_result.status_code == 204
+
+        # Confirmar que el registro desapareció de PostgreSQL.
+        db_session.expire_all()
+
+        deleted_evidence = db_session.get(
+            EvaluationEvidence,
+            saved_evidence.id,
+        )
+
+        assert deleted_evidence is None
+
+        # Confirmar que el archivo físico fue eliminado.
+        assert not file_path.exists()
+
+        # La descarga posterior debe devolver 404.
+        download_after_delete = client.get(
+            f"/api/evaluations/{evaluation.id}/evidences/"
+            f"{saved_evidence.id}/download"
+        )
+
+        assert download_after_delete.status_code == 404
+
+
+    finally:
+        app.dependency_overrides.pop(
+            get_evidence_storage_service,
+            None,
+        )
+
+        app.dependency_overrides.pop(
+            get_current_user,
+            None,
+        )
+
+
+def test_upload_file_evidence_rejects_invalid_extension_http(
+    client,
+    db_session,
+    tmp_path,
+):
+    data = create_evidence_data(db_session)
+
+    evaluation = data["evaluation"]
+    indicator = data["indicators"][0]
+    user = data["user"]
+
+    response = EvaluationIndicatorResponse(
+        evaluation_id=evaluation.id,
+        indicator_id=indicator.id,
+        indicator_answer_id=data["answers"][0].id,
+        maturity_level_id=data["maturity_levels"][0].id,
+        score=data["maturity_levels"][0].value,
+    )
+
+    db_session.add(response)
+    db_session.commit()
+
+    storage = EvidenceStorageService(
+        storage_path=tmp_path,
+    )
+
+    app.dependency_overrides[
+        get_current_user
+    ] = lambda: user
+
+    app.dependency_overrides[
+        get_evidence_storage_service
+    ] = lambda: storage
+
+    try:
+        result = client.post(
+            f"/api/evaluations/{evaluation.id}/evidences/upload",
+            data={
+                "indicator_id": str(indicator.id),
+            },
+            files={
+                "file": (
+                    "documento.txt",
+                    b"Archivo de prueba",
+                    "text/plain",
+                ),
+            },
+        )
+
+        assert result.status_code == 422
+
+        evidence_count = (
+            db_session.query(EvaluationEvidence)
+            .filter(
+                EvaluationEvidence.evaluation_id == evaluation.id,
+                EvaluationEvidence.indicator_id == indicator.id,
+            )
+            .count()
+        )
+
+        assert evidence_count == 0
+        assert list(tmp_path.iterdir()) == []
+
+    finally:
+        app.dependency_overrides.pop(
+            get_evidence_storage_service,
+            None,
+        )
+
+        app.dependency_overrides.pop(
+            get_current_user,
+            None,
+        )
+
+
+def test_download_file_evidence_rejects_other_user_http(
+    client,
+    db_session,
+    tmp_path,
+):
+    data = create_evidence_data(db_session)
+
+    evaluation = data["evaluation"]
+    indicator = data["indicators"][0]
+    user = data["user"]
+
+    storage = EvidenceStorageService(
+        storage_path=tmp_path,
+    )
+
+    content = create_valid_pdf()
+
+    storage_key = storage.save_file(
+        "evidencia.pdf",
+        content,
+        "application/pdf",
+    )
+
+    evidence = EvaluationEvidence(
+        evaluation_id=evaluation.id,
+        indicator_id=indicator.id,
+        user_id=user.id,
+        type=EvidenceType.FILE,
+        content=None,
+        storage_key=storage_key,
+        original_filename="evidencia.pdf",
+        mime_type="application/pdf",
+        file_size=len(content),
+    )
+
+    db_session.add(evidence)
+    db_session.commit()
+
+    app.dependency_overrides[
+        get_current_user
+    ] = lambda: type(
+        "TestUser",
+        (),
+        {"id": user.id + 99999},
+    )()
+
+    app.dependency_overrides[
+        get_evidence_storage_service
+    ] = lambda: storage
+
+    try:
+        result = client.get(
+            f"/api/evaluations/{evaluation.id}/evidences/"
+            f"{evidence.id}/download"
+        )
+
+        assert result.status_code == 404
+
+        assert result.json()["detail"] == (
+            "Evaluation not found"
+        )
+
+        assert storage.get_file(
+            storage_key
+        ).read_bytes() == content
+
+    finally:
+        app.dependency_overrides.pop(
+            get_current_user,
+            None,
+        )
+
+        app.dependency_overrides.pop(
+            get_evidence_storage_service,
+            None,
+        )
+
+
+def test_download_file_evidence_missing_file_http(
+    client,
+    db_session,
+    tmp_path,
+):
+    data = create_evidence_data(db_session)
+
+    evaluation = data["evaluation"]
+    indicator = data["indicators"][0]
+    user = data["user"]
+
+    storage = EvidenceStorageService(
+        storage_path=tmp_path,
+    )
+
+    content = create_valid_pdf()
+
+    storage_key = storage.save_file(
+        "evidencia.pdf",
+        content,
+        "application/pdf",
+    )
+
+    evidence = EvaluationEvidence(
+        evaluation_id=evaluation.id,
+        indicator_id=indicator.id,
+        user_id=user.id,
+        type=EvidenceType.FILE,
+        content=None,
+        storage_key=storage_key,
+        original_filename="evidencia.pdf",
+        mime_type="application/pdf",
+        file_size=len(content),
+    )
+
+    db_session.add(evidence)
+    db_session.commit()
+
+    # Simulamos que el archivo físico desapareció.
+    storage.delete_file(storage_key)
+
+    app.dependency_overrides[
+        get_current_user
+    ] = lambda: user
+
+    app.dependency_overrides[
+        get_evidence_storage_service
+    ] = lambda: storage
+
+    try:
+        result = client.get(
+            f"/api/evaluations/{evaluation.id}/evidences/"
+            f"{evidence.id}/download"
+        )
+
+        assert result.status_code == 404
+        assert result.json()["detail"] == (
+            "Evidence file not found"
+        )
+
+        # El fallo de descarga no debe eliminar los metadatos.
+        saved_evidence = db_session.get(
+            EvaluationEvidence,
+            evidence.id,
+        )
+
+        assert saved_evidence is not None
+        assert saved_evidence.storage_key == storage_key
+
+    finally:
+        app.dependency_overrides.pop(
+            get_current_user,
+            None,
+        )
+
+        app.dependency_overrides.pop(
+            get_evidence_storage_service,
+            None,
+        )
+
+
+def test_stream_evidence_file_closes_after_reading():
+    content = b"Contenido de evidencia"
+
+    file = BytesIO(content)
+
+    chunks = list(stream_evidence_file(file))
+
+    assert b"".join(chunks) == content
+    assert file.closed
+
+
+def test_stream_evidence_file_closes_on_interruption():
+    content = b"A" * (128 * 1024)
+
+    file = BytesIO(content)
+    stream = stream_evidence_file(file)
+
+    first_chunk = next(stream)
+
+    assert len(first_chunk) == 64 * 1024
+    assert not file.closed
+
+    stream.close()
+
+    assert file.closed

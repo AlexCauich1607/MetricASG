@@ -13,6 +13,14 @@ class Settings(BaseSettings):
         validation_alias="DATABASE_URL"
     )
 
+    # Directorio privado para almacenar archivos de evidencias.
+    evidence_storage_path: str = Field(
+        default="/data/evidences",
+        min_length=1,
+        validation_alias="EVIDENCE_STORAGE_PATH"
+    )
+
+
     # Configuración JWT.
     jwt_secret_key: str = Field(
         min_length=1,
