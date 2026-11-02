@@ -79,3 +79,10 @@ class Evaluation(Base):
         passive_deletes=True
     )
 
+    evidences = relationship(
+        "EvaluationEvidence",
+        back_populates="evaluation",
+        cascade="all, delete",
+        passive_deletes=True,
+    )
+

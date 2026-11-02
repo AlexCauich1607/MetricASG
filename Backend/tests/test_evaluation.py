@@ -15,6 +15,13 @@ from app.models.evaluation_indicator_response_model import (
     EvaluationIndicatorResponse,
 )
 
+from app.services.evidence_storage_service import EvidenceStorageService
+from tests.test_evidence_storage_service import create_valid_pdf
+
+from app.models.evaluation_evidence_model import (
+    EvaluationEvidence,
+    EvidenceType,
+)
 from app.models.evaluation_model import Evaluation, EvaluationStatus
 from app.models.indicator_answer_model import IndicatorAnswer
 from app.models.indicator_model import Indicator
@@ -1227,3 +1234,326 @@ def test_submit_evaluation_calculates_scores_from_draft(db_session):
     for ambit_score in ambit_scores:
         assert ambit_score.score is not None
         assert ambit_score.maturity_level_id is not None
+
+
+
+def test_save_draft_removes_evidences_of_unselected_indicators(
+    db_session,
+):
+    data = create_evaluation_data(db_session)
+    service = EvaluationService(db_session)
+
+    initial_responses = build_responses(data)
+
+    result = service.save_draft(
+        {"responses": initial_responses},
+        data["user"].id,
+    )
+
+    evaluation_id = result["evaluation_id"]
+
+    preserved_indicator_id = initial_responses[0]["indicator_id"]
+    removed_indicator_id = initial_responses[2]["indicator_id"]
+
+    preserved_evidence = EvaluationEvidence(
+        evaluation_id=evaluation_id,
+        indicator_id=preserved_indicator_id,
+        user_id=data["user"].id,
+        type=EvidenceType.COMMENT,
+        content="Evidence to preserve",
+    )
+
+    removed_evidences = [
+        EvaluationEvidence(
+            evaluation_id=evaluation_id,
+            indicator_id=removed_indicator_id,
+            user_id=data["user"].id,
+            type=EvidenceType.COMMENT,
+            content="Comment to remove",
+        ),
+        EvaluationEvidence(
+            evaluation_id=evaluation_id,
+            indicator_id=removed_indicator_id,
+            user_id=data["user"].id,
+            type=EvidenceType.URL,
+            content="https://example.com/remove",
+        ),
+    ]
+
+    db_session.add_all(
+        [preserved_evidence, *removed_evidences]
+    )
+    db_session.commit()
+
+    service.save_draft(
+        {"responses": initial_responses[:2]},
+        data["user"].id,
+    )
+
+    saved_evidences = (
+        db_session.query(EvaluationEvidence)
+        .filter(
+            EvaluationEvidence.evaluation_id == evaluation_id
+        )
+        .all()
+    )
+
+    assert len(saved_evidences) == 1
+    assert saved_evidences[0].indicator_id == preserved_indicator_id
+    assert saved_evidences[0].content == "Evidence to preserve"
+
+
+def test_submit_evaluation_preserves_draft_evidences(db_session):
+    data = create_evaluation_data(db_session)
+    service = EvaluationService(db_session)
+
+    responses = build_responses(data)
+
+    saved_draft = service.save_draft(
+        {"responses": responses[:2]},
+        data["user"].id,
+    )
+
+    evaluation_id = saved_draft["evaluation_id"]
+    indicator_id = responses[0]["indicator_id"]
+
+    evidence = EvaluationEvidence(
+        evaluation_id=evaluation_id,
+        indicator_id=indicator_id,
+        user_id=data["user"].id,
+        type=EvidenceType.COMMENT,
+        content="Evidence preserved after submission",
+    )
+
+    db_session.add(evidence)
+    db_session.commit()
+
+    evidence_id = evidence.id
+
+    result = service.submit_evaluation(
+        {"responses": responses},
+        data["user"].id,
+    )
+
+    assert result["evaluation_id"] == evaluation_id
+    assert result["status"] == "COMPLETED"
+
+    preserved_evidence = db_session.get(
+        EvaluationEvidence,
+        evidence_id,
+    )
+
+    assert preserved_evidence is not None
+    assert preserved_evidence.evaluation_id == evaluation_id
+    assert preserved_evidence.indicator_id == indicator_id
+    assert preserved_evidence.content == (
+        "Evidence preserved after submission"
+    )
+
+    saved_responses = (
+        db_session.query(EvaluationIndicatorResponse)
+        .filter(
+            EvaluationIndicatorResponse.evaluation_id
+            == evaluation_id
+        )
+        .all()
+    )
+
+    assert len(saved_responses) == len(responses)
+
+    assert indicator_id in {
+        response.indicator_id
+        for response in saved_responses
+    }
+
+
+def test_save_draft_removes_file_evidence_storage(
+    db_session,
+    tmp_path,
+):
+    data = create_evaluation_data(db_session)
+
+    service = EvaluationService(db_session)
+    user_id = data["user"].id
+
+    responses = build_responses(data)[:2]
+
+    # Crear el borrador con dos respuestas.
+    result = service.save_draft(
+        {"responses": responses},
+        user_id,
+    )
+
+    evaluation_id = result["evaluation_id"]
+    removed_indicator_id = responses[1]["indicator_id"]
+
+    storage = EvidenceStorageService(
+        storage_path=tmp_path,
+    )
+
+    content = create_valid_pdf()
+
+    storage_key = storage.save_file(
+        "evidencia.pdf",
+        content,
+        "application/pdf",
+    )
+
+    file_path = storage.get_file(storage_key)
+
+    # Asociar el archivo con el indicador que retiraremos.
+    evidence = EvaluationEvidence(
+        evaluation_id=evaluation_id,
+        indicator_id=removed_indicator_id,
+        user_id=user_id,
+        type=EvidenceType.FILE,
+        content=None,
+        storage_key=storage_key,
+        original_filename="evidencia.pdf",
+        mime_type="application/pdf",
+        file_size=len(content),
+    )
+
+    db_session.add(evidence)
+    db_session.commit()
+
+    evidence_id = evidence.id
+
+    assert file_path.exists()
+
+    # Actualizar el borrador conservando solo la primera respuesta.
+    service.save_draft(
+        {"responses": responses[:1]},
+        user_id,
+        storage=storage,
+    )
+
+    # La respuesta retirada debe desaparecer.
+    removed_response = (
+        db_session.query(EvaluationIndicatorResponse)
+        .filter(
+            EvaluationIndicatorResponse.evaluation_id == evaluation_id,
+            EvaluationIndicatorResponse.indicator_id == removed_indicator_id,
+        )
+        .first()
+    )
+
+    assert removed_response is None
+
+    # También debe desaparecer el registro de evidencia.
+    db_session.expire_all()
+
+    assert db_session.get(
+        EvaluationEvidence,
+        evidence_id,
+    ) is None
+
+    # Finalmente, comprobar la eliminación física.
+    assert not file_path.exists()
+
+    # La respuesta que conservamos debe seguir disponible.
+    preserved_response = (
+        db_session.query(EvaluationIndicatorResponse)
+        .filter(
+            EvaluationIndicatorResponse.evaluation_id == evaluation_id,
+            EvaluationIndicatorResponse.indicator_id
+            == responses[0]["indicator_id"],
+        )
+        .first()
+    )
+
+    assert preserved_response is not None
+
+
+def test_save_draft_preserves_file_evidence_on_commit_failure(
+    db_session,
+    tmp_path,
+):
+    data = create_evaluation_data(db_session)
+
+    service = EvaluationService(db_session)
+    user_id = data["user"].id
+    responses = build_responses(data)[:2]
+
+    result = service.save_draft(
+        {"responses": responses},
+        user_id,
+    )
+
+    evaluation_id = result["evaluation_id"]
+    removed_indicator_id = responses[1]["indicator_id"]
+
+    storage = EvidenceStorageService(
+        storage_path=tmp_path,
+    )
+
+    content = create_valid_pdf()
+
+    storage_key = storage.save_file(
+        "evidencia.pdf",
+        content,
+        "application/pdf",
+    )
+
+    file_path = storage.get_file(storage_key)
+
+    evidence = EvaluationEvidence(
+        evaluation_id=evaluation_id,
+        indicator_id=removed_indicator_id,
+        user_id=user_id,
+        type=EvidenceType.FILE,
+        content=None,
+        storage_key=storage_key,
+        original_filename="evidencia.pdf",
+        mime_type="application/pdf",
+        file_size=len(content),
+    )
+
+    db_session.add(evidence)
+    db_session.commit()
+
+    evidence_id = evidence.id
+
+    # Simulamos un error antes de confirmar los cambios.
+    with patch.object(
+        db_session,
+        "commit",
+        side_effect=OperationalError(
+            "COMMIT",
+            {},
+            Exception("Simulated database failure"),
+        ),
+    ):
+        with pytest.raises(OperationalError):
+            service.save_draft(
+                {"responses": responses[:1]},
+                user_id,
+                storage=storage,
+            )
+
+    db_session.expire_all()
+
+    # La respuesta debe conservarse.
+    preserved_response = (
+        db_session.query(EvaluationIndicatorResponse)
+        .filter(
+            EvaluationIndicatorResponse.evaluation_id == evaluation_id,
+            EvaluationIndicatorResponse.indicator_id == removed_indicator_id,
+        )
+        .first()
+    )
+
+    assert preserved_response is not None
+
+    # El registro de evidencia debe conservarse.
+    preserved_evidence = db_session.get(
+        EvaluationEvidence,
+        evidence_id,
+    )
+
+    assert preserved_evidence is not None
+    assert preserved_evidence.storage_key == storage_key
+
+    # El archivo físico también debe conservarse.
+    assert file_path.exists()
+    assert file_path.read_bytes() == content

@@ -9,6 +9,8 @@ from ..models.feedback_ambit_model import FeedbackAmbit
 
 from ..models.user_model import User
 
+from ..models.evaluation_evidence_model import EvaluationEvidence, EvidenceType
+
 from ..models.evaluation_ambit_score_model import EvaluationAmbitScore
 from ..models.evaluation_indicator_response_model import EvaluationIndicatorResponse
 from ..models.evaluation_model import Evaluation, EvaluationStatus
@@ -16,7 +18,7 @@ from ..models.ambit_model import Ambit;
 from ..models.indicator_model import Indicator;
 from ..models.indicator_answer_model import IndicatorAnswer;
 from ..models.maturity_level_model import MaturityLevel;
-
+from ..services.evidence_storage_service import EvidenceStorageService
 from ..services.methodology_service import MethodologyService
 
 class EvaluationService:
@@ -86,7 +88,12 @@ class EvaluationService:
 
         return result
 
-    def save_draft(self, payload: dict, user_id: int):
+    def save_draft(
+        self,
+        payload: dict,
+        user_id: int,
+        storage: EvidenceStorageService | None = None,
+    ):
         responses = payload["responses"]
 
         user = self.db.query(User).filter(User.id == user_id).first()
@@ -129,6 +136,7 @@ class EvaluationService:
                 }
             )
 
+        files_to_delete: list[str] = []
         try:
             evaluation = (
                 self.db.query(Evaluation)
@@ -193,8 +201,34 @@ class EvaluationService:
                     response.maturity_level_id = r["maturity_level_id"]
                     response.score = r["score"]
 
+
             for indicator_id, response in existing_responses.items():
                 if indicator_id not in submitted_indicator_ids:
+                    evidence_query = self.db.query(
+                        EvaluationEvidence
+                    ).filter(
+                        EvaluationEvidence.evaluation_id == evaluation.id,
+                        EvaluationEvidence.indicator_id == indicator_id,
+                    )
+
+                    file_evidences = evidence_query.filter(
+                        EvaluationEvidence.type == EvidenceType.FILE,
+                        EvaluationEvidence.storage_key.isnot(None),
+                    ).all()
+
+                    files_to_delete.extend(
+                        evidence.storage_key
+                        for evidence in file_evidences
+                    )
+                    if files_to_delete and storage is None:
+                        raise RuntimeError(
+                            "Evidence storage is required to clean up deleted files"
+                        )
+
+                    evidence_query.delete(
+                        synchronize_session=False
+                    )
+
                     self.db.delete(response)
 
             self.db.commit()
@@ -218,10 +252,25 @@ class EvaluationService:
             self.db.rollback()
             raise
 
+        # La transacción de PostgreSQL ya fue confirmada.
+        # Los archivos físicos solamente se eliminan después del commit.
+        if files_to_delete:
+            if storage is None:
+                raise RuntimeError(
+                    "Evidence storage is required to clean up deleted files"
+                )
+
+            for storage_key in files_to_delete:
+                try:
+                    storage.delete_file(storage_key)
+                except FileNotFoundError:
+                    pass
+
         return {
             "evaluation_id": evaluation.id,
             "status": evaluation.status.value,
         }
+
 
     def get_draft(self, user_id: int):
         user = self.db.query(User).filter(

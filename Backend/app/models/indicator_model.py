@@ -23,7 +23,10 @@ class Indicator(Base):
         cascade="all, delete"
     )
 
-
+    evidences = relationship(
+        "EvaluationEvidence",
+        back_populates="indicator",
+    )
 
 @event.listens_for(Indicator, "after_insert")
 def create_answers_for_new_indicator(mapper, connection, target):

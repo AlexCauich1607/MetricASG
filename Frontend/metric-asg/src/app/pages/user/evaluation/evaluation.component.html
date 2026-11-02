@@ -109,7 +109,8 @@
                         ? 'answer-select'
                         : ''
                     ">
-              <input type="radio" [name]="'indicator-' + currentQuestion.id" [checked]="
+              <input type="radio" [disabled]="evidenceOperationPending()" [name]="'indicator-' + currentQuestion.id"
+                [checked]="
                         responses().get(currentQuestion.id) === answer.id
                       " (change)="
                         selectAnswer(
@@ -123,6 +124,14 @@
             </label>
           </div>
           }
+
+
+          <app-evaluation-evidences [evaluationId]="evaluationId()" [indicatorId]="currentQuestion.id"
+            [canEdit]="canEditCurrentEvidence()" [hasAnswer]="responses().has(currentQuestion.id)"
+            (operationPending)="onEvidenceOperationPending($event)">
+          </app-evaluation-evidences>
+
+
         </div>
 
         <div class="d-flex align-items-start ms-4">
@@ -151,7 +160,7 @@
         }
 
         @if (ambit() > 0 || question() > 0) {
-        <button class="btn btn-my-purple pe-4" (click)="beforeQuestion()">
+        <button class="btn btn-my-purple pe-4" [disabled]="evidenceOperationPending()" (click)="beforeQuestion()">
           <i class="bi bi-chevron-left"></i>
           Anterior
         </button>
@@ -159,7 +168,7 @@
 
         @if (
         ambit() < structure()!.ambits.length - 1 || question() < currentAmbit.indicators.length - 1 ) { <button
-          class="btn btn-my-purple ps-4" (click)="nextQuestion()">
+          class="btn btn-my-purple ps-4" [disabled]="evidenceOperationPending()" (click)="nextQuestion()">
           Siguiente
           <i class="bi bi-chevron-right"></i>
           </button>
@@ -169,7 +178,8 @@
           ambit() === structure()!.ambits.length - 1 &&
           question() === currentAmbit.indicators.length - 1
           ) {
-          <button class="btn btn-my-purple ps-3" (click)="submit()" [disabled]="loading() || loadError() || submitting()">
+          <button class="btn btn-my-purple ps-3" (click)="submit()"
+            [disabled]="loading() || loadError() || submitting()">
             <i class="bi bi-send-fill"></i>
             @if (submitting()) {
             <span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>

@@ -619,4 +619,115 @@ describe('EvaluationComponent', () => {
 
     expect(saveDraftSpy).not.toHaveBeenCalled();
   });
+
+
+  it('should restore evaluation ID from an existing draft', () => {
+    getDraftSpy.and.returnValue(
+      of({
+        evaluation_id: 25,
+        status: 'DRAFT',
+        responses: [
+          {
+            indicator_id: 1,
+            indicator_answer_id: 1
+          }
+        ]
+      })
+    );
+
+    component.loadSurvey();
+
+    expect(component.evaluationId()).toBe(25);
+    expect(component.responses().get(1)).toBe(1);
+  });
+
+
+  it('should store evaluation ID after saving a draft', fakeAsync(() => {
+    saveDraftSpy.and.returnValue(
+      of({
+        evaluation_id: 30,
+        status: 'DRAFT'
+      })
+    );
+
+    component.selectAnswer(1, 1, 1);
+
+    tick(800);
+
+    expect(saveDraftSpy).toHaveBeenCalledTimes(1);
+    expect(component.evaluationId()).toBe(30);
+    expect(component.autosaveStatus()).toBe('saved');
+  }));
+
+  it('should not allow evidence editing without a saved answer', () => {
+    expect(component.canEditCurrentEvidence()).toBeFalse();
+
+    component.selectAnswer(1, 1, 1);
+
+    expect(component.canEditCurrentEvidence()).toBeFalse();
+    expect(component.autosaveStatus()).toBe('pending');
+  });
+
+  it('should allow evidence editing after the answer is saved', fakeAsync(() => {
+    component.selectAnswer(1, 1, 1);
+
+    expect(component.canEditCurrentEvidence()).toBeFalse();
+
+    tick(800);
+
+    expect(component.autosaveStatus()).toBe('saved');
+    expect(component.savedResponses().get(1)).toBe(1);
+    expect(component.canEditCurrentEvidence()).toBeTrue();
+  }));
+
+  it('should not allow evidence editing when autosave fails', fakeAsync(() => {
+    saveDraftSpy.and.returnValue(
+      throwError(() => new Error('Error al guardar'))
+    );
+
+    component.selectAnswer(1, 1, 1);
+
+    tick(800);
+
+    expect(component.autosaveStatus()).toBe('error');
+    expect(component.savedResponses().has(1)).toBeFalse();
+    expect(component.canEditCurrentEvidence()).toBeFalse();
+  }));
+
+  it('should prevent answer changes while an evidence operation is pending', () => {
+    component.onEvidenceOperationPending(true);
+
+    component.selectAnswer(1, 1, 1);
+
+    expect(component.responses().has(1)).toBeFalse();
+    expect(saveDraftSpy).not.toHaveBeenCalled();
+  });
+
+  it('should prevent evaluation submission while an evidence operation is pending', () => {
+    component.onEvidenceOperationPending(true);
+
+    component.submit();
+
+    expect(submitEvaluationSpy).not.toHaveBeenCalled();
+    expect(component.submitting()).toBeFalse();
+  });
+
+  it('should block navigation while an evidence operation is pending', () => {
+    const initialAmbit = component.ambit();
+    const initialQuestion = component.question();
+
+    component.onEvidenceOperationPending(true);
+
+    component.nextQuestion();
+    component.beforeQuestion();
+
+    expect(component.ambit()).toBe(initialAmbit);
+    expect(component.question()).toBe(initialQuestion);
+
+    component.onEvidenceOperationPending(false);
+
+    expect(component.evidenceOperationPending()).toBeFalse();
+  });
+
+
 });

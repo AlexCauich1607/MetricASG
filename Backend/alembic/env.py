@@ -6,6 +6,7 @@ from sqlalchemy import create_engine, pool
 from app.core.config import settings
 from app.database.database import Base
 
+import app.models.evaluation_evidence_model
 import app.models.ambit_model
 import app.models.company_relationship_model
 import app.models.company_sector_model
