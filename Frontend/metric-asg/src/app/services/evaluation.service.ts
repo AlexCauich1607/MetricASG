@@ -9,6 +9,7 @@ import { ResultEvaluation } from '../models/evaluation_result';
 import { EvaluationHistory } from '../models/history_evaluations';
 import { EvaluationDraft } from '../models/evaluation_draft';
 import { EvaluationDraftResponse } from '../models/evaluation_draft_response';
+import { EvaluationComparison } from '../models/evaluation_comparison';
 
 @Injectable({
   providedIn: 'root'
@@ -53,6 +54,21 @@ export class EvaluationService extends BaseService<Evaluation> {
   getEvaluationHistory(): Observable<EvaluationHistory> {
     return this.http.get<EvaluationHistory>(
       `http://localhost:8000/api/evaluations/history/me`,
+    );
+  }
+
+  getEvaluationComparison(
+    evaluationId1: number,
+    evaluationId2: number
+  ): Observable<EvaluationComparison> {
+    return this.http.get<EvaluationComparison>(
+      `http://localhost:8000/api/${this.endpoint}/compare`,
+      {
+        params: {
+          evaluation_id_1: evaluationId1,
+          evaluation_id_2: evaluationId2
+        }
+      }
     );
   }
 }

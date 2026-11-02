@@ -91,6 +91,14 @@ export const pagesRoutes: Routes = [
           import('./user/history/history.component')
             .then(m => m.HistoryComponent)
       },
+
+      {
+        path: 'compare',
+        loadComponent: () =>
+          import('./user/compare/compare.component')
+            .then(m => m.CompareComponent)
+      },
+
       { path: '', redirectTo: 'home', pathMatch: 'full' }
     ]
   },

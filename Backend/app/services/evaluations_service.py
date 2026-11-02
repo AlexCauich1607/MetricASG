@@ -20,6 +20,7 @@ from ..models.indicator_answer_model import IndicatorAnswer;
 from ..models.maturity_level_model import MaturityLevel;
 from ..services.evidence_storage_service import EvidenceStorageService
 from ..services.methodology_service import MethodologyService
+from ..models.methodology_model import Methodology
 
 class EvaluationService:
 
@@ -598,6 +599,160 @@ class EvaluationService:
                 "ambits": ambit_averages
             }
         }
+
+    @staticmethod
+    def calculate_comparison_differences(
+        first: dict,
+        second: dict,
+    ) -> dict:
+        global_delta = (
+            second["global_score"] - first["global_score"]
+        )
+
+        first_ambits = {
+            ambit["ambit_id"]: ambit
+            for ambit in first["ambits"]
+        }
+
+        second_ambits = {
+            ambit["ambit_id"]: ambit
+            for ambit in second["ambits"]
+        }
+
+        if first_ambits.keys() != second_ambits.keys():
+            raise HTTPException(
+                status_code=409,
+                detail="Evaluation ambits are not compatible",
+            )
+
+        ambit_differences = []
+
+        for ambit_id, first_ambit in first_ambits.items():
+            second_ambit = second_ambits[ambit_id]
+
+            ambit_differences.append({
+                "ambit_id": ambit_id,
+                "ambit_name": first_ambit["ambit_name"],
+                "delta": (
+                    second_ambit["score"] - first_ambit["score"]
+                ),
+            })
+
+        return {
+            "global_score": global_delta,
+            "ambits": ambit_differences,
+        }
+
+
+    def get_comparison(
+        self,
+        evaluation_id_1: int,
+        evaluation_id_2: int,
+        user_id: int,
+    ):
+        if evaluation_id_1 == evaluation_id_2:
+            raise HTTPException(
+                status_code=400,
+                detail="Two different evaluations are required",
+            )
+
+        evaluations = (
+            self.db.query(Evaluation)
+            .filter(
+                Evaluation.id.in_([evaluation_id_1, evaluation_id_2]),
+                Evaluation.user_id == user_id,
+                Evaluation.status == EvaluationStatus.COMPLETED,
+            )
+            .all()
+        )
+
+        evaluations_by_id = {
+            evaluation.id: evaluation
+            for evaluation in evaluations
+        }
+
+        if len(evaluations_by_id) != 2:
+            raise HTTPException(
+                status_code=404,
+                detail="One or both evaluations were not found",
+            )
+
+        comparison_data = []
+
+        for evaluation_id in (evaluation_id_1, evaluation_id_2):
+            evaluation = evaluations_by_id[evaluation_id]
+
+            methodology = (
+                self.db.query(Methodology)
+                .filter(Methodology.id == evaluation.methodology_id)
+                .first()
+            )
+
+            if methodology is None:
+                raise HTTPException(
+                    status_code=409,
+                    detail="Evaluation methodology is unavailable",
+                )
+
+            ambit_scores = (
+                self.db.query(EvaluationAmbitScore)
+                .filter(
+                    EvaluationAmbitScore.evaluation_id == evaluation.id
+                )
+                .all()
+            )
+
+            ambits = []
+
+            for ambit_score in ambit_scores:
+                ambit = (
+                    self.db.query(Ambit)
+                    .filter(Ambit.id == ambit_score.ambit_id)
+                    .first()
+                )
+
+                ambits.append({
+                    "ambit_id": ambit_score.ambit_id,
+                    "ambit_name": ambit.name if ambit else None,
+                    "score": ambit_score.score,
+                })
+
+            comparison_data.append({
+                "evaluation_id": evaluation.id,
+                "date": evaluation.date,
+                "methodology_id": evaluation.methodology_id,
+                "methodology_version": methodology.version,
+                "global_score": evaluation.global_score,
+                "ambits": ambits,
+            })
+
+
+        comparable = (
+            comparison_data[0]["methodology_id"]
+            == comparison_data[1]["methodology_id"]
+        )
+
+        differences = (
+            self.calculate_comparison_differences(
+                comparison_data[0],
+                comparison_data[1],
+            )
+            if comparable
+            else None
+        )
+
+        return {
+            "comparable": comparable,
+            "warning": (
+                None
+                if comparable
+                else "Evaluations use different methodology versions"
+            ),
+            "evaluations": comparison_data,
+            "differences": differences,
+        }
+
+
     def get_required_indicator_ids(
         self,
         methodology_id: int,
