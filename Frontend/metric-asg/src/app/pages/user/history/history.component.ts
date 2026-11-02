@@ -3,9 +3,11 @@ import { EvaluationService } from '../../../services/evaluation.service';
 import { EvaluationHistory } from '../../../models/history_evaluations';
 import { SwDates } from '../../../models/dates';
 import { SessionService } from '../../../shared/class/temporalStorage';
-import { KeyValuePipe } from '@angular/common';
+import { KeyValuePipe, DatePipe } from '@angular/common';
 import { AmbitCardComponent } from '../../../shared/ambit-card/ambit-card.component';
 import { BarChartComponent } from '../../../shared/bar-chart/bar-chart.component';
+import { Router } from '@angular/router';
+
 
 export interface AmbitChart {
   name: string,
@@ -19,7 +21,8 @@ export interface AmbitChart {
   imports: [
     AmbitCardComponent,
     BarChartComponent,
-    KeyValuePipe
+    KeyValuePipe,
+    DatePipe
   ],
   templateUrl: './history.component.html',
   changeDetection: ChangeDetectionStrategy.Eager,
@@ -31,16 +34,20 @@ export class HistoryComponent {
   historial: EvaluationHistory | null = null;
   loadingChart = false;
   data: Map<number, AmbitChart> = new Map();
-  blueColor= "#00245D"; 
+  blueColor = "#00245D";
   global: AmbitChart = {
     name: "Nivel ASG",
     data: [],
     scores: [],
     colors: [],
   }
-  constructor(private historyService: EvaluationService) {
+  evaluationId1: number | null = null;
+  evaluationId2: number | null = null;
 
-  }
+  constructor(
+    private historyService: EvaluationService,
+    private router: Router
+  ) { }
   ngOnInit(): void {
     this.loadHistory();
   }
@@ -91,7 +98,7 @@ export class HistoryComponent {
             }
 
             if (ambito) {
-              ambito.data.push(SwDates.formatDateDDMMYY(a.date??""));
+              ambito.data.push(SwDates.formatDateDDMMYY(a.date ?? ""));
               ambito.scores.push(a.score!);
               ambito.colors.push(a.ambit_color!);
               console.log(ambito)
@@ -111,4 +118,26 @@ export class HistoryComponent {
       }
     })
   }
+
+  get canCompare(): boolean {
+    return (
+      this.evaluationId1 !== null &&
+      this.evaluationId2 !== null &&
+      this.evaluationId1 !== this.evaluationId2
+    );
+  }
+
+  compareEvaluations(): void {
+    if (!this.canCompare) {
+      return;
+    }
+
+    this.router.navigate(['/user/compare'], {
+      queryParams: {
+        evaluation_id_1: this.evaluationId1,
+        evaluation_id_2: this.evaluationId2
+      }
+    });
+  }
+
 }

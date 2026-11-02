@@ -129,4 +129,61 @@ describe('EvaluationService', () => {
 
     request.flush({});
   });
+
+  it('should get the comparison of two evaluations', () => {
+    const evaluationId1 = 12;
+    const evaluationId2 = 15;
+
+    const mockResponse = {
+      comparable: true,
+      warning: null,
+      evaluations: [
+        {
+          evaluation_id: evaluationId1,
+          date: '2026-09-10T12:00:00',
+          methodology_id: 1,
+          methodology_version: '1.0',
+          global_score: 7.5,
+          ambits: []
+        },
+        {
+          evaluation_id: evaluationId2,
+          date: '2026-10-20T12:00:00',
+          methodology_id: 1,
+          methodology_version: '1.0',
+          global_score: 8.5,
+          ambits: []
+        }
+      ],
+      differences: {
+        global_score: 1.0,
+        ambits: []
+      }
+    };
+
+    service.getEvaluationComparison(
+      evaluationId1,
+      evaluationId2
+    ).subscribe(response => {
+      expect(response).toEqual(mockResponse);
+    });
+
+    const request = httpTestingController.expectOne(
+      req => req.url ===
+        'http://localhost:8000/api/evaluations/compare'
+    );
+
+    expect(request.request.method).toBe('GET');
+
+    expect(
+      request.request.params.get('evaluation_id_1')
+    ).toBe('12');
+
+    expect(
+      request.request.params.get('evaluation_id_2')
+    ).toBe('15');
+
+    request.flush(mockResponse);
+  });
+
 });

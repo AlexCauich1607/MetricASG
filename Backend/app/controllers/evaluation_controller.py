@@ -90,6 +90,19 @@ class EvaluationsController(BaseController):
                 current_user.id
             )
 
+        @self.router.get("/compare")
+        def compare_evaluations(
+            evaluation_id_1: int,
+            evaluation_id_2: int,
+            current_user: User = Depends(get_current_user),
+            db: Session = Depends(get_db),
+        ):
+            return EvaluationService(db).get_comparison(
+                evaluation_id_1=evaluation_id_1,
+                evaluation_id_2=evaluation_id_2,
+                user_id=current_user.id,
+            )
+
 
                 # Register specific GET routes before the inherited dynamic route.
         dynamic_route = next(

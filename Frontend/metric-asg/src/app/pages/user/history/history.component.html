@@ -2,6 +2,78 @@
   <div>
     <h4 class="text-my-purple fw-bold mb-4"><span class="bg-white py-2 px-4 rounded-5 shadow-sm border"><i class="bi bi-hourglass-split"></i> Historial</span></h4>
 
+    <div class="bg-white rounded border shadow-sm p-4 mt-4 mb-4">
+      <h5 class="text-my-purple fw-bold mb-3">
+        <i class="bi bi-arrow-left-right me-2"></i>
+        Comparar evaluaciones
+      </h5>
+
+      <p class="text-muted mb-4">
+        Selecciona dos evaluaciones de tu historial para comparar
+        sus resultados y conocer las diferencias en sus puntuaciones ASG.
+      </p>
+
+      <div class="row g-3">
+        <div class="col-12 col-md-6">
+          <label for="evaluationId1" class="form-label fw-bold">
+            Evaluación inicial
+          </label>
+
+          <select
+            id="evaluationId1"
+            class="form-select"
+            [value]="evaluationId1 ?? ''"
+            (change)="evaluationId1 = $any($event.target).value
+              ? +$any($event.target).value : null"
+          >
+            <option value="">Selecciona una evaluación</option>
+
+            @for (evaluation of historial?.history; track evaluation.evaluation_id) {
+              <option [value]="evaluation.evaluation_id">
+                {{ evaluation.date | date:'dd/MM/yyyy' }}
+                - Puntuación: {{ evaluation.global_score.toFixed(1) }}
+              </option>
+            }
+          </select>
+        </div>
+
+        <div class="col-12 col-md-6">
+          <label for="evaluationId2" class="form-label fw-bold">
+            Evaluación final
+          </label>
+
+          <select
+            id="evaluationId2"
+            class="form-select"
+            [value]="evaluationId2 ?? ''"
+            (change)="evaluationId2 = $any($event.target).value
+              ? +$any($event.target).value : null"
+          >
+            <option value="">Selecciona una evaluación</option>
+
+            @for (evaluation of historial?.history; track evaluation.evaluation_id) {
+              <option [value]="evaluation.evaluation_id">
+                {{ evaluation.date | date:'dd/MM/yyyy' }}
+                - Puntuación: {{ evaluation.global_score.toFixed(1) }}
+              </option>
+            }
+          </select>
+        </div>
+      </div>
+
+      <div class="d-flex justify-content-end mt-4">
+        <button
+          type="button"
+          class="btn btn-primary"
+          [disabled]="!canCompare"
+          (click)="compareEvaluations()"
+        >
+          <i class="bi bi-arrow-left-right me-2"></i>
+          Comparar resultados
+        </button>
+      </div>
+    </div>
+
     <p class="text-white fw-bold mt-5 mb-4"><span class="bg-my-purple py-2 px-4 rounded-5 shadow-sm border"><i class="bi bi-star-fill"></i> Puntaciones Históricas</span></p>
     <div class="row split-margin  align-items-stretch">
       <div class="col-6 col-lg-3 mb-2">
