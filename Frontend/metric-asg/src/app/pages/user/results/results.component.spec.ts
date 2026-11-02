@@ -78,7 +78,7 @@ describe('ResultsComponent', () => {
     );
     evidenceServiceSpy = jasmine.createSpyObj(
       'EvidenceService',
-      ['getEvidences']
+      ['getEvidences', 'downloadEvidence']
     );
 
     evidenceServiceSpy.getEvidences.and.returnValue(of([]));
@@ -353,7 +353,7 @@ describe('ResultsComponent', () => {
     expect(link?.rel).toContain('noreferrer');
   });
 
-  it('should display file evidence metadata without download actions', () => {
+  it('should display file evidence with a download button in read-only mode', () => {
     const fileEvidence: EvaluationEvidence = {
       ...mockEvidences[0],
       id: 3,
@@ -384,9 +384,144 @@ describe('ResultsComponent', () => {
       'reporte-ambiental.pdf'
     );
 
+    const downloadButton = Array.from(
+      element.querySelectorAll('button')
+    ).find(button =>
+      button.textContent?.includes('Descargar')
+    );
+
+    expect(downloadButton).toBeDefined();
+    expect(downloadButton?.disabled).toBeFalse();
+
     expect(
-      element.querySelector('a[download]')
+      element.querySelector('button.btn-outline-danger')
     ).toBeNull();
+  });
+
+  it('should download file evidence with its original filename', () => {
+    const fileEvidence: EvaluationEvidence = {
+      ...mockEvidences[0],
+      id: 3,
+      type: 'FILE',
+      content: null,
+      original_filename: 'reporte-ambiental.pdf',
+      mime_type: 'application/pdf',
+      file_size: 2048
+    };
+
+    const fileContent = new Blob(
+      ['PDF content'],
+      { type: 'application/pdf' }
+    );
+
+    component.results = mockResults;
+
+    evidenceServiceSpy.downloadEvidence.and.returnValue(
+      of(fileContent)
+    );
+
+    const objectUrlSpy = spyOn(
+      URL,
+      'createObjectURL'
+    ).and.returnValue('blob:mock-evidence');
+
+    const revokeUrlSpy = spyOn(
+      URL,
+      'revokeObjectURL'
+    );
+
+    const clickSpy = spyOn(
+      HTMLAnchorElement.prototype,
+      'click'
+    );
+
+    jasmine.clock().install();
+
+    try {
+      component.downloadEvidence(fileEvidence);
+
+      expect(
+        evidenceServiceSpy.downloadEvidence
+      ).toHaveBeenCalledWith(1, 3);
+
+      expect(objectUrlSpy).toHaveBeenCalledWith(fileContent);
+      expect(clickSpy).toHaveBeenCalled();
+
+      expect(component.downloadingEvidenceId).toBeNull();
+      expect(component.evidenceDownloadError).toBeNull();
+
+      jasmine.clock().tick(1000);
+
+      expect(revokeUrlSpy).toHaveBeenCalledWith(
+        'blob:mock-evidence'
+      );
+    } finally {
+      jasmine.clock().uninstall();
+    }
+  });
+
+  it('should display an error when file download fails', () => {
+    const fileEvidence: EvaluationEvidence = {
+      ...mockEvidences[0],
+      id: 3,
+      type: 'FILE',
+      content: null,
+      original_filename: 'reporte-ambiental.pdf',
+      mime_type: 'application/pdf',
+      file_size: 2048
+    };
+
+    component.results = mockResults;
+
+    evidenceServiceSpy.downloadEvidence.and.returnValue(
+      throwError(() => new Error('Download failed'))
+    );
+
+    component.downloadEvidence(fileEvidence);
+
+    expect(
+      evidenceServiceSpy.downloadEvidence
+    ).toHaveBeenCalledWith(1, 3);
+
+    expect(component.downloadingEvidenceId).toBeNull();
+
+    expect(component.evidenceDownloadError).toBe(
+      'No se pudo descargar el archivo. Inténtalo nuevamente.'
+    );
+  });
+
+  it('should prevent concurrent file downloads', () => {
+    const fileEvidence: EvaluationEvidence = {
+      ...mockEvidences[0],
+      id: 3,
+      type: 'FILE',
+      content: null,
+      original_filename: 'reporte-ambiental.pdf',
+      mime_type: 'application/pdf',
+      file_size: 2048
+    };
+
+    const pendingDownload = new Subject<Blob>();
+
+    component.results = mockResults;
+
+    evidenceServiceSpy.downloadEvidence.and.returnValue(
+      pendingDownload.asObservable()
+    );
+
+    component.downloadEvidence(fileEvidence);
+
+    expect(component.downloadingEvidenceId).toBe(3);
+
+    component.downloadEvidence(fileEvidence);
+
+    expect(
+      evidenceServiceSpy.downloadEvidence
+    ).toHaveBeenCalledTimes(1);
+
+    pendingDownload.error(new Error('Download cancelled'));
+
+    expect(component.downloadingEvidenceId).toBeNull();
   });
 
 });

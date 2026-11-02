@@ -35,6 +35,9 @@ export class ResultsComponent {
   loadingEvidences = false;
   evidencesError = false;
 
+  downloadingEvidenceId: number | null = null;
+  evidenceDownloadError: string | null = null;
+
   ambits: string[] = [];
   scores: number[] = [];
   colors: string[] = [];
@@ -64,6 +67,51 @@ export class ResultsComponent {
       error: () => {
         this.evidencesError = true;
         this.loadingEvidences = false;
+      }
+    });
+  }
+
+
+  downloadEvidence(evidence: EvaluationEvidence): void {
+    if (
+      !this.results ||
+      evidence.type !== 'FILE' ||
+      this.downloadingEvidenceId !== null
+    ) {
+      return;
+    }
+
+    const evaluationId = this.results.evaluation_id;
+
+    this.downloadingEvidenceId = evidence.id;
+    this.evidenceDownloadError = null;
+
+    this.evidenceService.downloadEvidence(
+      evaluationId,
+      evidence.id
+    ).subscribe({
+      next: (blob) => {
+        this.downloadingEvidenceId = null;
+
+        const objectUrl = URL.createObjectURL(blob);
+        const anchor = document.createElement('a');
+
+        anchor.href = objectUrl;
+        anchor.download =
+          evidence.original_filename || 'evidencia';
+
+        document.body.appendChild(anchor);
+        anchor.click();
+        anchor.remove();
+
+        setTimeout(() => {
+          URL.revokeObjectURL(objectUrl);
+        }, 1000);
+      },
+      error: () => {
+        this.downloadingEvidenceId = null;
+        this.evidenceDownloadError =
+          'No se pudo descargar el archivo. Inténtalo nuevamente.';
       }
     });
   }

@@ -140,4 +140,81 @@ describe('EvidenceService', () => {
       statusText: 'No Content'
     });
   });
+
+  it('should upload file evidence using multipart form data', () => {
+    const file = new File(
+      ['PDF content'],
+      'evidencia.pdf',
+      { type: 'application/pdf' }
+    );
+
+    const fileEvidence: EvaluationEvidence = {
+      ...mockEvidence,
+      id: 2,
+      type: 'FILE',
+      content: null,
+      original_filename: 'evidencia.pdf',
+      mime_type: 'application/pdf',
+      file_size: file.size
+    };
+
+    service.uploadEvidence(
+      evaluationId,
+      indicatorId,
+      file
+    ).subscribe(evidence => {
+      expect(evidence).toEqual(fileEvidence);
+    });
+
+    const request = httpMock.expectOne(
+      `${baseUrl}/upload`
+    );
+
+    expect(request.request.method).toBe('POST');
+
+    const body = request.request.body as FormData;
+
+    expect(body instanceof FormData).toBeTrue();
+    expect(body.get('indicator_id')).toBe(String(indicatorId));
+
+    const uploadedFile = body.get('file') as File;
+
+    expect(uploadedFile).toBeInstanceOf(File);
+    expect(uploadedFile.name).toBe(file.name);
+    expect(uploadedFile.size).toBe(file.size);
+    expect(uploadedFile.type).toBe(file.type);
+
+
+    expect(
+      request.request.headers.has('Content-Type')
+    ).toBeFalse();
+
+    request.flush(fileEvidence);
+  });
+
+  it('should download file evidence as a blob', () => {
+    const evidenceId = 2;
+
+    const fileContent = new Blob(
+      ['PDF content'],
+      { type: 'application/pdf' }
+    );
+
+    service.downloadEvidence(
+      evaluationId,
+      evidenceId
+    ).subscribe(blob => {
+      expect(blob).toBe(fileContent);
+    });
+
+    const request = httpMock.expectOne(
+      `${baseUrl}/${evidenceId}/download`
+    );
+
+    expect(request.request.method).toBe('GET');
+    expect(request.request.responseType).toBe('blob');
+
+    request.flush(fileContent);
+  });
+
 });

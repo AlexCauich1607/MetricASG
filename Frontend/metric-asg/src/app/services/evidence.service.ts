@@ -15,7 +15,7 @@ export class EvidenceService {
   private readonly baseUrl =
     'http://localhost:8000/api/evaluations';
 
-  constructor(private http: HttpClient) {}
+  constructor(private http: HttpClient) { }
 
   createEvidence(
     evaluationId: number,
@@ -51,6 +51,35 @@ export class EvidenceService {
       `${this.baseUrl}/${evaluationId}/evidences/${evidenceId}`
     );
   }
+
+  uploadEvidence(
+    evaluationId: number,
+    indicatorId: number,
+    file: File
+  ): Observable<EvaluationEvidence> {
+    const formData = new FormData();
+
+    formData.append('indicator_id', String(indicatorId));
+    formData.append('file', file, file.name);
+
+    return this.http.post<EvaluationEvidence>(
+      `${this.baseUrl}/${evaluationId}/evidences/upload`,
+      formData
+    );
+  }
+
+  downloadEvidence(
+    evaluationId: number,
+    evidenceId: number
+  ): Observable<Blob> {
+    return this.http.get(
+      `${this.baseUrl}/${evaluationId}/evidences/${evidenceId}/download`,
+      {
+        responseType: 'blob'
+      }
+    );
+  }
+
 
   deleteEvidence(
     evaluationId: number,

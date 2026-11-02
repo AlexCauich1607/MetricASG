@@ -125,11 +125,12 @@
           </div>
           }
 
-          @if (responses().has(currentQuestion.id)) {
+
           <app-evaluation-evidences [evaluationId]="evaluationId()" [indicatorId]="currentQuestion.id"
-            [canEdit]="canEditCurrentEvidence()" (operationPending)="onEvidenceOperationPending($event)">
+            [canEdit]="canEditCurrentEvidence()" [hasAnswer]="responses().has(currentQuestion.id)"
+            (operationPending)="onEvidenceOperationPending($event)">
           </app-evaluation-evidences>
-          }
+
 
         </div>
 
