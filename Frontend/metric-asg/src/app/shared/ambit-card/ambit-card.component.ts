@@ -10,7 +10,9 @@ import { Component, Input, ChangeDetectionStrategy } from '@angular/core';
 export class AmbitCardComponent {
   @Input() title: string = "";
   @Input() subtitle: string = "";
-  @Input() score: number = 0;
+  @Input() score: number | null = 0;
+  @Input() delta: number | null = null;
+  @Input() showDelta: boolean = false;
   @Input() color: string = "";
   @Input() letter: string = "";
   @Input() maturity_color: string = "";

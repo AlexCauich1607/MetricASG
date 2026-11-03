@@ -1,48 +1,45 @@
 import { Component, ChangeDetectionStrategy } from '@angular/core';
 import { EvaluationService } from '../../../services/evaluation.service';
 import { EvaluationHistory } from '../../../models/history_evaluations';
-import { SwDates } from '../../../models/dates';
-import { SessionService } from '../../../shared/class/temporalStorage';
-import { KeyValuePipe, DatePipe } from '@angular/common';
+import { DatePipe } from '@angular/common';
 import { AmbitCardComponent } from '../../../shared/ambit-card/ambit-card.component';
-import { BarChartComponent } from '../../../shared/bar-chart/bar-chart.component';
 import { Router } from '@angular/router';
+import { EvaluationDashboard } from '../../../models/evaluation_dashboard';
+import {
+  buildHistoricalChart,
+  HistoricalDashboardChart
+} from '../../../models/evaluation_dashboard_chart';
+import { HistoricalTrendChartComponent } from '../../../shared/historical-trend-chart/historical-trend-chart.component';
 
-
-export interface AmbitChart {
-  name: string,
-  data: string[],
-  scores: number[],
-  colors: string[]
-}
 @Component({
   selector: 'app-history',
   standalone: true,
   imports: [
     AmbitCardComponent,
-    BarChartComponent,
-    KeyValuePipe,
-    DatePipe
+    DatePipe,
+    HistoricalTrendChartComponent
   ],
   templateUrl: './history.component.html',
   changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './history.component.scss'
 })
 export class HistoryComponent {
-  user_id: number = SessionService.getSessionItem('id') ?? 0;
-  chartsLoading = 0;
   historial: EvaluationHistory | null = null;
-  loadingChart = false;
-  data: Map<number, AmbitChart> = new Map();
-  blueColor = "#00245D";
-  global: AmbitChart = {
-    name: "Nivel ASG",
-    data: [],
-    scores: [],
-    colors: [],
-  }
   evaluationId1: number | null = null;
   evaluationId2: number | null = null;
+  dashboard: EvaluationDashboard | null = null;
+  latestEvaluation: EvaluationDashboard['history'][number] | null = null;
+
+  globalTrend: HistoricalDashboardChart = {
+    labels: [],
+    datasets: []
+  };
+
+  ambitTrends: {
+    id: number;
+    name: string;
+    chart: HistoricalDashboardChart;
+  }[] = [];
 
   constructor(
     private historyService: EvaluationService,
@@ -50,73 +47,65 @@ export class HistoryComponent {
   ) { }
   ngOnInit(): void {
     this.loadHistory();
+    this.loadHistoricalDashboard();
+  }
+  loadHistoricalDashboard(): void {
+    this.historyService.getHistoricalDashboard().subscribe({
+      next: (dashboard) => {
+        this.dashboard = dashboard;
+        this.latestEvaluation =
+          dashboard.history.at(-1) ?? null;
+        this.globalTrend = buildHistoricalChart(dashboard);
+
+        const ambits = new Map<number, string>();
+
+        dashboard.history.forEach(evaluation => {
+          evaluation.ambits.forEach(ambit => {
+            if (!ambits.has(ambit.ambit_id)) {
+              ambits.set(
+                ambit.ambit_id,
+                ambit.ambit_name ?? `Ámbito ${ambit.ambit_id}`
+              );
+            }
+          });
+        });
+
+        this.ambitTrends = Array.from(ambits, ([id, name]) => ({
+          id,
+          name,
+          chart: buildHistoricalChart(dashboard, id)
+        }));
+      },
+      error: (error) => {
+        console.error('Error al cargar el dashboard histórico', error);
+      }
+    });
   }
   getLetter(id: number): string {
-    let result = "";
-    this.historial?.averages.ambits.forEach(a => {
-      if (a.ambit_id == id) {
-        result = a.letter ?? "";
-
-      }
-
-    })
-    return result;
+    return this.historial?.averages?.ambits.find(
+      ambit => ambit.ambit_id === id
+    )?.letter ?? '';
   }
   getColor(id: number): string {
-    let result = "";
-    this.historial?.averages.ambits.forEach(a => {
-      if (a.ambit_id == id) {
-        result = a.ambit_color ?? "";
-
-      }
-
-    })
-    return result;
+    return this.historial?.averages?.ambits.find(
+      ambit => ambit.ambit_id === id
+    )?.ambit_color ?? '';
   }
   loadHistory(): void {
-    this.loadingChart = false;
     this.historyService.getEvaluationHistory().subscribe({
       next: (value) => {
         this.historial = value;
-        this.historial.history.forEach(e => {
-          this.global.scores.push(e.global_score);
-          this.global.data.push(SwDates.formatDateDDMMYY(e.date));
-          this.global.colors.push(this.blueColor)
-          e.ambits.forEach(a => {
-            let ambito = this.data.get(a.ambit_id);
-            if (!ambito) {
-              let newAmbit: AmbitChart = {
-                name: "",
-                data: [],
-                scores: [],
-                colors: [],
-              }
-              this.data.set(a.ambit_id, newAmbit);
-              ambito = newAmbit;
-              ambito.name = a.ambit_name;
-
-            }
-
-            if (ambito) {
-              ambito.data.push(SwDates.formatDateDDMMYY(a.date ?? ""));
-              ambito.scores.push(a.score!);
-              ambito.colors.push(a.ambit_color!);
-              console.log(ambito)
-            }
-
-          })
-          this.chartsLoading++;
-        })
-
-        this.loadingChart = true;
-
-
-
       },
-      error: (err) => {
-
+      error: (error) => {
+        console.error('Error al cargar el historial', error);
       }
-    })
+    });
+  }
+
+  get hasComparableTrend(): boolean {
+    return this.dashboard?.history.some(
+      evaluation => evaluation.global_delta !== null
+    ) ?? false;
   }
 
   get canCompare(): boolean {
