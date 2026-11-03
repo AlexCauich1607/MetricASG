@@ -2,6 +2,7 @@ from collections import defaultdict
 from datetime import date
 from fastapi import HTTPException
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
+from sqlalchemy.orm import selectinload, joinedload
 
 from dateutil.relativedelta import relativedelta
 
@@ -752,6 +753,129 @@ class EvaluationService:
             "differences": differences,
         }
 
+    def get_historical_dashboard(self, user_id: int):
+        evaluations = (
+            self.db.query(Evaluation)
+            .options(
+                joinedload(Evaluation.methodology),
+                selectinload(Evaluation.ambit_scores),
+            )
+            .filter(
+                Evaluation.user_id == user_id,
+                Evaluation.status == EvaluationStatus.COMPLETED,
+            )
+            .order_by(Evaluation.date.asc(), Evaluation.id.asc())
+            .all()
+        )
+
+        ambit_ids = {
+            score.ambit_id
+            for evaluation in evaluations
+            for score in evaluation.ambit_scores
+        }
+
+        ambits_by_id = {}
+
+        if ambit_ids:
+            ambits = (
+                self.db.query(Ambit)
+                .filter(Ambit.id.in_(ambit_ids))
+                .all()
+            )
+
+            ambits_by_id = {
+                ambit.id: ambit
+                for ambit in ambits
+            }
+
+        history = []
+        previous_by_methodology = {}
+
+        for evaluation in evaluations:
+            methodology = evaluation.methodology
+
+            if methodology is None:
+                raise HTTPException(
+                    status_code=409,
+                    detail="Evaluation methodology is unavailable",
+                )
+
+            ambit_data = []
+
+            for score in evaluation.ambit_scores:
+                ambit = ambits_by_id.get(score.ambit_id)
+
+                ambit_data.append({
+                    "ambit_id": score.ambit_id,
+                    "ambit_name": ambit.name if ambit else None,
+                    "score": score.score,
+                    "delta": None,
+                })
+
+            ambit_data.sort(key=lambda item: item["ambit_id"])
+
+            current = {
+                "evaluation_id": evaluation.id,
+                "date": evaluation.date,
+                "methodology_id": evaluation.methodology_id,
+                "methodology_version": methodology.version,
+                "global_score": evaluation.global_score,
+                "global_delta": None,
+                "ambits": ambit_data,
+            }
+
+            previous = previous_by_methodology.get(
+                evaluation.methodology_id
+            )
+
+            if previous is not None:
+                current_ambits = {
+                    ambit["ambit_id"]: ambit
+                    for ambit in current["ambits"]
+                }
+
+                previous_ambits = {
+                    ambit["ambit_id"]: ambit
+                    for ambit in previous["ambits"]
+                }
+
+                compatible = (
+                    current_ambits.keys() == previous_ambits.keys()
+                    and current["global_score"] is not None
+                    and previous["global_score"] is not None
+                    and all(
+                        ambit["score"] is not None
+                        for ambit in current_ambits.values()
+                    )
+                    and all(
+                        ambit["score"] is not None
+                        for ambit in previous_ambits.values()
+                    )
+                )
+
+                if compatible:
+                    current["global_delta"] = (
+                        current["global_score"]
+                        - previous["global_score"]
+                    )
+
+                    for ambit in current["ambits"]:
+                        previous_ambit = previous_ambits[
+                            ambit["ambit_id"]
+                        ]
+
+                        ambit["delta"] = (
+                            ambit["score"]
+                            - previous_ambit["score"]
+                        )
+
+            history.append(current)
+
+            previous_by_methodology[
+                evaluation.methodology_id
+            ] = current
+
+        return {"history": history}
 
     def get_required_indicator_ids(
         self,

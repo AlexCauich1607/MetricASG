@@ -10,6 +10,7 @@ import { EvaluationHistory } from '../models/history_evaluations';
 import { EvaluationDraft } from '../models/evaluation_draft';
 import { EvaluationDraftResponse } from '../models/evaluation_draft_response';
 import { EvaluationComparison } from '../models/evaluation_comparison';
+import { EvaluationDashboard } from '../models/evaluation_dashboard';
 
 @Injectable({
   providedIn: 'root'
@@ -69,6 +70,11 @@ export class EvaluationService extends BaseService<Evaluation> {
           evaluation_id_2: evaluationId2
         }
       }
+    );
+  }
+  getHistoricalDashboard(): Observable<EvaluationDashboard> {
+    return this.http.get<EvaluationDashboard>(
+      `http://localhost:8000/api/${this.endpoint}/dashboard/history/me`
     );
   }
 }

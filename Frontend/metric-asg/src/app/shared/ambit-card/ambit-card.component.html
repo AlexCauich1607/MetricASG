@@ -13,7 +13,19 @@
             <div class="sw-bg-sm-white text-white p-0 px-3 py-1 rounded text-center">
                 <p class=" sw-fs-7 m-0 p-0">{{subtitle}}
                 </p>
-                <p class="m-0 fs-3 p-0 fw-bold">{{score.toFixed(1)}}</p>
+                <p class="m-0 fs-3 p-0 fw-bold">
+                    {{ score !== null ? score.toFixed(1) : 'N/D' }}
+                </p>
+
+                @if (showDelta) {
+                <p class="m-0 sw-fs-7">
+                    @if (delta !== null) {
+                    {{ delta > 0 ? '+' : '' }}{{ delta.toFixed(1) }}
+                    } @else {
+                    Sin comparación
+                    }
+                </p>
+                }
 
             </div>
 

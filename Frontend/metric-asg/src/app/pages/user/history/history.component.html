@@ -1,6 +1,7 @@
 <div class="sw-split-ly color-bg">
   <div>
-    <h4 class="text-my-purple fw-bold mb-4"><span class="bg-white py-2 px-4 rounded-5 shadow-sm border"><i class="bi bi-hourglass-split"></i> Historial</span></h4>
+    <h4 class="text-my-purple fw-bold mb-4"><span class="bg-white py-2 px-4 rounded-5 shadow-sm border"><i
+          class="bi bi-hourglass-split"></i> Historial</span></h4>
 
     <div class="bg-white rounded border shadow-sm p-4 mt-4 mb-4">
       <h5 class="text-my-purple fw-bold mb-3">
@@ -19,20 +20,15 @@
             Evaluación inicial
           </label>
 
-          <select
-            id="evaluationId1"
-            class="form-select"
-            [value]="evaluationId1 ?? ''"
-            (change)="evaluationId1 = $any($event.target).value
-              ? +$any($event.target).value : null"
-          >
+          <select id="evaluationId1" class="form-select" [value]="evaluationId1 ?? ''" (change)="evaluationId1 = $any($event.target).value
+              ? +$any($event.target).value : null">
             <option value="">Selecciona una evaluación</option>
 
             @for (evaluation of historial?.history; track evaluation.evaluation_id) {
-              <option [value]="evaluation.evaluation_id">
-                {{ evaluation.date | date:'dd/MM/yyyy' }}
-                - Puntuación: {{ evaluation.global_score.toFixed(1) }}
-              </option>
+            <option [value]="evaluation.evaluation_id">
+              {{ evaluation.date | date:'dd/MM/yyyy' }}
+              - Puntuación: {{ evaluation.global_score.toFixed(1) }}
+            </option>
             }
           </select>
         </div>
@@ -42,90 +38,158 @@
             Evaluación final
           </label>
 
-          <select
-            id="evaluationId2"
-            class="form-select"
-            [value]="evaluationId2 ?? ''"
-            (change)="evaluationId2 = $any($event.target).value
-              ? +$any($event.target).value : null"
-          >
+          <select id="evaluationId2" class="form-select" [value]="evaluationId2 ?? ''" (change)="evaluationId2 = $any($event.target).value
+              ? +$any($event.target).value : null">
             <option value="">Selecciona una evaluación</option>
 
             @for (evaluation of historial?.history; track evaluation.evaluation_id) {
-              <option [value]="evaluation.evaluation_id">
-                {{ evaluation.date | date:'dd/MM/yyyy' }}
-                - Puntuación: {{ evaluation.global_score.toFixed(1) }}
-              </option>
+            <option [value]="evaluation.evaluation_id">
+              {{ evaluation.date | date:'dd/MM/yyyy' }}
+              - Puntuación: {{ evaluation.global_score.toFixed(1) }}
+            </option>
             }
           </select>
         </div>
       </div>
 
       <div class="d-flex justify-content-end mt-4">
-        <button
-          type="button"
-          class="btn btn-primary"
-          [disabled]="!canCompare"
-          (click)="compareEvaluations()"
-        >
+        <button type="button" class="btn btn-primary" [disabled]="!canCompare" (click)="compareEvaluations()">
           <i class="bi bi-arrow-left-right me-2"></i>
           Comparar resultados
         </button>
       </div>
     </div>
 
-    <p class="text-white fw-bold mt-5 mb-4"><span class="bg-my-purple py-2 px-4 rounded-5 shadow-sm border"><i class="bi bi-star-fill"></i> Puntaciones Históricas</span></p>
-    <div class="row split-margin  align-items-stretch">
-      <div class="col-6 col-lg-3 mb-2">
-        <div class="sw-bg-blue-light sw-hover-scale rounded p-4 border shadow-sm">
-          <div class="d-flex justify-content-between align-items-stretch">
-            <p class="text-my-purple sw-fs-7 fw-bold"><i class="bi bi-globe-americas"></i> Nivel ASG</p>
-          </div>
-          <div class="d-flex justify-content-end">
-            <div class="sw-bg-sm-purple text-my-purple p-0 px-3 py-1 rounded text-center">
-              <p class=" sw-fs-7 m-0 p-0">Promedio
-              </p>
-              <p class="m-0 fs-3 p-0 fw-bold"> {{ historial?.averages?.global_score?.toFixed(1) ?? '0' }}
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
 
-      @for (ambito of historial?.averages?.ambits; track ambito) {
-        <div class="col-6 col-lg-3">
-          <app-ambit-card [title]="ambito.ambit_name" [letter]="ambito.letter!" [color]="ambito.ambit_color"
-            [subtitle]="'Promedio'" [maturity_color]="ambito.ambit_color"
-          [score]="ambito.score"></app-ambit-card>
-        </div>
-      }
+    @if (dashboard; as historicalDashboard) {
+    @if (historicalDashboard.history.length === 0) {
+    <div class="bg-white rounded border shadow-sm p-4 mt-4 text-center">
+      <i class="bi bi-clock-history fs-1 text-my-purple"></i>
+
+      <h5 class="text-my-purple fw-bold mt-3">
+        Aún no tienes evaluaciones finalizadas
+      </h5>
+
+      <p class="text-muted mb-0">
+        Completa tu primera evaluación ASG para comenzar
+        a consultar tu historial y analizar la evolución
+        de tus resultados.
+      </p>
     </div>
-    @if (loadingChart) {
-      <div class="row g-1 split-margin">
-        <div class="col-12 col-lg-6 ">
-          <div class="border rounded bg-white p-4 m-2 shadow-sm">
-            <h5 class="text-center fw-bold mb-3 " [style.color]="blueColor">
-              <b class="text-white px-1 rounded" [style.backgroundColor]="blueColor"><i
-              class="bi bi-globe-americas"></i></b> {{global.name}}
-            </h5>
-            <app-bar-chart [data]="global.data" [scores]="global.scores" [colors]="global.colors"
-            [id]="0"></app-bar-chart>
-          </div>
-        </div>
-        @for (ambito of data | keyvalue; track ambito) {
-          <div class="col-12 col-lg-6 ">
-            <div class="border rounded bg-white p-4 m-2 shadow-sm">
-              <h5 class="text-center fw-bold mb-3 " [style.color]="getColor(ambito.key)">
-                <b class="text-white px-2 rounded"
-                [style.backgroundColor]="getColor(ambito.key)">{{getLetter(ambito.key)}}</b>
-                {{ambito.value.name}}
-              </h5>
-              <app-bar-chart [data]="data.get(ambito.key)?.data??[]" [scores]="data.get(ambito.key)?.scores??[]"
-              [colors]="data.get(ambito.key)?.colors??[]" [id]="ambito.key"></app-bar-chart>
+    } @else {
+    <section class="mt-5 mb-4">
+
+      <h5 class="text-my-purple fw-bold mb-4">
+        <span class="bg-white py-2 px-4 rounded-5 shadow-sm border">
+          <i class="bi bi-graph-up-arrow me-2"></i>
+          Evolución histórica ASG
+        </span>
+      </h5>
+
+
+      @if (latestEvaluation; as latest) {
+      <div class="row g-3 mb-4 align-items-stretch">
+
+        <!-- Tarjeta global -->
+        <div class="col-6 col-lg-3">
+          <div class="sw-bg-blue-light sw-hover-scale rounded p-4 border shadow-sm h-100">
+            <p class="text-my-purple sw-fs-7 fw-bold">
+              <i class="bi bi-globe-americas"></i>
+              Nivel ASG
+            </p>
+
+            <div class="d-flex justify-content-end">
+              <div class="sw-bg-sm-purple text-my-purple px-3 py-1 rounded text-center">
+                <p class="sw-fs-7 m-0">Última evaluación</p>
+
+                <p class="m-0 fs-3 fw-bold">
+                  {{ latest.global_score !== null
+                  ? latest.global_score.toFixed(1)
+                  : 'N/D' }}
+                </p>
+
+                <p class="m-0 sw-fs-7">
+                  @if (latest.global_delta !== null) {
+                  {{ latest.global_delta > 0 ? '+' : '' }}{{ latest.global_delta.toFixed(1) }}
+                  } @else {
+                  Sin comparación
+                  }
+                </p>
+              </div>
             </div>
           </div>
+        </div>
+
+        <!-- Tarjetas por ámbito -->
+        @for (ambit of latest.ambits; track ambit.ambit_id) {
+        <div class="col-6 col-lg-3">
+          <app-ambit-card [title]="ambit.ambit_name ?? 'Ámbito ' + ambit.ambit_id" [letter]="getLetter(ambit.ambit_id)"
+            [color]="getColor(ambit.ambit_id)" [maturity_color]="getColor(ambit.ambit_id)"
+            [subtitle]="'Última evaluación'" [score]="ambit.score" [delta]="ambit.delta" [showDelta]="true">
+          </app-ambit-card>
+        </div>
         }
       </div>
+      }
+
+      @if (hasComparableTrend) {
+      <div class="row g-3">
+        <div class="col-12">
+          <div class="bg-white rounded border shadow-sm p-4">
+
+            <h5 class="text-center fw-bold mb-3" style="color: #00245D;">
+              <b class="text-white px-1 rounded" style="background-color: #00245D;">
+                <i class="bi bi-globe-americas"></i>
+              </b>
+
+              Nivel ASG
+            </h5>
+
+
+            <app-historical-trend-chart [labels]="globalTrend.labels" [datasets]="globalTrend.datasets">
+            </app-historical-trend-chart>
+          </div>
+        </div>
+
+        @for (ambit of ambitTrends; track ambit.id) {
+        <div class="col-12 col-lg-6">
+          <div class="bg-white rounded border shadow-sm p-4 h-100">
+
+            <h5 class="text-center fw-bold mb-3" [style.color]="getColor(ambit.id)">
+              <b class="text-white px-2 rounded" [style.backgroundColor]="getColor(ambit.id)">
+                {{ getLetter(ambit.id) }}
+              </b>
+
+              {{ ambit.name }}
+            </h5>
+
+
+            <app-historical-trend-chart [labels]="ambit.chart.labels" [datasets]="ambit.chart.datasets">
+            </app-historical-trend-chart>
+          </div>
+        </div>
+        }
+      </div>
+
+      } @else {
+      <div class="bg-white rounded border shadow-sm p-4 text-center">
+        <i class="bi bi-graph-up fs-1 text-my-purple"></i>
+
+        <h5 class="text-my-purple fw-bold mt-3">
+          Aún no hay suficientes evaluaciones comparables
+        </h5>
+
+        <p class="text-muted mb-0">
+          Las puntuaciones de tu última evaluación están disponibles.
+          Para visualizar una tendencia histórica, necesitas al menos
+          dos evaluaciones finalizadas con la misma metodología
+          y ámbitos compatibles.
+        </p>
+      </div>
+      }
+
+    </section>
+    }
     }
 
   </div>

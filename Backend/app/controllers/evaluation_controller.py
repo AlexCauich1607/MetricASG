@@ -90,6 +90,15 @@ class EvaluationsController(BaseController):
                 current_user.id
             )
 
+        @self.router.get("/dashboard/history/me")
+        def get_historical_dashboard(
+            current_user: User = Depends(get_current_user),
+            db: Session = Depends(get_db),
+        ):
+            return EvaluationService(db).get_historical_dashboard(
+                current_user.id
+            )
+
         @self.router.get("/compare")
         def compare_evaluations(
             evaluation_id_1: int,
