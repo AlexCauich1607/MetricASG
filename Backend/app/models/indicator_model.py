@@ -28,6 +28,12 @@ class Indicator(Base):
         back_populates="indicator",
     )
 
+    improvement_actions = relationship(
+        "ImprovementAction",
+        back_populates="indicator",
+        passive_deletes=True,
+    )
+
 @event.listens_for(Indicator, "after_insert")
 def create_answers_for_new_indicator(mapper, connection, target):
     ambits_table = Base.metadata.tables["ambits"]

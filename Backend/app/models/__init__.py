@@ -10,6 +10,7 @@ from app.models.evaluation_model import Evaluation
 from app.models.feedback_ambit_model import FeedbackAmbit
 from app.models.indicator_answer_model import IndicatorAnswer
 from app.models.indicator_model import Indicator
+from app.models.improvement_action_model import ImprovementAction
 from app.models.maturity_level_model import MaturityLevel
 from app.models.maturity_level_score_range_model import MaturityLevelScoreRange
 from app.models.methodology_model import Methodology

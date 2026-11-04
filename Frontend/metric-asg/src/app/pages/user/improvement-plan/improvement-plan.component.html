@@ -1,0 +1,460 @@
+<div class="sw-split-ly color-bg" [attr.inert]="activeModal !== null ? '' : null">
+    <div>
+        <h4 class="text-my-purple fw-bold mb-4">
+            <span class="bg-white py-2 px-4 rounded-5 shadow-sm border">
+                <i class="bi bi-clipboard-check me-2"></i>
+                Plan de mejora
+            </span>
+        </h4>
+
+
+        <div class="bg-white rounded border shadow-sm p-4 mb-4">
+            <div class="d-flex flex-wrap align-items-center
+           justify-content-between gap-3">
+                <div>
+                    <h5 class="text-my-purple fw-bold mb-2">
+                        Acciones de mejora
+                    </h5>
+
+                    @if (evaluationId !== null) {
+                    <p class="text-muted mb-0">
+                        Evaluación #{{ evaluationId }}
+                    </p>
+                    }
+                </div>
+
+                @if (evaluationId !== null) {
+                <button type="button" class="btn btn-primary" [disabled]="saving || updating"
+                    (click)="toggleCreateForm()">
+                    <i class="bi bi-plus-lg me-2"></i>
+                    Nueva acción
+                </button>
+                }
+            </div>
+        </div>
+
+        <div class="bg-white rounded border shadow-sm p-4 mb-4">
+            <h5 class="text-my-purple fw-bold mb-4">
+                <i class="bi bi-graph-up-arrow me-2"></i>
+                Progreso del plan de mejora
+            </h5>
+
+            @if (loadingProgress) {
+            <div class="text-center py-3" role="status">
+                <div class="spinner-border text-my-purple" aria-hidden="true"></div>
+                <p class="text-muted mt-2 mb-0">
+                    Cargando métricas de progreso...
+                </p>
+            </div>
+            } @else if (progressError) {
+            <div class="alert alert-danger mb-0" role="alert">
+                {{ progressError }}
+                <button type="button" class="btn btn-outline-danger btn-sm ms-2" (click)="loadProgressMetrics()">
+                    Reintentar
+                </button>
+            </div>
+            } @else if (progress; as metrics) {
+            <div class="row g-3 mb-4">
+                <div class="col-6 col-md-4 col-xl">
+                    <div class="bg-light rounded p-3 h-100 text-center">
+                        <p class="text-muted small mb-1">Total</p>
+                        <h4 class="fw-bold text-my-purple mb-0">
+                            {{ metrics.total }}
+                        </h4>
+                    </div>
+                </div>
+
+                <div class="col-6 col-md-4 col-xl">
+                    <div class="bg-light rounded p-3 h-100 text-center">
+                        <p class="text-muted small mb-1">Pendientes</p>
+                        <h4 class="fw-bold mb-0">
+                            {{ metrics.pending }}
+                        </h4>
+                    </div>
+                </div>
+
+                <div class="col-6 col-md-4 col-xl">
+                    <div class="bg-light rounded p-3 h-100 text-center">
+                        <p class="text-muted small mb-1">En progreso</p>
+                        <h4 class="fw-bold text-primary mb-0">
+                            {{ metrics.in_progress }}
+                        </h4>
+                    </div>
+                </div>
+
+                <div class="col-6 col-md-4 col-xl">
+                    <div class="bg-light rounded p-3 h-100 text-center">
+                        <p class="text-muted small mb-1">Completadas</p>
+                        <h4 class="fw-bold text-success mb-0">
+                            {{ metrics.completed }}
+                        </h4>
+                    </div>
+                </div>
+
+                <div class="col-6 col-md-4 col-xl">
+                    <div class="bg-light rounded p-3 h-100 text-center">
+                        <p class="text-muted small mb-1">Canceladas</p>
+                        <h4 class="fw-bold text-secondary mb-0">
+                            {{ metrics.cancelled }}
+                        </h4>
+                    </div>
+                </div>
+            </div>
+
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <span class="fw-semibold text-my-purple">
+                    Avance de acciones activas
+                </span>
+                <span class="fw-bold">
+                    {{ metrics.progress_percentage | number:'1.0-2' }}%
+                </span>
+            </div>
+
+            <div class="progress" role="progressbar" aria-label="Avance del plan de mejora" aria-valuemin="0"
+                aria-valuemax="100" [attr.aria-valuenow]="metrics.progress_percentage" style="height: 12px;">
+                <div class="progress-bar bg-success" [style.width.%]="metrics.progress_percentage"></div>
+            </div>
+
+            <p class="text-muted small mt-2 mb-0">
+                El porcentaje se calcula excluyendo las acciones canceladas.
+            </p>
+            }
+        </div>
+
+        @if (loading) {
+        <div class="bg-white rounded border shadow-sm p-4 text-center">
+            <div class="spinner-border text-primary mb-3" role="status">
+                <span class="visually-hidden">Cargando...</span>
+            </div>
+            <p class="text-muted mb-0">
+                Cargando acciones de mejora...
+            </p>
+        </div>
+        } @else if (errorMessage) {
+        <div class="alert alert-danger" role="alert">
+            {{ errorMessage }}
+        </div>
+        } @else if (actions.length === 0) {
+        <div class="bg-white rounded border shadow-sm p-4 text-center">
+            <i class="bi bi-clipboard-x fs-1 text-my-purple"></i>
+
+            <h5 class="text-my-purple fw-bold mt-3">
+                No hay acciones de mejora registradas.
+            </h5>
+
+            <p class="text-muted mb-0">
+                Las acciones que registres para esta evaluación
+                aparecerán aquí.
+            </p>
+        </div>
+        } @else {
+        <div class="row g-3">
+            @for (action of actions; track action.id) {
+            <div class="col-12">
+                <div class="bg-white rounded border shadow-sm p-4">
+                    <div class="d-flex flex-wrap justify-content-between
+                          align-items-start gap-3 mb-3">
+                        <div>
+                            <h5 class="text-my-purple fw-bold mb-2">
+                                {{ action.description }}
+                            </h5>
+
+                            <p class="text-muted mb-0">
+                                {{ action.gap_description }}
+                            </p>
+                        </div>
+
+
+                        <div class="d-flex flex-wrap gap-2">
+                            <span class="badge" [ngClass]="getPriorityClass(action.priority)">
+                                Prioridad: {{ getPriorityLabel(action.priority) }}
+                            </span>
+
+                            <span class="badge" [ngClass]="getStatusClass(action.status)">
+                                {{ getStatusLabel(action.status) }}
+                            </span>
+                        </div>
+
+                    </div>
+
+                    <div class="row g-3">
+                        <div class="col-12 col-md-6">
+                            <p class="text-muted small mb-1">
+                                Responsable
+                            </p>
+                            <p class="fw-semibold mb-0">
+                                {{ action.responsible }}
+                            </p>
+                        </div>
+
+                        <div class="col-12 col-md-6">
+                            <p class="text-muted small mb-1">
+                                Fecha objetivo
+                            </p>
+                            <p class="fw-semibold mb-0">
+                                {{ action.target_date | date:'dd/MM/yyyy':'UTC' }}
+                            </p>
+                        </div>
+                    </div>
+
+
+                    <div class="d-flex flex-wrap justify-content-end gap-2 mt-4">
+                        <button type="button" class="btn btn-outline-primary"
+                            [disabled]="updating || saving || deletingActionId !== null" (click)="startEditing(action)">
+                            <i class="bi bi-pencil-square me-2"></i>
+                            Editar
+                        </button>
+
+                        <button type="button" class="btn btn-outline-danger"
+                            [disabled]="updating || saving || deletingActionId !== null"
+                            (click)="requestDelete(action.id)">
+                            <i class="bi bi-trash me-2"></i>
+                            Eliminar
+                        </button>
+                    </div>
+
+                    @if (confirmDeleteActionId === action.id) {
+                    <div class="alert alert-warning mt-3 mb-0" role="alert">
+                        <p class="fw-semibold mb-2">
+                            ¿Estás seguro de que deseas eliminar esta acción de mejora?
+                        </p>
+
+                        <p class="small mb-3">
+                            Esta operación eliminará el registro de forma permanente.
+                        </p>
+
+                        @if (deleteError) {
+                        <div class="alert alert-danger mb-3" role="alert">
+                            {{ deleteError }}
+                        </div>
+                        }
+
+                        <div class="d-flex flex-wrap justify-content-end gap-2">
+                            <button type="button" class="btn btn-outline-secondary"
+                                [disabled]="deletingActionId !== null" (click)="cancelDelete()">
+                                Cancelar
+                            </button>
+
+                            <button type="button" class="btn btn-danger" [disabled]="deletingActionId !== null"
+                                (click)="deleteAction()">
+                                @if (deletingActionId === action.id) {
+                                <span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>
+                                } @else {
+                                <i class="bi bi-trash me-2"></i>
+                                }
+
+                                {{ deletingActionId === action.id
+                                ? 'Eliminando...'
+                                : 'Confirmar eliminación' }}
+                            </button>
+                        </div>
+                    </div>
+                    }
+                </div>
+            </div>
+            }
+        </div>
+        }
+    </div>
+</div>
+
+@if (activeModal === 'create') {
+<div class="modal d-block" tabindex="-1" role="dialog" aria-modal="true" aria-labelledby="createActionModalTitle">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-lg">
+        <div class="modal-content" cdkTrapFocus [cdkTrapFocusAutoCapture]="true">
+            <div class="modal-header">
+                <h5 id="createActionModalTitle" class="modal-title text-my-purple fw-bold">
+                    <i class="bi bi-plus-circle me-2"></i>
+                    Nueva acción de mejora
+                </h5>
+
+                <button type="button" class="btn-close" aria-label="Cerrar" [disabled]="saving"
+                    (click)="toggleCreateForm()"></button>
+            </div>
+
+            <form #actionForm="ngForm" (ngSubmit)="createAction()">
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <label for="gapDescription" class="form-label fw-semibold">
+                                Brecha identificada *
+                            </label>
+                            <textarea id="gapDescription" name="gap_description" class="form-control" rows="3"
+                                maxlength="2000" required cdkFocusInitial
+                                [(ngModel)]="newAction.gap_description"></textarea>
+                        </div>
+
+                        <div class="col-12">
+                            <label for="actionDescription" class="form-label fw-semibold">
+                                Acción propuesta *
+                            </label>
+                            <textarea id="actionDescription" name="description" class="form-control" rows="3"
+                                maxlength="2000" required [(ngModel)]="newAction.description"></textarea>
+                        </div>
+
+                        <div class="col-12 col-md-6">
+                            <label for="priority" class="form-label fw-semibold">
+                                Prioridad *
+                            </label>
+                            <select id="priority" name="priority" class="form-select" required
+                                [(ngModel)]="newAction.priority">
+                                <option value="LOW">Baja</option>
+                                <option value="MEDIUM">Media</option>
+                                <option value="HIGH">Alta</option>
+                            </select>
+                        </div>
+
+                        <div class="col-12 col-md-6">
+                            <label for="responsible" class="form-label fw-semibold">
+                                Responsable *
+                            </label>
+                            <input id="responsible" name="responsible" type="text" class="form-control" maxlength="150"
+                                required [(ngModel)]="newAction.responsible">
+                        </div>
+
+                        <div class="col-12 col-md-6">
+                            <label for="targetDate" class="form-label fw-semibold">
+                                Fecha objetivo *
+                            </label>
+                            <input id="targetDate" name="target_date" type="date" class="form-control" required
+                                [(ngModel)]="newAction.target_date">
+                        </div>
+                    </div>
+
+                    @if (formError) {
+                    <div class="alert alert-danger mt-3 mb-0" role="alert">
+                        {{ formError }}
+                    </div>
+                    }
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" [disabled]="saving"
+                        (click)="toggleCreateForm()">
+                        Cancelar
+                    </button>
+
+                    <button type="submit" class="btn btn-primary" [disabled]="actionForm.invalid || saving">
+                        @if (saving) {
+                        <span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>
+                        } @else {
+                        <i class="bi bi-check-lg me-2"></i>
+                        }
+
+                        {{ saving ? 'Guardando...' : 'Guardar acción' }}
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="modal-backdrop fade show"></div>
+}
+
+@if (activeModal === 'edit' && editingActionId !== null) {
+<div class="modal d-block" tabindex="-1" role="dialog" aria-modal="true" aria-labelledby="editActionModalTitle">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-lg">
+        <div class="modal-content" cdkTrapFocus [cdkTrapFocusAutoCapture]="true">
+            <div class="modal-header">
+                <h5 id="editActionModalTitle" class="modal-title text-my-purple fw-bold">
+                    <i class="bi bi-pencil-square me-2"></i>
+                    Editar acción de mejora
+                </h5>
+
+                <button type="button" class="btn-close" aria-label="Cerrar" [disabled]="updating"
+                    (click)="cancelEditing()"></button>
+            </div>
+
+            <form #editForm="ngForm" (ngSubmit)="updateAction()">
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <label for="editGapDescription" class="form-label fw-semibold">
+                                Brecha identificada *
+                            </label>
+                            <textarea id="editGapDescription" name="edit_gap_description" class="form-control" rows="3"
+                                maxlength="2000" required [(ngModel)]="editAction.gap_description"
+                                cdkFocusInitial></textarea>
+                        </div>
+
+                        <div class="col-12">
+                            <label for="editDescription" class="form-label fw-semibold">
+                                Acción propuesta *
+                            </label>
+                            <textarea id="editDescription" name="edit_description" class="form-control" rows="3"
+                                maxlength="2000" required [(ngModel)]="editAction.description"></textarea>
+                        </div>
+
+                        <div class="col-12 col-md-6">
+                            <label for="editPriority" class="form-label fw-semibold">
+                                Prioridad *
+                            </label>
+                            <select id="editPriority" name="edit_priority" class="form-select" required
+                                [(ngModel)]="editAction.priority">
+                                <option value="LOW">Baja</option>
+                                <option value="MEDIUM">Media</option>
+                                <option value="HIGH">Alta</option>
+                            </select>
+                        </div>
+
+                        <div class="col-12 col-md-6">
+                            <label for="editStatus" class="form-label fw-semibold">
+                                Estado *
+                            </label>
+                            <select id="editStatus" name="edit_status" class="form-select" required
+                                [(ngModel)]="editAction.status">
+                                <option value="PENDING">Pendiente</option>
+                                <option value="IN_PROGRESS">En progreso</option>
+                                <option value="COMPLETED">Completada</option>
+                                <option value="CANCELLED">Cancelada</option>
+                            </select>
+                        </div>
+
+                        <div class="col-12 col-md-6">
+                            <label for="editResponsible" class="form-label fw-semibold">
+                                Responsable *
+                            </label>
+                            <input id="editResponsible" name="edit_responsible" type="text" class="form-control"
+                                maxlength="150" required [(ngModel)]="editAction.responsible">
+                        </div>
+
+                        <div class="col-12 col-md-6">
+                            <label for="editTargetDate" class="form-label fw-semibold">
+                                Fecha objetivo *
+                            </label>
+                            <input id="editTargetDate" name="edit_target_date" type="date" class="form-control" required
+                                [(ngModel)]="editAction.target_date">
+                        </div>
+                    </div>
+
+                    @if (editError) {
+                    <div class="alert alert-danger mt-3 mb-0" role="alert">
+                        {{ editError }}
+                    </div>
+                    }
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" [disabled]="updating"
+                        (click)="cancelEditing()">
+                        Cancelar
+                    </button>
+
+                    <button type="submit" class="btn btn-primary" [disabled]="editForm.invalid || updating">
+                        @if (updating) {
+                        <span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>
+                        } @else {
+                        <i class="bi bi-check-lg me-2"></i>
+                        }
+
+                        {{ updating ? 'Actualizando...' : 'Guardar cambios' }}
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="modal-backdrop fade show"></div>
+}
