@@ -93,6 +93,13 @@ export const pagesRoutes: Routes = [
       },
 
       {
+        path: 'evaluations/:evaluationId/improvement-plan',
+        loadComponent: () =>
+          import('./user/improvement-plan/improvement-plan.component')
+            .then(m => m.ImprovementPlanComponent)
+      },
+
+      {
         path: 'compare',
         loadComponent: () =>
           import('./user/compare/compare.component')

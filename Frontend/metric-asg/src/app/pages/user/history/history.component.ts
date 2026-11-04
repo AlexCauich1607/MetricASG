@@ -27,6 +27,7 @@ export class HistoryComponent {
   historial: EvaluationHistory | null = null;
   evaluationId1: number | null = null;
   evaluationId2: number | null = null;
+  improvementEvaluationId: number | null = null;
   dashboard: EvaluationDashboard | null = null;
   latestEvaluation: EvaluationDashboard['history'][number] | null = null;
 
@@ -128,5 +129,15 @@ export class HistoryComponent {
       }
     });
   }
+  openImprovementPlan(evaluationId: number): void {
+    if (!Number.isSafeInteger(evaluationId) || evaluationId <= 0) {
+      return;
+    }
 
+    this.router.navigate([
+      '/user/evaluations',
+      evaluationId,
+      'improvement-plan'
+    ]);
+  }
 }

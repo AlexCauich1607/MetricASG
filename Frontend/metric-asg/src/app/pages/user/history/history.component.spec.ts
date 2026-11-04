@@ -5,6 +5,7 @@ import { EvaluationService } from '../../../services/evaluation.service';
 import { EvaluationDashboard } from '../../../models/evaluation_dashboard';
 import { HistoryComponent } from './history.component';
 import { EvaluationHistory } from '../../../models/history_evaluations';
+import { Router } from '@angular/router';
 
 describe('HistoryComponent', () => {
   let component: HistoryComponent;
@@ -279,6 +280,32 @@ describe('HistoryComponent', () => {
     expect(content).not.toContain(
       'Aún no hay suficientes evaluaciones comparables'
     );
+  });
+
+  it('should navigate to the improvement plan for a valid evaluation', () => {
+    const router = TestBed.inject(Router);
+    const navigateSpy = spyOn(router, 'navigate');
+
+    component.openImprovementPlan(10);
+
+    expect(navigateSpy).toHaveBeenCalledOnceWith([
+      '/user/evaluations',
+      10,
+      'improvement-plan'
+    ]);
+  });
+
+  it('should reject invalid evaluation IDs when opening the improvement plan', () => {
+    const router = TestBed.inject(Router);
+    const navigateSpy = spyOn(router, 'navigate');
+
+    const invalidIds = [0, -1, 1.5, Number.NaN];
+
+    invalidIds.forEach(evaluationId => {
+      component.openImprovementPlan(evaluationId);
+    });
+
+    expect(navigateSpy).not.toHaveBeenCalled();
   });
 
 });

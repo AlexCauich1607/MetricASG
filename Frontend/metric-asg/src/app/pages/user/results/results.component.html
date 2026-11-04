@@ -59,6 +59,37 @@
       <feedback-component [ambits]="results? results.ambits: []"></feedback-component>
     </div>
 
+    @if (results) {
+    <div class="mt-5" data-html2canvas-ignore>
+      <p class="text-my-purple fw-bold fs-5 mb-4">
+        <span class="bg-white py-2 px-3 rounded-5 shadow-sm border">
+          <i class="bi bi-clipboard-check me-2"></i>
+          Plan de mejora
+        </span>
+      </p>
+
+      <div class="bg-white border rounded shadow-sm p-4">
+        <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+          <div>
+            <h5 class="text-my-purple fw-bold mb-2">
+              Da seguimiento a tus acciones de mejora
+            </h5>
+
+            <p class="text-muted mb-0">
+              Registra acciones para atender las áreas de oportunidad
+              identificadas en esta evaluación y consulta su avance.
+            </p>
+          </div>
+
+          <button type="button" class="btn btn-primary" (click)="openImprovementPlan()">
+            <i class="bi bi-arrow-right-circle me-2"></i>
+            Ver plan de mejora
+          </button>
+        </div>
+      </div>
+    </div>
+    }
+
     <div class="mt-5" data-html2canvas-ignore>
       <p class="text-my-purple fw-bold fs-5 mb-4">
         <span class="bg-white py-2 px-3 rounded-5 shadow-sm border">

@@ -9,6 +9,7 @@ import html2canvas from 'html2canvas';
 import { FeedbackComponent } from '../../../shared/feedback/feedback.component';
 import { EvidenceService } from '../../../services/evidence.service';
 import { EvaluationEvidence } from '../../../models/evaluation_evidence';
+import { Router } from '@angular/router';
 
 @Component({
   selector: 'app-results',
@@ -46,13 +47,31 @@ export class ResultsComponent {
   loadingChart = false;
   constructor(
     private resultService: EvaluationService,
-    private evidenceService: EvidenceService
+    private evidenceService: EvidenceService,
+    private router: Router
   ) { }
   chart: any;
   ngOnInit(): void {
     this.loadResults();
   }
 
+  openImprovementPlan(): void {
+    const evaluationId = this.results?.evaluation_id;
+
+    if (
+      evaluationId === undefined ||
+      !Number.isSafeInteger(evaluationId) ||
+      evaluationId <= 0
+    ) {
+      return;
+    }
+
+    this.router.navigate([
+      '/user/evaluations',
+      evaluationId,
+      'improvement-plan'
+    ]);
+  }
 
   loadEvidences(evaluationId: number): void {
     this.loadingEvidences = true;

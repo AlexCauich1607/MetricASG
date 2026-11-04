@@ -17,6 +17,7 @@ import app.models.evaluation_model
 import app.models.feedback_ambit_model
 import app.models.indicator_answer_model
 import app.models.indicator_model
+import app.models.improvement_action_model
 import app.models.maturity_level_model
 import app.models.maturity_level_score_range_model
 import app.models.refresh_session_model

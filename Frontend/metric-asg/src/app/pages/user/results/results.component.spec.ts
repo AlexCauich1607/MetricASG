@@ -5,6 +5,7 @@ import { EvaluationEvidence } from '../../../models/evaluation_evidence';
 import { ResultsComponent } from './results.component';
 import { EvaluationService } from '../../../services/evaluation.service';
 import { ResultEvaluation } from '../../../models/evaluation_result';
+import { Router } from '@angular/router';
 
 describe('ResultsComponent', () => {
   let component: ResultsComponent;
@@ -522,6 +523,51 @@ describe('ResultsComponent', () => {
     pendingDownload.error(new Error('Download cancelled'));
 
     expect(component.downloadingEvidenceId).toBeNull();
+  });
+
+  it('should navigate to the improvement plan for the loaded evaluation', () => {
+    const router = TestBed.inject(Router);
+    const navigateSpy = spyOn(router, 'navigate');
+
+    component.results = mockResults;
+
+    component.openImprovementPlan();
+
+    expect(navigateSpy).toHaveBeenCalledOnceWith([
+      '/user/evaluations',
+      1,
+      'improvement-plan'
+    ]);
+  });
+
+  it('should not navigate to the improvement plan without a valid evaluation ID', () => {
+    const router = TestBed.inject(Router);
+    const navigateSpy = spyOn(router, 'navigate');
+
+    // No existe una evaluación cargada.
+    component.results = null;
+    component.openImprovementPlan();
+
+    // El identificador es inválido.
+    component.results = {
+      ...mockResults,
+      evaluation_id: 0
+    };
+    component.openImprovementPlan();
+
+    component.results = {
+      ...mockResults,
+      evaluation_id: -1
+    };
+    component.openImprovementPlan();
+
+    component.results = {
+      ...mockResults,
+      evaluation_id: Number.NaN
+    };
+    component.openImprovementPlan();
+
+    expect(navigateSpy).not.toHaveBeenCalled();
   });
 
 });

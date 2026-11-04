@@ -86,3 +86,9 @@ class Evaluation(Base):
         passive_deletes=True,
     )
 
+    improvement_actions = relationship(
+        "ImprovementAction",
+        back_populates="evaluation",
+        passive_deletes=True,
+    )
+
