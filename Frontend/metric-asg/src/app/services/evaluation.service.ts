@@ -52,6 +52,13 @@ export class EvaluationService extends BaseService<Evaluation> {
       `http://localhost:8000/api/evaluations/results/me`,
     );
   }
+  getEvaluationResultById(
+    evaluationId: number
+  ): Observable<ResultEvaluation> {
+    return this.http.get<ResultEvaluation>(
+      `http://localhost:8000/api/${this.endpoint}/${evaluationId}/results`
+    );
+  }
   getEvaluationHistory(): Observable<EvaluationHistory> {
     return this.http.get<EvaluationHistory>(
       `http://localhost:8000/api/evaluations/history/me`,

@@ -1,15 +1,25 @@
-import { jsPDF } from 'jspdf';
-import { Component, ChangeDetectionStrategy } from '@angular/core';
+import { firstValueFrom } from 'rxjs';
+import {
+  Component,
+  ChangeDetectionStrategy,
+  ChangeDetectorRef,
+  Injector,
+  afterNextRender
+} from '@angular/core';
 import { ResultEvaluation } from '../../../models/evaluation_result';
 import { EvaluationService } from '../../../services/evaluation.service';
 import { SessionService } from '../../../shared/class/temporalStorage';
 import { AmbitCardComponent } from '../../../shared/ambit-card/ambit-card.component';
 import { BarChartComponent } from '../../../shared/bar-chart/bar-chart.component';
-import html2canvas from 'html2canvas';
 import { FeedbackComponent } from '../../../shared/feedback/feedback.component';
 import { EvidenceService } from '../../../services/evidence.service';
 import { EvaluationEvidence } from '../../../models/evaluation_evidence';
 import { Router } from '@angular/router';
+import { AsgReport } from '../../../models/asg_report';
+import { AsgReportService } from '../../../services/asg-report.service';
+import { AsgReportPaginatorService } from '../../../services/asg-report-paginator.service';
+import { AsgPdfService } from '../../../services/asg-pdf.service';
+import { AsgReportTemplateComponent } from '../../../shared/asg-report-template/asg-report-template.component';
 
 @Component({
   selector: 'app-results',
@@ -17,7 +27,8 @@ import { Router } from '@angular/router';
   imports: [
     AmbitCardComponent,
     BarChartComponent,
-    FeedbackComponent
+    FeedbackComponent,
+    AsgReportTemplateComponent
   ],
   templateUrl: './results.component.html',
   changeDetection: ChangeDetectionStrategy.Eager,
@@ -44,11 +55,22 @@ export class ResultsComponent {
   colors: string[] = [];
   bordes: string[] = [];
 
+  asgReport: AsgReport | null = null;
+
+  generatingAsgReport = false;
+
+  asgReportError: string | null = null;
+
   loadingChart = false;
   constructor(
     private resultService: EvaluationService,
     private evidenceService: EvidenceService,
-    private router: Router
+    private router: Router,
+    private asgReportService: AsgReportService,
+    private asgReportPaginator: AsgReportPaginatorService,
+    private asgPdfService: AsgPdfService,
+    private cdr: ChangeDetectorRef,
+    private injector: Injector
   ) { }
   chart: any;
   ngOnInit(): void {
@@ -205,30 +227,81 @@ export class ResultsComponent {
 
   }
 
+  async exportAsgReport(): Promise<void> {
+    const reportElement = document.querySelector<HTMLElement>(
+      '.asg-report-export [data-pdf-root]'
+    );
 
-  async downloadPdf(): Promise<void> {
-    const element = document.getElementById('pdf-content');
+    if (!reportElement || !this.asgReport) {
+      throw new Error(
+        'La plantilla del reporte ASG no está disponible.'
+      );
+    }
 
-    if (!element) {
+    const { workspace, pages } =
+      this.asgReportPaginator.paginate(reportElement);
+
+    try {
+      await this.asgPdfService.generatePdf(
+        pages,
+        `reporte-asg-${this.asgReport.evaluation.evaluation_id}.pdf`
+      );
+    } finally {
+      workspace.remove();
+    }
+  }
+
+  private waitForReportRender(): Promise<void> {
+    return new Promise<void>((resolve) => {
+      afterNextRender(
+        {
+          read: () => resolve()
+        },
+        {
+          injector: this.injector
+        }
+      );
+
+      this.cdr.markForCheck();
+    });
+  }
+
+  async downloadAsgReport(): Promise<void> {
+    const evaluationId = this.results?.evaluation_id;
+
+    if (
+      evaluationId === undefined ||
+      !Number.isSafeInteger(evaluationId) ||
+      evaluationId <= 0 ||
+      this.generatingAsgReport
+    ) {
       return;
     }
 
-    element.classList.add('pdf-mode');
+    this.generatingAsgReport = true;
+    this.asgReportError = null;
+    this.asgReport = null;
 
     try {
+      const report = await firstValueFrom(
+        this.asgReportService.getReport(evaluationId)
+      );
 
-      html2canvas(element, { scale: 2 }).then((canvas) => {
+      this.asgReport = report;
 
-        const pdf = new jsPDF();
-        pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, 0, 211, 298);
-        pdf.setFontSize(12);
-        pdf.save('reporte.pdf');
-        element.classList.remove('pdf-mode');
-      })
+      await this.waitForReportRender();
+      await this.exportAsgReport();
+
     } catch (error) {
-      console.error('Error al generar el PDF:', error);
+      console.error('Error al generar el reporte ASG:', error);
+
+      this.asgReportError =
+        'No se pudo generar el reporte ASG. Inténtalo nuevamente.';
+
     } finally {
-      element.classList.remove('pdf-mode');
+      this.asgReport = null;
+      this.generatingAsgReport = false;
+      this.cdr.markForCheck();
     }
   }
 

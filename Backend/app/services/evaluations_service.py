@@ -463,6 +463,28 @@ class EvaluationService:
         if not evaluation:
             raise HTTPException(404, "No evaluations found")
 
+        return self._build_evaluation_results(evaluation)
+
+    def get_results_by_id(self, evaluation_id: int, user_id: int):
+        evaluation = (
+            self.db.query(Evaluation)
+            .filter(
+                Evaluation.id == evaluation_id,
+                Evaluation.user_id == user_id,
+                Evaluation.status == EvaluationStatus.COMPLETED,
+            )
+            .first()
+        )
+
+        if not evaluation:
+            raise HTTPException(
+                status_code=404,
+                detail="Evaluation not found",
+            )
+
+        return self._build_evaluation_results(evaluation)
+
+    def _build_evaluation_results(self, evaluation: Evaluation):
         ambit_results = []
 
         ambit_scores = (

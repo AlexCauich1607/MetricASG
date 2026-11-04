@@ -185,5 +185,41 @@ describe('EvaluationService', () => {
 
     request.flush(mockResponse);
   });
+  it('should get evaluation results by ID', () => {
+    const evaluationId = 12;
 
+    const mockResponse = {
+      evaluation_id: evaluationId,
+      date: '2026-10-20T12:00:00',
+      global_score: 8,
+      global_maturity_level: 'Intermedio',
+      ambits: [
+        {
+          ambit_id: 1,
+          ambit_name: 'Ambiental',
+          score: 8,
+          letter: 'A',
+          color: '#37AB48',
+          maturity_level: 'Intermedio',
+          maturity_color: '#13b46e',
+          feedback: 'Mantener las prácticas ambientales.'
+        }
+      ]
+    };
+
+    service.getEvaluationResultById(evaluationId).subscribe(response => {
+      expect(response).toEqual(mockResponse);
+      expect(response.evaluation_id).toBe(evaluationId);
+      expect(response.global_score).toBe(8);
+      expect(response.ambits.length).toBe(1);
+    });
+
+    const request = httpTestingController.expectOne(
+      `http://localhost:8000/api/evaluations/${evaluationId}/results`
+    );
+
+    expect(request.request.method).toBe('GET');
+
+    request.flush(mockResponse);
+  });
 });
