@@ -81,10 +81,7 @@
   width: 794px;
 }
 
-/* Cuando se genera el PDF */
-.pdf-mode .solo-pdf {
-  position: static;
-}
+
 .evidence-content {
   white-space: pre-wrap;
   overflow-wrap: anywhere;
@@ -92,4 +89,12 @@
 
 a {
   overflow-wrap: anywhere;
+}
+
+.asg-report-export {
+  position: fixed;
+  top: 0;
+  left: -10000px;
+  width: 794px;
+  pointer-events: none;
 }

@@ -6,12 +6,19 @@ import { ResultsComponent } from './results.component';
 import { EvaluationService } from '../../../services/evaluation.service';
 import { ResultEvaluation } from '../../../models/evaluation_result';
 import { Router } from '@angular/router';
+import { AsgReportService } from '../../../services/asg-report.service';
+import { AsgReport } from '../../../models/asg_report';
+import { AsgReportPaginatorService } from '../../../services/asg-report-paginator.service';
+import { AsgPdfService } from '../../../services/asg-pdf.service';
 
 describe('ResultsComponent', () => {
   let component: ResultsComponent;
   let fixture: ComponentFixture<ResultsComponent>;
   let evaluationServiceSpy: jasmine.SpyObj<EvaluationService>;
   let evidenceServiceSpy: jasmine.SpyObj<EvidenceService>;
+  let asgReportServiceSpy: jasmine.SpyObj<AsgReportService>;
+  let asgReportPaginatorSpy: jasmine.SpyObj<AsgReportPaginatorService>;
+  let asgPdfServiceSpy: jasmine.SpyObj<AsgPdfService>;
 
   const mockResults: ResultEvaluation = {
     evaluation_id: 1,
@@ -81,7 +88,19 @@ describe('ResultsComponent', () => {
       'EvidenceService',
       ['getEvidences', 'downloadEvidence']
     );
+    asgReportServiceSpy = jasmine.createSpyObj(
+      'AsgReportService',
+      ['getReport']
+    );
+    asgReportPaginatorSpy = jasmine.createSpyObj(
+      'AsgReportPaginatorService',
+      ['paginate']
+    );
 
+    asgPdfServiceSpy = jasmine.createSpyObj(
+      'AsgPdfService',
+      ['generatePdf']
+    );
     evidenceServiceSpy.getEvidences.and.returnValue(of([]));
 
     await TestBed.configureTestingModule({
@@ -97,6 +116,18 @@ describe('ResultsComponent', () => {
         {
           provide: EvidenceService,
           useValue: evidenceServiceSpy
+        },
+        {
+          provide: AsgReportService,
+          useValue: asgReportServiceSpy
+        },
+        {
+          provide: AsgReportPaginatorService,
+          useValue: asgReportPaginatorSpy
+        },
+        {
+          provide: AsgPdfService,
+          useValue: asgPdfServiceSpy
         }
       ]
 
@@ -568,6 +599,205 @@ describe('ResultsComponent', () => {
     component.openImprovementPlan();
 
     expect(navigateSpy).not.toHaveBeenCalled();
+  });
+
+  it('should paginate and export the ASG report', async () => {
+    const reportElement = document.createElement('div');
+    reportElement.setAttribute('data-pdf-root', '');
+
+    const exportContainer = document.createElement('div');
+    exportContainer.className = 'asg-report-export';
+    exportContainer.appendChild(reportElement);
+    document.body.appendChild(exportContainer);
+
+    const workspace = document.createElement('div');
+    document.body.appendChild(workspace);
+
+    const page = document.createElement('section');
+
+    const report = {
+      evaluation: mockResults
+    } as AsgReport;
+
+    component.asgReport = report;
+
+    asgReportPaginatorSpy.paginate.and.returnValue({
+      workspace,
+      pages: [page]
+    });
+
+    asgPdfServiceSpy.generatePdf.and.resolveTo();
+
+    try {
+      await component.exportAsgReport();
+
+      expect(asgReportPaginatorSpy.paginate)
+        .toHaveBeenCalledOnceWith(reportElement);
+
+      expect(asgPdfServiceSpy.generatePdf)
+        .toHaveBeenCalledOnceWith(
+          [page],
+          'reporte-asg-1.pdf'
+        );
+
+      expect(workspace.isConnected).toBeFalse();
+    } finally {
+      exportContainer.remove();
+      workspace.remove();
+    }
+  });
+
+  it('should clean up the workspace when PDF generation fails', async () => {
+    const reportElement = document.createElement('div');
+    reportElement.setAttribute('data-pdf-root', '');
+
+    const exportContainer = document.createElement('div');
+    exportContainer.className = 'asg-report-export';
+    exportContainer.appendChild(reportElement);
+    document.body.appendChild(exportContainer);
+
+    const workspace = document.createElement('div');
+    document.body.appendChild(workspace);
+
+    const page = document.createElement('section');
+
+    component.asgReport = {
+      evaluation: mockResults
+    } as AsgReport;
+
+    asgReportPaginatorSpy.paginate.and.returnValue({
+      workspace,
+      pages: [page]
+    });
+
+    asgPdfServiceSpy.generatePdf.and.rejectWith(
+      new Error('No se pudo generar el PDF')
+    );
+
+    try {
+      await expectAsync(
+        component.exportAsgReport()
+      ).toBeRejectedWithError(
+        'No se pudo generar el PDF'
+      );
+
+      expect(asgReportPaginatorSpy.paginate)
+        .toHaveBeenCalledOnceWith(reportElement);
+
+      expect(asgPdfServiceSpy.generatePdf)
+        .toHaveBeenCalledOnceWith(
+          [page],
+          'reporte-asg-1.pdf'
+        );
+
+      expect(workspace.isConnected).toBeFalse();
+    } finally {
+      exportContainer.remove();
+      workspace.remove();
+    }
+  });
+
+  it('should download the ASG report for the current evaluation', async () => {
+    const report = {
+      evaluation: mockResults
+    } as AsgReport;
+
+    component.results = mockResults;
+
+    asgReportServiceSpy.getReport.and.returnValue(of(report));
+
+    const renderSpy = spyOn(
+      component as any,
+      'waitForReportRender'
+    ).and.resolveTo();
+
+    const exportSpy = spyOn(
+      component,
+      'exportAsgReport'
+    ).and.resolveTo();
+
+    await component.downloadAsgReport();
+
+    expect(asgReportServiceSpy.getReport)
+      .toHaveBeenCalledOnceWith(1);
+
+    expect(renderSpy).toHaveBeenCalledTimes(1);
+    expect(exportSpy).toHaveBeenCalledTimes(1);
+
+    expect(renderSpy)
+      .toHaveBeenCalledBefore(exportSpy);
+
+    expect(component.asgReport).toBeNull();
+    expect(component.generatingAsgReport).toBeFalse();
+    expect(component.asgReportError).toBeNull();
+  });
+
+  it('should handle errors when fetching data for ASG PDF', async () => {
+    component.results = mockResults;
+
+    asgReportServiceSpy.getReport.and.returnValue(
+      throwError(() => new Error('Error de conexión'))
+    );
+
+    const exportSpy = spyOn(
+      component,
+      'exportAsgReport'
+    ).and.resolveTo();
+
+    spyOn(console, 'error');
+
+    await component.downloadAsgReport();
+
+    expect(asgReportServiceSpy.getReport)
+      .toHaveBeenCalledOnceWith(1);
+
+    expect(exportSpy).not.toHaveBeenCalled();
+
+    expect(component.asgReport).toBeNull();
+    expect(component.generatingAsgReport).toBeFalse();
+
+    expect(component.asgReportError).toBe(
+      'No se pudo generar el reporte ASG. Inténtalo nuevamente.'
+    );
+  });
+
+  it('should handle errors during ASG PDF export', async () => {
+    const report = {
+      evaluation: mockResults
+    } as AsgReport;
+
+    component.results = mockResults;
+
+    asgReportServiceSpy.getReport.and.returnValue(of(report));
+
+    const renderSpy = spyOn(
+      component as any,
+      'waitForReportRender'
+    ).and.resolveTo();
+
+    const exportSpy = spyOn(
+      component,
+      'exportAsgReport'
+    ).and.rejectWith(
+      new Error('Error durante la exportación')
+    );
+
+    spyOn(console, 'error');
+
+    await component.downloadAsgReport();
+
+    expect(asgReportServiceSpy.getReport)
+      .toHaveBeenCalledOnceWith(1);
+
+    expect(renderSpy).toHaveBeenCalledTimes(1);
+    expect(exportSpy).toHaveBeenCalledTimes(1);
+
+    expect(component.asgReport).toBeNull();
+    expect(component.generatingAsgReport).toBeFalse();
+
+    expect(component.asgReportError).toBe(
+      'No se pudo generar el reporte ASG. Inténtalo nuevamente.'
+    );
   });
 
 });

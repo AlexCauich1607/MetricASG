@@ -80,6 +80,16 @@ class EvaluationsController(BaseController):
                 current_user.id
             )
 
+        @self.router.get("/{evaluation_id}/results")
+        def get_results_by_id(
+            evaluation_id: int,
+            current_user: User = Depends(get_current_user),
+            db: Session = Depends(get_db),
+        ):
+            return EvaluationService(db).get_results_by_id(
+                evaluation_id=evaluation_id,
+                user_id=current_user.id,
+            )
 
         @self.router.get("/history/me")
         def get_history(

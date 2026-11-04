@@ -1557,3 +1557,235 @@ def test_save_draft_preserves_file_evidence_on_commit_failure(
     # El archivo físico también debe conservarse.
     assert file_path.exists()
     assert file_path.read_bytes() == content
+
+def test_get_results_by_id_returns_completed_evaluation(db_session):
+    data = create_evaluation_data(db_session)
+    service = EvaluationService(db_session)
+
+    submitted = service.submit_evaluation(
+        {"responses": build_responses(data)},
+        data["user"].id,
+    )
+
+    result = service.get_results_by_id(
+        submitted["evaluation_id"],
+        data["user"].id,
+    )
+
+    assert result["evaluation_id"] == submitted["evaluation_id"]
+    assert result["global_score"] == 8
+    assert result["global_maturity_level"] == "Intermedio"
+
+    assert len(result["ambits"]) == 3
+    assert all(ambit["score"] == 8 for ambit in result["ambits"])
+
+    for ambit in result["ambits"]:
+        assert {
+            "ambit_id",
+            "ambit_name",
+            "score",
+            "letter",
+            "color",
+            "maturity_level",
+            "maturity_color",
+            "feedback",
+        }.issubset(ambit.keys())
+
+
+def test_get_results_by_id_rejects_nonexistent_evaluation(db_session):
+    data = create_evaluation_data(db_session)
+    service = EvaluationService(db_session)
+
+    with pytest.raises(HTTPException) as exc_info:
+        service.get_results_by_id(
+            999999,
+            data["user"].id,
+        )
+
+    assert exc_info.value.status_code == 404
+
+
+def test_get_results_by_id_rejects_other_user(db_session):
+    data = create_evaluation_data(db_session)
+    service = EvaluationService(db_session)
+
+    submitted = service.submit_evaluation(
+        {"responses": build_responses(data)},
+        data["user"].id,
+    )
+
+    other_user = User(
+        name="Other",
+        lastname="User",
+        position="Tester",
+        company_name="Other Company",
+        email="other-results-user@test.local",
+        phone="9999999998",
+        password="test-password",
+        role=UserRole.USER,
+        active=True,
+    )
+
+    db_session.add(other_user)
+    db_session.flush()
+
+    with pytest.raises(HTTPException) as exc_info:
+        service.get_results_by_id(
+            submitted["evaluation_id"],
+            other_user.id,
+        )
+
+    assert exc_info.value.status_code == 404
+
+
+def test_get_results_by_id_rejects_draft(db_session):
+    data = create_evaluation_data(db_session)
+    service = EvaluationService(db_session)
+
+    draft = service.save_draft(
+        {"responses": build_responses(data)[:1]},
+        data["user"].id,
+    )
+
+    with pytest.raises(HTTPException) as exc_info:
+        service.get_results_by_id(
+            draft["evaluation_id"],
+            data["user"].id,
+        )
+
+    assert exc_info.value.status_code == 404
+
+def test_results_by_id_endpoint_requires_authentication(client):
+    response = client.get(
+        "/api/evaluations/1/results",
+    )
+
+    assert response.status_code == 401
+
+
+def test_results_by_id_endpoint_returns_completed_evaluation(
+    client,
+    db_session,
+):
+    data = create_evaluation_data(db_session)
+    service = EvaluationService(db_session)
+
+    submitted = service.submit_evaluation(
+        {"responses": build_responses(data)},
+        data["user"].id,
+    )
+
+    app.dependency_overrides[get_current_user] = (
+        lambda: data["user"]
+    )
+
+    try:
+        response = client.get(
+            f"/api/evaluations/{submitted['evaluation_id']}/results"
+        )
+
+        assert response.status_code == 200
+
+        result = response.json()
+
+        assert result["evaluation_id"] == submitted["evaluation_id"]
+        assert result["global_score"] == 8
+        assert result["global_maturity_level"] == "Intermedio"
+        assert len(result["ambits"]) == 3
+        assert all(
+            ambit["score"] == 8
+            for ambit in result["ambits"]
+        )
+
+    finally:
+        app.dependency_overrides.pop(get_current_user, None)
+
+
+def test_results_by_id_endpoint_rejects_other_user(
+    client,
+    db_session,
+):
+    data = create_evaluation_data(db_session)
+    service = EvaluationService(db_session)
+
+    submitted = service.submit_evaluation(
+        {"responses": build_responses(data)},
+        data["user"].id,
+    )
+
+    other_user = User(
+        name="Other",
+        lastname="User",
+        position="Tester",
+        company_name="Other Company",
+        email="other-results-endpoint@test.local",
+        phone="9999999998",
+        password="test-password",
+        role=UserRole.USER,
+        active=True,
+    )
+
+    db_session.add(other_user)
+    db_session.flush()
+
+    app.dependency_overrides[get_current_user] = (
+        lambda: other_user
+    )
+
+    try:
+        response = client.get(
+            f"/api/evaluations/{submitted['evaluation_id']}/results"
+        )
+
+        assert response.status_code == 404
+
+    finally:
+        app.dependency_overrides.pop(get_current_user, None)
+
+
+def test_results_by_id_endpoint_rejects_draft(
+    client,
+    db_session,
+):
+    data = create_evaluation_data(db_session)
+    service = EvaluationService(db_session)
+
+    draft = service.save_draft(
+        {"responses": build_responses(data)[:1]},
+        data["user"].id,
+    )
+
+    app.dependency_overrides[get_current_user] = (
+        lambda: data["user"]
+    )
+
+    try:
+        response = client.get(
+            f"/api/evaluations/{draft['evaluation_id']}/results"
+        )
+
+        assert response.status_code == 404
+
+    finally:
+        app.dependency_overrides.pop(get_current_user, None)
+
+
+def test_results_by_id_endpoint_rejects_nonexistent_evaluation(
+    client,
+    db_session,
+):
+    data = create_evaluation_data(db_session)
+
+    app.dependency_overrides[get_current_user] = (
+        lambda: data["user"]
+    )
+
+    try:
+        response = client.get(
+            "/api/evaluations/999999/results"
+        )
+
+        assert response.status_code == 404
+
+    finally:
+        app.dependency_overrides.pop(get_current_user, None)

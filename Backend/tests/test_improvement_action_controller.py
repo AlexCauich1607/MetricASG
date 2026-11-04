@@ -892,3 +892,19 @@ def test_improvement_progress_endpoint_rejects_other_user(
     assert response.json() == {
         "detail": "Evaluation not found"
     }
+
+
+def test_list_improvement_actions_requires_authentication(client):
+    response = client.get(
+        "/api/evaluations/1/improvement-actions"
+    )
+
+    assert response.status_code == 401
+
+
+def test_improvement_progress_requires_authentication(client):
+    response = client.get(
+        "/api/evaluations/1/improvement-actions/progress"
+    )
+
+    assert response.status_code == 401

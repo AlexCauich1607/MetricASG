@@ -1,0 +1,448 @@
+<div class="asg-report" data-pdf-root>
+
+    <!-- 1. Portada -->
+    <section class="report-page report-cover" data-pdf-section>
+        <div class="report-brand">
+            <img src="assets/logo.png" alt="MetricASG">
+            <span>MetricASG</span>
+        </div>
+
+        <div class="report-cover-content">
+            <p class="report-subtitle">Reporte de sostenibilidad</p>
+            <h1>Reporte de desempeño ASG</h1>
+
+            <p class="report-company">
+                {{ report.company.company_name }}
+            </p>
+
+            <div class="report-meta">
+                <p>
+                    <strong>Evaluación:</strong>
+                    #{{ report.evaluation.evaluation_id }}
+                </p>
+                <p>
+                    <strong>Fecha de evaluación:</strong>
+                    {{ report.evaluation.date | date:'dd/MM/yyyy' }}
+                </p>
+            </div>
+        </div>
+    </section>
+
+    <!-- 2. Resultados generales -->
+    <section class="report-page" data-pdf-section>
+        <h2>Resultados generales ASG</h2>
+
+        <div class="report-summary" data-pdf-keep>
+            <div class="report-score">
+                <span>Puntuación global</span>
+                <strong>
+                    {{ report.evaluation.global_score | number:'1.1-1' }}
+                </strong>
+            </div>
+
+            <div class="report-maturity">
+                <span>Nivel de madurez</span>
+                <strong>
+                    {{ report.evaluation.global_maturity_level }}
+                </strong>
+            </div>
+        </div>
+
+        <h3>Resultados por ámbito</h3>
+
+        <table class="report-table">
+            <thead>
+                <tr>
+                    <th>Ámbito</th>
+                    <th>Puntuación</th>
+                    <th>Nivel de madurez</th>
+                </tr>
+            </thead>
+
+            <tbody>
+                @for (ambit of report.evaluation.ambits; track ambit.ambit_id) {
+                <tr>
+                    <td>{{ ambit.ambit_name }}</td>
+                    <td>{{ ambit.score | number:'1.1-1' }}</td>
+                    <td>{{ ambit.maturity_level }}</td>
+                </tr>
+                }
+            </tbody>
+        </table>
+    </section>
+
+    <!-- 3. Fortalezas y brechas -->
+    <section class="report-page" data-pdf-section>
+        <h2>Fortalezas y áreas de oportunidad</h2>
+
+        <h3>Observaciones por ámbito</h3>
+
+        @for (ambit of report.evaluation.ambits; track ambit.ambit_id) {
+        <div class="report-observation" data-pdf-keep>
+            <h4>{{ ambit.ambit_name }}</h4>
+
+            <p>
+                <strong>Nivel de madurez:</strong>
+                {{ ambit.maturity_level }}
+            </p>
+
+            @if (ambit.feedback) {
+            <p>{{ ambit.feedback }}</p>
+            } @else {
+            <p class="report-empty">
+                No hay observaciones registradas para este ámbito.
+            </p>
+            }
+        </div>
+        }
+
+        <h3>Brechas registradas</h3>
+
+        @if (report.improvement_actions.length > 0) {
+        <div class="report-gaps">
+            @for (action of report.improvement_actions; track action.id) {
+            <div class="report-gap" data-pdf-keep>
+                <p>{{ action.gap_description }}</p>
+
+                @if (action.indicator_id !== null) {
+                <small>
+                    Indicador relacionado: {{ action.indicator_id }}
+                </small>
+                }
+            </div>
+            }
+        </div>
+        } @else {
+        <p class="report-empty">
+            No hay brechas registradas en el plan de mejora
+            para esta evaluación.
+        </p>
+        }
+    </section>
+
+    <!-- 4. Comparación histórica -->
+    <section class="report-page" data-pdf-section>
+        <h2>Comparación histórica</h2>
+
+        @if (report.comparison; as comparison) {
+
+        @if (!comparison.comparable && comparison.warning) {
+        <div class="report-warning" data-pdf-keep>
+            <strong>Advertencia de comparabilidad</strong>
+            <p>{{ comparison.warning }}</p>
+        </div>
+        }
+
+        <h3>Evaluaciones consideradas</h3>
+
+        <div class="report-summary" data-pdf-keep>
+            @for (
+            evaluation of comparison.evaluations;
+            track evaluation.evaluation_id;
+            let i = $index
+            ) {
+            <div class="report-score">
+                <span>
+                    Evaluación {{ i === 0 ? 'inicial' : 'final' }}
+                </span>
+
+                <strong>
+                    {{ evaluation.global_score | number:'1.1-1' }}
+                </strong>
+
+                <p>
+                    Fecha:
+                    {{ evaluation.date | date:'dd/MM/yyyy' }}
+                </p>
+
+                <p>
+                    Metodología:
+                    {{ evaluation.methodology_version }}
+                </p>
+            </div>
+            }
+        </div>
+
+        @if (comparison.comparable && comparison.differences; as differences) {
+
+        <h3>Diferencia global</h3>
+
+        <div class="report-difference" data-pdf-keep>
+            <strong [class.positive]="differences.global_score > 0" [class.negative]="differences.global_score < 0">
+                {{ differences.global_score > 0 ? '+' : '' }}
+                {{ differences.global_score | number:'1.1-1' }}
+            </strong>
+
+            <p>
+                Diferencia entre la evaluación final y la inicial.
+            </p>
+        </div>
+
+        <h3>Diferencias por ámbito</h3>
+
+        <table class="report-table">
+            <thead>
+                <tr>
+                    <th>Ámbito</th>
+                    <th>Inicial</th>
+                    <th>Final</th>
+                    <th>Diferencia</th>
+                </tr>
+            </thead>
+
+            <tbody>
+                @for (
+                ambit of differences.ambits;
+                track ambit.ambit_id
+                ) {
+                <tr>
+                    <td>{{ ambit.ambit_name }}</td>
+
+                    <td>
+                        {{
+                        getComparisonAmbitScore(
+                        comparison.evaluations[0],
+                        ambit.ambit_id
+                        ) | number:'1.1-1'
+                        }}
+                    </td>
+
+                    <td>
+                        {{
+                        getComparisonAmbitScore(
+                        comparison.evaluations[1],
+                        ambit.ambit_id
+                        ) | number:'1.1-1'
+                        }}
+                    </td>
+
+                    <td>
+                        {{ ambit.delta > 0 ? '+' : '' }}
+                        {{ ambit.delta | number:'1.1-1' }}
+                    </td>
+                </tr>
+                } @empty {
+                <tr>
+                    <td colspan="4">
+                        No hay diferencias por ámbito disponibles.
+                    </td>
+                </tr>
+                }
+            </tbody>
+        </table>
+
+        } @else {
+        <p class="report-empty">
+            Las evaluaciones no son comparables.
+            Se presentan sus puntuaciones individuales
+            sin calcular diferencias.
+        </p>
+        }
+
+        } @else {
+        <p class="report-empty">
+            No existe una evaluación anterior disponible
+            para realizar una comparación histórica.
+        </p>
+        }
+    </section>
+
+    <!-- 5. Acciones de mejora y seguimiento -->
+    <section class="report-page" data-pdf-section>
+        <h2>Acciones de mejora y seguimiento</h2>
+
+        <h3>Resumen del plan de mejora</h3>
+
+        <div class="report-progress-summary" data-pdf-keep>
+            <div class="report-progress-item">
+                <span>Total de acciones</span>
+                <strong>{{ report.improvement_progress.total }}</strong>
+            </div>
+
+            <div class="report-progress-item">
+                <span>Pendientes</span>
+                <strong>{{ report.improvement_progress.pending }}</strong>
+            </div>
+
+            <div class="report-progress-item">
+                <span>En progreso</span>
+                <strong>{{ report.improvement_progress.in_progress }}</strong>
+            </div>
+
+            <div class="report-progress-item">
+                <span>Completadas</span>
+                <strong>{{ report.improvement_progress.completed }}</strong>
+            </div>
+
+            <div class="report-progress-item">
+                <span>Canceladas</span>
+                <strong>{{ report.improvement_progress.cancelled }}</strong>
+            </div>
+        </div>
+
+        <div class="report-progress" data-pdf-keep>
+            <div class="report-progress-heading">
+                <strong>Avance de acciones activas</strong>
+
+                <strong>
+                    {{ report.improvement_progress.progress_percentage | number:'1.0-2' }}%
+                </strong>
+            </div>
+
+            <div class="report-progress-track">
+                <div class="report-progress-fill" [style.width.%]="report.improvement_progress.progress_percentage">
+                </div>
+            </div>
+
+            <p class="report-progress-note">
+                El porcentaje de avance excluye las acciones canceladas.
+            </p>
+        </div>
+
+        <h3>Detalle de acciones registradas</h3>
+
+        @for (action of report.improvement_actions; track action.id) {
+        <article class="report-action" data-pdf-keep>
+            <h4>{{ action.description }}</h4>
+
+            <p>
+                <strong>Brecha identificada:</strong>
+                {{ action.gap_description }}
+            </p>
+
+            <div class="report-action-details">
+                <p>
+                    <strong>Prioridad:</strong>
+                    {{ getPriorityLabel(action.priority) }}
+                </p>
+
+                <p>
+                    <strong>Estado:</strong>
+                    {{ getStatusLabel(action.status) }}
+                </p>
+
+                <p>
+                    <strong>Responsable:</strong>
+                    {{ action.responsible }}
+                </p>
+
+                <p>
+                    <strong>Fecha objetivo:</strong>
+                    {{ action.target_date | date:'dd/MM/yyyy':'UTC' }}
+                </p>
+            </div>
+        </article>
+        } @empty {
+        <p class="report-empty">
+            No hay acciones de mejora registradas para esta evaluación.
+        </p>
+        }
+    </section>
+
+    <!-- 6. Conclusiones -->
+    <section class="report-page" data-pdf-section>
+        <h2>Conclusiones</h2>
+
+        <div class="report-conclusion" data-pdf-keep>
+            <h3>Síntesis de la evaluación</h3>
+
+            <p>
+                La evaluación ASG de
+                <strong>{{ report.company.company_name }}</strong>
+                obtuvo una puntuación global de
+                <strong>
+                    {{ report.evaluation.global_score | number:'1.1-1' }}
+                </strong>,
+                correspondiente al nivel de madurez
+                <strong>
+                    {{ report.evaluation.global_maturity_level }}
+                </strong>.
+            </p>
+
+            <p>
+                Los resultados por ámbito y las observaciones
+                presentadas en este reporte permiten consultar
+                las áreas evaluadas y las oportunidades de mejora
+                identificadas.
+            </p>
+        </div>
+
+        <div class="report-conclusion" data-pdf-keep>
+            <h3>Evolución histórica</h3>
+
+            @if (report.comparison; as comparison) {
+
+            @if (comparison.comparable && comparison.differences; as differences) {
+            <p>
+                La diferencia de puntuación global respecto
+                a la evaluación anterior fue de
+                <strong>
+                    {{ differences.global_score > 0 ? '+' : '' }}
+                    {{ differences.global_score | number:'1.1-1' }}
+                </strong>
+                puntos.
+            </p>
+            } @else {
+            <p>
+                Las evaluaciones históricas disponibles
+                no permiten calcular diferencias comparables
+                debido a las condiciones metodológicas
+                señaladas en este reporte.
+            </p>
+            }
+
+            } @else {
+            <p>
+                No se dispone de una evaluación anterior
+                para establecer una comparación histórica.
+            </p>
+            }
+        </div>
+
+        <div class="report-conclusion" data-pdf-keep>
+            <h3>Seguimiento de acciones de mejora</h3>
+
+            @if (report.improvement_progress.total > 0) {
+            <p>
+                El plan de mejora contiene
+                <strong>{{ report.improvement_progress.total }}</strong>
+                acciones registradas, de las cuales
+                <strong>{{ report.improvement_progress.completed }}</strong>
+                se encuentran completadas y
+                <strong>{{ report.improvement_progress.in_progress }}</strong>
+                están en progreso.
+            </p>
+
+            <p>
+                El avance registrado de las acciones activas es de
+                <strong>
+                    {{ report.improvement_progress.progress_percentage | number:'1.0-2' }}%
+                </strong>.
+            </p>
+            } @else {
+            <p>
+                Actualmente no existen acciones registradas
+                en el plan de mejora de esta evaluación.
+            </p>
+            }
+        </div>
+
+        <div class="report-conclusion-note" data-pdf-keep>
+            <strong>Alcance del reporte</strong>
+
+            <p>
+                Este documento presenta los resultados de la
+                evaluación ASG seleccionada y la información
+                de seguimiento disponible al momento de
+                generar el reporte.
+            </p>
+
+            <p>
+                Las comparaciones históricas se presentan
+                únicamente cuando las evaluaciones cumplen
+                las condiciones de comparabilidad metodológica.
+            </p>
+        </div>
+    </section>
+
+</div>
