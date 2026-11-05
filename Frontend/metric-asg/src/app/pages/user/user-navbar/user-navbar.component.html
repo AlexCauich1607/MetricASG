@@ -12,52 +12,113 @@
     <div id="mainNavbar" class="collapse navbar-collapse justify-content-end">
       <ul class="navbar-nav fw-bold align-items-center">
         @if (!first) {
-          <li class="nav-item mx-2 ">
-            <a class="nav-link fw-bold" routerLink="/user/home" routerLinkActive="active">Inicio</a>
-          </li>
+        <li class="nav-item mx-2 ">
+          <a class="nav-link fw-bold" routerLink="/user/home" routerLinkActive="active">Inicio</a>
+        </li>
         }
 
         @if (!first) {
-          <li class="nav-item mx-2">
-            <a class="nav-link fw-bold" routerLink="/user/history" routerLinkActive="active">Historial</a>
-          </li>
+        <li class="nav-item mx-2">
+          <a class="nav-link fw-bold" routerLink="/user/history" routerLinkActive="active">Historial</a>
+        </li>
         }
 
         @if (!first) {
-          <li class="nav-item mx-2">
-            <a class="nav-link fw-bold" routerLink="/user/feedback"
-            routerLinkActive="active">Retroalimentación</a>
-          </li>
+        <li class="nav-item mx-2">
+          <a class="nav-link fw-bold" routerLink="/user/feedback" routerLinkActive="active">Retroalimentación</a>
+        </li>
         }
+        <!-- Recordatorios de reevaluación -->
+        <li class="nav-item dropdown mx-2 notification-dropdown">
+          <button type="button" class="nav-link notification-trigger d-flex align-items-center justify-content-center"
+            data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false"
+            aria-label="Ver recordatorios de evaluación" (click)="loadNotifications()">
+            <i class="bi bi-bell fs-5"></i>
 
+            @if (notifications.length > 0) {
+            <span class="notification-indicator"></span>
+            }
+          </button>
+
+          <div class="dropdown-menu dropdown-menu-end notification-menu">
+            <div class="notification-header">
+              <span class="fw-bold">Recordatorios de evaluación</span>
+            </div>
+
+            <div class="notification-content">
+              @if (notificationsLoading) {
+              <div class="notification-state">
+                <span class="spinner-border spinner-border-sm me-2"></span>
+                Cargando recordatorios...
+              </div>
+              } @else if (notificationsError) {
+              <div class="notification-state text-danger">
+                No se pudieron cargar los recordatorios.
+              </div>
+
+              <button type="button" class="btn btn-sm btn-outline-secondary mx-3 mb-3" (click)="loadNotifications()">
+                Reintentar
+              </button>
+              } @else if (notifications.length === 0) {
+              <div class="notification-state">
+                <i class="bi bi-bell-slash d-block fs-4 mb-2"></i>
+                No tienes recordatorios por el momento.
+              </div>
+              } @else {
+              @for (notification of notifications; track notification.id) {
+              <div class="notification-item">
+                <div class="notification-item-icon">
+                  <i class="bi bi-calendar-event"></i>
+                </div>
+
+                <div class="notification-item-body">
+                  <div class="fw-semibold">
+                    {{ getReminderTitle(notification.reminder_type) }}
+                  </div>
+
+                  <p class="mb-1">
+                    {{ getReminderMessage(notification) }}
+                  </p>
+
+                  <small class="text-muted">
+                    Fecha de evaluación:
+                    {{ formatReminderDate(notification.target_date) }}
+                  </small>
+                </div>
+              </div>
+              }
+              }
+            </div>
+          </div>
+        </li>
 
         <li class="nav-item dropdown mx-2">
-          <a class="nav-link  d-flex align-items-center m-0 p-0" role="button"
-            data-bs-toggle="dropdown">
-            @if (!photo || photo.length <= 0) {
-              <div class="bg-my-purple sw-all-center sw-circle"
-                style="height: 40px; width: 40px;"><i class="bi bi-person-fill text-white fs-5"></i></div>
-              }
-              @if (photo && photo.length > 0) {
-                <img class="sw-circle sw-all-center" style="height: 40px;width: 40px;"
-                  [src]="getImage()" alt="Foto de usuario" />
-              }
+          <a class="nav-link  d-flex align-items-center m-0 p-0" role="button" data-bs-toggle="dropdown">
 
-            </a>
-            <ul class="dropdown-menu dropdown-menu-end">
-              <li>
-                <button class="dropdown-item text-my-purple fw-bold sw-fs-7" (click)="openConfiguration()">
-                  <i class="bi bi-gear me-1"></i>
-                  Configuración
-                </button>
-                <button class="dropdown-item text-danger fw-bold sw-fs-7" (click)="cerrarSesion()">
-                  <i class="bi bi-box-arrow-right me-1"></i>
-                  Cerrar Sesión
-                </button>
-              </li>
-            </ul>
-          </li>
-        </ul>
-      </div>
+
+            @if (!photo || photo.length <= 0) { <div class="bg-my-purple sw-all-center sw-circle"
+              style="height: 40px; width: 40px;"><i class="bi bi-person-fill text-white fs-5"></i>
     </div>
-  </nav>
+    }
+    @if (photo && photo.length > 0) {
+    <img class="sw-circle sw-all-center" style="height: 40px;width: 40px;" [src]="getImage()" alt="Foto de usuario" />
+    }
+
+    </a>
+    <ul class="dropdown-menu dropdown-menu-end">
+      <li>
+        <button class="dropdown-item text-my-purple fw-bold sw-fs-7" (click)="openConfiguration()">
+          <i class="bi bi-gear me-1"></i>
+          Configuración
+        </button>
+        <button class="dropdown-item text-danger fw-bold sw-fs-7" (click)="cerrarSesion()">
+          <i class="bi bi-box-arrow-right me-1"></i>
+          Cerrar Sesión
+        </button>
+      </li>
+    </ul>
+    </li>
+    </ul>
+  </div>
+  </div>
+</nav>

@@ -88,6 +88,20 @@ class User(Base):
         "EvaluationEvidence",
         back_populates="user",
     )
+    notification_preference = relationship(
+        "NotificationPreference",
+        back_populates="user",
+        uselist=False,
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )
+
+    reevaluation_reminders = relationship(
+        "ReevaluationReminder",
+        back_populates="user",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )
 
     @validates("role")
     def validate_role(self, key, value):
