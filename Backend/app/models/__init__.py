@@ -17,3 +17,5 @@ from app.models.methodology_model import Methodology
 from app.models.refresh_session_model import RefreshSession
 from app.models.user_model import User
 from app.models.user_response_model import UserResponse
+from app.models.notification_preference_model import NotificationPreference
+from app.models.reevaluation_reminder_model import ReevaluationReminder
