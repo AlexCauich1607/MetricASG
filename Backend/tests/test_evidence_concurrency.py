@@ -23,7 +23,11 @@ from app.models.user_model import User
 from app.models.evaluation_evidence_request import EvidenceCreateRequest
 from app.services.evidence_service import EvidenceService
 from tests.conftest import engine
-
+from app.models.company_model import Company
+from app.models.company_membership_model import (
+    CompanyMembership,
+    CompanyMembershipStatus,
+)
 
 SessionLocal = sessionmaker(
     bind=engine,
@@ -43,7 +47,7 @@ def test_concurrent_evidence_creation_respects_limit():
         with SessionLocal.begin() as db:
             methodology = Methodology(
                 name=f"Concurrency Test {unique_id}",
-                version="TEST-1",
+                version=f"TEST-{unique_id}",
                 is_active=False,
             )
             db.add(methodology)
@@ -94,8 +98,24 @@ def test_concurrent_evidence_creation_respects_limit():
             db.add(user)
             db.flush()
 
+            company = Company(
+                name="Concurrency Test Company",
+                active=True,
+            )
+            db.add(company)
+            db.flush()
+
+            membership = CompanyMembership(
+                user_id=user.id,
+                company_id=company.id,
+                status=CompanyMembershipStatus.ACTIVE,
+            )
+            db.add(membership)
+            db.flush()
+
             evaluation = Evaluation(
                 user_id=user.id,
+                company_id=company.id,
                 methodology_id=methodology.id,
                 status=EvaluationStatus.DRAFT,
             )
@@ -135,6 +155,7 @@ def test_concurrent_evidence_creation_respects_limit():
                 "user_id": user.id,
                 "evaluation_id": evaluation.id,
                 "indicator_id": indicator.id,
+                "company_id": company.id,
             }
 
         def create_evidence(index):
@@ -216,8 +237,16 @@ def test_concurrent_evidence_creation_respects_limit():
                     == ids["methodology_id"]
                 ).delete(synchronize_session=False)
 
+                db.query(CompanyMembership).filter(
+                    CompanyMembership.user_id == ids["user_id"]
+                ).delete(synchronize_session=False)
+
                 db.query(User).filter(
                     User.id == ids["user_id"]
+                ).delete(synchronize_session=False)
+
+                db.query(Company).filter(
+                    Company.id == ids["company_id"]
                 ).delete(synchronize_session=False)
 
                 db.query(Methodology).filter(

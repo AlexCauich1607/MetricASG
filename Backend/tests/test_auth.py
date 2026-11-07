@@ -5,7 +5,14 @@ from app.models.refresh_session_model import RefreshSession
 from app.models.user_model import User
 from app.services.auth_service import AuthService
 from app.core.roles import UserRole
+from app.models.company_model import Company
+from app.models.company_membership_model import (
+    CompanyMembership,
+    CompanyMembershipStatus,
+)
+from unittest.mock import patch
 
+import pytest
 
 TEST_EMAIL = "auth-test@test.local"
 TEST_PASSWORD = "Password123!"
@@ -240,3 +247,151 @@ def test_revoked_refresh_token_is_rejected(client, db_session):
 
     assert response.status_code == 401
     assert response.json()["detail"] == "Refresh session revoked"
+
+def test_register_creates_company_and_active_membership(client, db_session):
+    email = "register-company-member@test.local"
+
+    response = client.post(
+        "/api/auth/register",
+        json={
+            "name": "Company",
+            "lastname": "Member",
+            "position": "Manager",
+            "company_name": "Registration Test Company",
+            "email": email,
+            "phone": "9999999999",
+            "password": TEST_PASSWORD,
+        },
+    )
+
+    assert response.status_code == 200
+
+    user = (
+        db_session.query(User)
+        .filter(User.email == email)
+        .one()
+    )
+
+    company = (
+        db_session.query(Company)
+        .filter(Company.name == "Registration Test Company")
+        .one()
+    )
+
+    membership = (
+        db_session.query(CompanyMembership)
+        .filter(
+            CompanyMembership.user_id == user.id,
+            CompanyMembership.company_id == company.id,
+        )
+        .one()
+    )
+
+    assert user.role == UserRole.USER.value
+    assert company.active is True
+    assert membership.status == CompanyMembershipStatus.ACTIVE
+    assert user.company_name == company.name
+
+
+def test_register_company_creates_active_membership(client, db_session):
+    email = "register-organization@test.local"
+
+    response = client.post(
+        "/api/auth/register-company",
+        json={
+            "company_name": "Organization Registration Test",
+            "email": email,
+            "phone": "9999999998",
+            "password": TEST_PASSWORD,
+        },
+    )
+
+    assert response.status_code == 200
+
+    user = (
+        db_session.query(User)
+        .filter(User.email == email)
+        .one()
+    )
+
+    company = (
+        db_session.query(Company)
+        .filter(Company.name == "Organization Registration Test")
+        .one()
+    )
+
+    membership = (
+        db_session.query(CompanyMembership)
+        .filter(
+            CompanyMembership.user_id == user.id,
+            CompanyMembership.company_id == company.id,
+        )
+        .one()
+    )
+
+    assert user.name is None
+    assert user.lastname is None
+    assert user.position is None
+    assert user.role == UserRole.USER.value
+    assert company.active is True
+    assert membership.status == CompanyMembershipStatus.ACTIVE
+    assert user.company_name == company.name
+
+def test_register_company_rolls_back_on_commit_failure(db_session):
+    email = "rollback-company@test.local"
+    company_name = "Rollback Test Company"
+
+    service = AuthService()
+
+    payload = {
+        "name": "Rollback",
+        "lastname": "Test",
+        "position": "Manager",
+        "company_name": company_name,
+        "email": email,
+        "phone": "9999999999",
+        "password": TEST_PASSWORD,
+    }
+
+    with patch.object(
+        db_session,
+        "commit",
+        side_effect=RuntimeError("Simulated commit failure"),
+    ), patch.object(
+        db_session,
+        "rollback",
+        wraps=db_session.rollback,
+    ) as mock_rollback:
+
+        with pytest.raises(
+            RuntimeError,
+            match="Simulated commit failure",
+        ):
+            service.create_user(payload, db_session)
+
+        mock_rollback.assert_called_once()
+
+    assert (
+        db_session.query(User)
+        .filter(User.email == email)
+        .count()
+        == 0
+    )
+
+    assert (
+        db_session.query(Company)
+        .filter(Company.name == company_name)
+        .count()
+        == 0
+    )
+
+    assert (
+        db_session.query(CompanyMembership)
+        .join(
+            User,
+            CompanyMembership.user_id == User.id,
+        )
+        .filter(User.email == email)
+        .count()
+        == 0
+    )

@@ -1,4 +1,5 @@
 import uuid
+from uuid import uuid4
 from unittest.mock import patch
 from datetime import date
 
@@ -32,7 +33,11 @@ from app.models.methodology_model import (
 )
 from app.models.user_model import User
 from app.services.evaluations_service import EvaluationService
-
+from app.models.company_model import Company
+from app.models.company_membership_model import (
+    CompanyMembership,
+    CompanyMembershipStatus,
+)
 
 def create_evaluation_data(db_session):
     active_methodology = (
@@ -166,6 +171,25 @@ def create_evaluation_data(db_session):
     db_session.add(user)
     db_session.flush()
 
+    company = Company(
+        name=user.company_name,
+        sector_id=user.company_sector_id,
+        size_id=user.company_size_id,
+        active=True,
+    )
+
+    db_session.add(company)
+    db_session.flush()
+
+    membership = CompanyMembership(
+        user_id=user.id,
+        company_id=company.id,
+        status=CompanyMembershipStatus.ACTIVE,
+    )
+
+    db_session.add(membership)
+    db_session.flush()
+
     return {
         "methodology": methodology,
         "ambits": ambits,
@@ -173,7 +197,10 @@ def create_evaluation_data(db_session):
         "indicators": indicators,
         "answers": answers,
         "user": user,
+        "company": company,
+        "membership": membership,
     }
+
 
 
 def build_responses(data):
@@ -679,6 +706,7 @@ def test_evaluation_rejects_duplicate_drafts(db_session):
 
     first_draft = Evaluation(
         user_id=data["user"].id,
+        company_id=data["company"].id,
         methodology_id=data["methodology"].id,
         date=date.today(),
         status=EvaluationStatus.DRAFT,
@@ -689,6 +717,7 @@ def test_evaluation_rejects_duplicate_drafts(db_session):
 
     second_draft = Evaluation(
         user_id=data["user"].id,
+        company_id=data["company"].id,
         methodology_id=data["methodology"].id,
         date=date.today(),
         status=EvaluationStatus.DRAFT,
@@ -698,8 +727,6 @@ def test_evaluation_rejects_duplicate_drafts(db_session):
 
     with pytest.raises(IntegrityError):
         db_session.flush()
-
-    db_session.rollback()
 
 def test_save_draft_rolls_back_on_database_error(db_session):
     data = create_evaluation_data(db_session)
@@ -784,6 +811,7 @@ def test_evaluation_row_lock_prevents_concurrent_access():
     from tests.conftest import engine
 
     user_id = None
+    company_id = None
 
     try:
         # Prepare committed test data
@@ -824,16 +852,49 @@ def test_evaluation_row_lock_prevents_concurrent_access():
                 },
             ).scalar_one()
 
+            company_id = connection.execute(
+                text(
+                    """
+                    INSERT INTO companies (name)
+                    VALUES ('Concurrency Test Company')
+                    RETURNING id
+                    """
+                )
+            ).scalar_one()
+
+            connection.execute(
+                text(
+                    """
+                    INSERT INTO company_memberships (
+                        user_id,
+                        company_id,
+                        status
+                    )
+                    VALUES (
+                        :user_id,
+                        :company_id,
+                        'ACTIVE'
+                    )
+                    """
+                ),
+                {
+                    "user_id": user_id,
+                    "company_id": company_id,
+                },
+            )
+
             evaluation_id = connection.execute(
                 text(
                     """
                     INSERT INTO evaluations (
                         user_id,
+                        company_id,
                         methodology_id,
                         status
                     )
                     VALUES (
                         :user_id,
+                        :company_id,
                         :methodology_id,
                         'DRAFT'
                     )
@@ -842,6 +903,7 @@ def test_evaluation_row_lock_prevents_concurrent_access():
                 ),
                 {
                     "user_id": user_id,
+                    "company_id": company_id,
                     "methodology_id": methodology_id,
                 },
             ).scalar_one()
@@ -887,17 +949,40 @@ def test_evaluation_row_lock_prevents_concurrent_access():
                         )
 
     finally:
-        if user_id is not None:
+        if user_id is not None or company_id is not None:
             with engine.begin() as connection:
-                connection.execute(
-                    text(
-                        """
-                        DELETE FROM users
-                        WHERE id = :user_id
-                        """
-                    ),
-                    {"user_id": user_id},
-                )
+                if user_id is not None:
+                    connection.execute(
+                        text(
+                            """
+                            DELETE FROM company_memberships
+                            WHERE user_id = :user_id
+                            """
+                        ),
+                        {"user_id": user_id},
+                    )
+
+                    connection.execute(
+                        text(
+                            """
+                            DELETE FROM users
+                            WHERE id = :user_id
+                            """
+                        ),
+                        {"user_id": user_id},
+                    )
+
+                if company_id is not None:
+                    connection.execute(
+                        text(
+                            """
+                            DELETE FROM companies
+                            WHERE id = :company_id
+                            """
+                        ),
+                        {"company_id": company_id},
+                    )
+
 
 def test_get_draft_returns_saved_responses(db_session):
     data = create_evaluation_data(db_session)
@@ -949,6 +1034,23 @@ def test_get_draft_does_not_return_another_users_draft(db_session):
     )
 
     db_session.add(other_user)
+    db_session.flush()
+
+    other_company = Company(
+        name=other_user.company_name,
+        active=True,
+    )
+
+    db_session.add(other_company)
+    db_session.flush()
+
+    other_membership = CompanyMembership(
+        user_id=other_user.id,
+        company_id=other_company.id,
+        status=CompanyMembershipStatus.ACTIVE,
+    )
+
+    db_session.add(other_membership)
     db_session.flush()
 
     result = service.get_draft(other_user.id)
@@ -1789,3 +1891,484 @@ def test_results_by_id_endpoint_rejects_nonexistent_evaluation(
 
     finally:
         app.dependency_overrides.pop(get_current_user, None)
+
+
+def test_get_results_by_id_rejects_inactive_company_membership(
+    db_session,
+):
+    data = create_evaluation_data(db_session)
+    service = EvaluationService(db_session)
+
+    submitted = service.submit_evaluation(
+        {"responses": build_responses(data)},
+        data["user"].id,
+    )
+
+    membership = (
+        db_session.query(CompanyMembership)
+        .filter(
+            CompanyMembership.user_id == data["user"].id,
+            CompanyMembership.company_id == data["company"].id,
+        )
+        .one()
+    )
+
+    membership.status = CompanyMembershipStatus.INACTIVE
+    db_session.flush()
+
+    with pytest.raises(HTTPException) as exc_info:
+        service.get_results_by_id(
+            submitted["evaluation_id"],
+            data["user"].id,
+        )
+
+    assert exc_info.value.status_code == 404
+
+    # La evaluación histórica debe conservarse.
+    saved_evaluation = db_session.get(
+        Evaluation,
+        submitted["evaluation_id"],
+    )
+
+    assert saved_evaluation is not None
+
+
+def test_get_results_by_id_rejects_inactive_company(db_session):
+    data = create_evaluation_data(db_session)
+    service = EvaluationService(db_session)
+
+    submitted = service.submit_evaluation(
+        {"responses": build_responses(data)},
+        data["user"].id,
+    )
+
+    company = data["company"]
+    company.active = False
+    db_session.flush()
+
+    with pytest.raises(HTTPException) as exc_info:
+        service.get_results_by_id(
+            submitted["evaluation_id"],
+            data["user"].id,
+        )
+
+    assert exc_info.value.status_code == 404
+
+    db_session.expire_all()
+
+    saved_evaluation = db_session.get(
+        Evaluation,
+        submitted["evaluation_id"],
+    )
+
+    assert saved_evaluation is not None
+    assert saved_evaluation.company_id == company.id
+
+
+def test_get_latest_results_rejects_inactive_company_membership(
+    db_session,
+):
+    data = create_evaluation_data(db_session)
+    service = EvaluationService(db_session)
+
+    submitted = service.submit_evaluation(
+        {"responses": build_responses(data)},
+        data["user"].id,
+    )
+
+    membership = (
+        db_session.query(CompanyMembership)
+        .filter(
+            CompanyMembership.user_id == data["user"].id,
+            CompanyMembership.company_id == data["company"].id,
+        )
+        .one()
+    )
+
+    membership.status = CompanyMembershipStatus.INACTIVE
+    db_session.flush()
+
+    with pytest.raises(HTTPException) as exc_info:
+        service.get_latest_results(
+            user_id=data["user"].id,
+            company_id=data["company"].id,
+        )
+
+    assert exc_info.value.status_code == 403
+    assert exc_info.value.detail == (
+        "User does not have an active membership in this company"
+    )
+
+    saved_evaluation = db_session.get(
+        Evaluation,
+        submitted["evaluation_id"],
+    )
+
+    assert saved_evaluation is not None
+    assert saved_evaluation.company_id == data["company"].id
+
+
+def test_get_latest_results_requires_company_selection_for_multiple_memberships(
+    db_session,
+):
+    data = create_evaluation_data(db_session)
+    service = EvaluationService(db_session)
+
+    submitted = service.submit_evaluation(
+        {"responses": build_responses(data)},
+        data["user"].id,
+    )
+
+    other_company = Company(
+        name="Second Company",
+        active=True,
+    )
+
+    db_session.add(other_company)
+    db_session.flush()
+
+    other_membership = CompanyMembership(
+        user_id=data["user"].id,
+        company_id=other_company.id,
+        status=CompanyMembershipStatus.ACTIVE,
+    )
+
+    db_session.add(other_membership)
+    db_session.flush()
+
+    with pytest.raises(HTTPException) as exc_info:
+        service.get_latest_results(
+            user_id=data["user"].id,
+        )
+
+    assert exc_info.value.status_code == 400
+    assert exc_info.value.detail == (
+        "Company selection is required"
+    )
+
+    # Al seleccionar la empresa original, se recuperan sus resultados.
+    result = service.get_latest_results(
+        user_id=data["user"].id,
+        company_id=data["company"].id,
+    )
+
+    assert result["evaluation_id"] == submitted["evaluation_id"]
+
+
+def test_get_latest_results_isolated_by_company(db_session):
+    data = create_evaluation_data(db_session)
+    service = EvaluationService(db_session)
+
+    # Primera evaluación en la empresa original.
+    first_result = service.submit_evaluation(
+        {
+            "company_id": data["company"].id,
+            "responses": build_responses(data),
+        },
+        data["user"].id,
+    )
+
+    # Crear una segunda empresa y asociar al mismo usuario.
+    other_company = Company(
+        name=f"Second Company {uuid4().hex}",
+        active=True,
+    )
+
+    db_session.add(other_company)
+    db_session.flush()
+
+    other_membership = CompanyMembership(
+        user_id=data["user"].id,
+        company_id=other_company.id,
+        status=CompanyMembershipStatus.ACTIVE,
+    )
+
+    db_session.add(other_membership)
+    db_session.flush()
+
+    # Segunda evaluación en la otra empresa.
+    second_result = service.submit_evaluation(
+        {
+            "company_id": other_company.id,
+            "responses": build_responses(data),
+        },
+        data["user"].id,
+    )
+
+    assert first_result["evaluation_id"] != second_result["evaluation_id"]
+
+    # Cada consulta debe devolver únicamente la evaluación
+    # correspondiente a la empresa seleccionada.
+    original_company_results = service.get_latest_results(
+        user_id=data["user"].id,
+        company_id=data["company"].id,
+    )
+
+    other_company_results = service.get_latest_results(
+        user_id=data["user"].id,
+        company_id=other_company.id,
+    )
+
+    assert original_company_results["evaluation_id"] == (
+        first_result["evaluation_id"]
+    )
+
+    assert other_company_results["evaluation_id"] == (
+        second_result["evaluation_id"]
+    )
+
+
+def test_get_evaluation_history_rejects_inactive_company_membership(
+    db_session,
+):
+    data = create_evaluation_data(db_session)
+    service = EvaluationService(db_session)
+
+    submitted = service.submit_evaluation(
+        {
+            "company_id": data["company"].id,
+            "responses": build_responses(data),
+        },
+        data["user"].id,
+    )
+
+    membership = (
+        db_session.query(CompanyMembership)
+        .filter(
+            CompanyMembership.user_id == data["user"].id,
+            CompanyMembership.company_id == data["company"].id,
+        )
+        .one()
+    )
+
+    membership.status = CompanyMembershipStatus.INACTIVE
+    db_session.flush()
+
+    with pytest.raises(HTTPException) as exc_info:
+        service.get_evaluation_history(
+            user_id=data["user"].id,
+            company_id=data["company"].id,
+        )
+
+    assert exc_info.value.status_code == 403
+    assert exc_info.value.detail == (
+        "User does not have an active membership in this company"
+    )
+
+    # La evaluación histórica debe conservarse.
+    saved_evaluation = db_session.get(
+        Evaluation,
+        submitted["evaluation_id"],
+    )
+
+    assert saved_evaluation is not None
+    assert saved_evaluation.company_id == data["company"].id
+
+
+def test_get_evaluation_history_isolated_by_company(db_session):
+    data = create_evaluation_data(db_session)
+    service = EvaluationService(db_session)
+
+    # Evaluación de la primera empresa.
+    first_result = service.submit_evaluation(
+        {
+            "company_id": data["company"].id,
+            "responses": build_responses(data),
+        },
+        data["user"].id,
+    )
+
+    # Segunda empresa con el mismo usuario.
+    other_company = Company(
+        name=f"Second Company {uuid4().hex}",
+        active=True,
+    )
+
+    db_session.add(other_company)
+    db_session.flush()
+
+    db_session.add(
+        CompanyMembership(
+            user_id=data["user"].id,
+            company_id=other_company.id,
+            status=CompanyMembershipStatus.ACTIVE,
+        )
+    )
+    db_session.flush()
+
+    # Evaluación de la segunda empresa.
+    second_result = service.submit_evaluation(
+        {
+            "company_id": other_company.id,
+            "responses": build_responses(data),
+        },
+        data["user"].id,
+    )
+
+    assert first_result["evaluation_id"] != second_result["evaluation_id"]
+
+    first_history = service.get_evaluation_history(
+        user_id=data["user"].id,
+        company_id=data["company"].id,
+    )
+
+    second_history = service.get_evaluation_history(
+        user_id=data["user"].id,
+        company_id=other_company.id,
+    )
+
+    # Cada historial contiene exclusivamente su evaluación.
+    assert [
+        item["evaluation_id"]
+        for item in first_history["history"]
+    ] == [first_result["evaluation_id"]]
+
+    assert [
+        item["evaluation_id"]
+        for item in second_history["history"]
+    ] == [second_result["evaluation_id"]]
+
+    # Los promedios globales se calculan utilizando
+    # únicamente las evaluaciones de cada empresa.
+    assert first_history["averages"]["global_score"] == (
+        first_history["history"][0]["global_score"]
+    )
+
+    assert second_history["averages"]["global_score"] == (
+        second_history["history"][0]["global_score"]
+    )
+
+    # Cada ámbito utiliza exclusivamente las puntuaciones
+    # presentes en el historial de su empresa.
+    for company_history in (first_history, second_history):
+        expected_averages = {
+            ambit["ambit_id"]: ambit["score"]
+            for ambit in company_history["history"][0]["ambits"]
+        }
+
+        actual_averages = {
+            ambit["ambit_id"]: ambit["score"]
+            for ambit in company_history["averages"]["ambits"]
+        }
+
+        assert actual_averages == expected_averages
+
+def test_get_historical_dashboard_rejects_inactive_company_membership(
+    db_session,
+):
+    data = create_evaluation_data(db_session)
+    service = EvaluationService(db_session)
+
+    submitted = service.submit_evaluation(
+        {
+            "company_id": data["company"].id,
+            "responses": build_responses(data),
+        },
+        data["user"].id,
+    )
+
+    membership = (
+        db_session.query(CompanyMembership)
+        .filter(
+            CompanyMembership.user_id == data["user"].id,
+            CompanyMembership.company_id == data["company"].id,
+        )
+        .one()
+    )
+
+    membership.status = CompanyMembershipStatus.INACTIVE
+    db_session.flush()
+
+    with pytest.raises(HTTPException) as exc_info:
+        service.get_historical_dashboard(
+            user_id=data["user"].id,
+            company_id=data["company"].id,
+        )
+
+    assert exc_info.value.status_code == 403
+    assert exc_info.value.detail == (
+        "User does not have an active membership in this company"
+    )
+
+    # La evaluación histórica debe conservarse.
+    saved_evaluation = db_session.get(
+        Evaluation,
+        submitted["evaluation_id"],
+    )
+
+    assert saved_evaluation is not None
+    assert saved_evaluation.company_id == data["company"].id
+
+
+def test_get_historical_dashboard_isolated_by_company(db_session):
+    data = create_evaluation_data(db_session)
+    service = EvaluationService(db_session)
+
+    first_result = service.submit_evaluation(
+        {
+            "company_id": data["company"].id,
+            "responses": build_responses(data),
+        },
+        data["user"].id,
+    )
+
+    other_company = Company(
+        name=f"Second Company {uuid4().hex}",
+        active=True,
+    )
+
+    db_session.add(other_company)
+    db_session.flush()
+
+    db_session.add(
+        CompanyMembership(
+            user_id=data["user"].id,
+            company_id=other_company.id,
+            status=CompanyMembershipStatus.ACTIVE,
+        )
+    )
+    db_session.flush()
+
+    second_result = service.submit_evaluation(
+        {
+            "company_id": other_company.id,
+            "responses": build_responses(data),
+        },
+        data["user"].id,
+    )
+
+    assert first_result["evaluation_id"] != second_result["evaluation_id"]
+
+    first_dashboard = service.get_historical_dashboard(
+        user_id=data["user"].id,
+        company_id=data["company"].id,
+    )
+
+    second_dashboard = service.get_historical_dashboard(
+        user_id=data["user"].id,
+        company_id=other_company.id,
+    )
+
+    assert [
+        item["evaluation_id"]
+        for item in first_dashboard["history"]
+    ] == [first_result["evaluation_id"]]
+
+    assert [
+        item["evaluation_id"]
+        for item in second_dashboard["history"]
+    ] == [second_result["evaluation_id"]]
+
+    # Al existir una evaluación por empresa,
+    # no deben calcularse variaciones entre ellas.
+    for dashboard in (first_dashboard, second_dashboard):
+        assert len(dashboard["history"]) == 1
+
+        evaluation = dashboard["history"][0]
+
+        assert evaluation["global_delta"] is None
+
+        assert all(
+            ambit["delta"] is None
+            for ambit in evaluation["ambits"]
+        )

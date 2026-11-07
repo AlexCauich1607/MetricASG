@@ -32,6 +32,7 @@ def reminder_data(db_session):
 
     evaluation = Evaluation(
         user_id=user.id,
+        company_id=data["company"].id,
         methodology_id=data["methodology"].id,
         status=EvaluationStatus.COMPLETED,
         date=datetime(2026, 6, 5),
@@ -327,6 +328,7 @@ def test_generates_reminders_across_calendar_boundaries(
 
     evaluation = Evaluation(
         user_id=user.id,
+        company_id=data["company"].id,
         methodology_id=data["methodology"].id,
         status=EvaluationStatus.COMPLETED,
         date=datetime(2026, 6, 5),

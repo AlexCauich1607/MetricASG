@@ -15,12 +15,19 @@ from app.core.roles import UserRole
 from app.main import app
 from app.services.token_service import get_current_user
 
+from app.models.company_model import Company
+from app.models.company_membership_model import (
+    CompanyMembership,
+    CompanyMembershipStatus,
+)
+
 @pytest.fixture
 def dashboard_data(db_session):
     data = create_evaluation_data(db_session)
 
     first = Evaluation(
         user_id=data["user"].id,
+        company_id=data["company"].id,
         methodology_id=data["methodology"].id,
         status=EvaluationStatus.COMPLETED,
         date=datetime(2026, 1, 15),
@@ -29,6 +36,7 @@ def dashboard_data(db_session):
 
     second = Evaluation(
         user_id=data["user"].id,
+        company_id=data["company"].id,
         methodology_id=data["methodology"].id,
         status=EvaluationStatus.COMPLETED,
         date=datetime(2026, 4, 15),
@@ -135,6 +143,7 @@ def test_dashboard_does_not_compare_different_methodologies(
 
     third = Evaluation(
         user_id=data["user"].id,
+        company_id=data["company"].id,
         methodology_id=second_methodology.id,
         status=EvaluationStatus.COMPLETED,
         date=datetime(2026, 7, 15),
@@ -178,6 +187,7 @@ def test_dashboard_excludes_drafts(
 
     draft = Evaluation(
         user_id=data["user"].id,
+        company_id=data["company"].id,
         methodology_id=data["methodology"].id,
         status=EvaluationStatus.DRAFT,
         date=datetime(2026, 5, 15),
@@ -236,8 +246,26 @@ def test_dashboard_isolates_evaluations_by_user(
     db_session.add(other_user)
     db_session.flush()
 
+    other_company = Company(
+        name="Other Dashboard Company",
+        active=True,
+    )
+
+    db_session.add(other_company)
+    db_session.flush()
+
+    other_membership = CompanyMembership(
+        user_id=other_user.id,
+        company_id=other_company.id,
+        status=CompanyMembershipStatus.ACTIVE,
+    )
+
+    db_session.add(other_membership)
+    db_session.flush()
+
     other_evaluation = Evaluation(
         user_id=other_user.id,
+        company_id=other_company.id,
         methodology_id=data["methodology"].id,
         status=EvaluationStatus.COMPLETED,
         date=datetime(2026, 6, 15),

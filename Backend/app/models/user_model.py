@@ -57,6 +57,13 @@ class User(Base):
     
     
     evaluations = relationship( "Evaluation", cascade="all, delete", passive_deletes=True)
+
+    company_memberships = relationship(
+        "CompanyMembership",
+        back_populates="user",
+        passive_deletes=True,
+    )
+
     sector = relationship(
         "CompanySector",
         back_populates="users",

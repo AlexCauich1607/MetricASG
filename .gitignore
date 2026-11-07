@@ -91,3 +91,6 @@ Desktop.ini
 *.temp
 *.swp
 *.swo
+
+# Local PostgreSQL backups
+/Backend/backups/

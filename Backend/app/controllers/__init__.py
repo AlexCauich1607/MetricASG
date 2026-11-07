@@ -17,7 +17,8 @@ from .methodology_controller import MethodologiesController
 from .evidence_controller import EvidenceController
 from .improvement_action_controller import ImprovementActionController
 from .notification_controller import NotificationController
-
+from .company_invitation_controller import CompanyInvitationController
+from .company_membership_controller import CompanyMembershipController
 controllers = [
     UsersController(),
     AmbitsController(),
@@ -38,4 +39,6 @@ controllers = [
     EvidenceController(),
     ImprovementActionController(),
     NotificationController(),
+    CompanyInvitationController(),
+    CompanyMembershipController()
 ]

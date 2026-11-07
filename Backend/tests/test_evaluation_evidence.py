@@ -21,6 +21,7 @@ def create_evidence_data(db_session):
 
     evaluation = Evaluation(
         user_id=data["user"].id,
+        company_id=data["company"].id,
         methodology_id=data["methodology"].id,
         status=EvaluationStatus.DRAFT,
     )
