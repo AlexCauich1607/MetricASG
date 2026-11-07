@@ -1,4 +1,4 @@
-
+from uuid import uuid4
 import pytest
 from fastapi import HTTPException
 
@@ -7,8 +7,17 @@ from app.models.evaluation_model import Evaluation, EvaluationStatus
 from app.services.evaluations_service import EvaluationService
 from app.services.token_service import get_current_user
 from app.models.evaluation_ambit_score_model import EvaluationAmbitScore
-from tests.test_evaluation import create_evaluation_data
+from tests.test_evaluation import (
+    create_evaluation_data,
+    build_responses,
+)
 from app.models.methodology_model import Methodology, MethodologyStatus
+
+from app.models.company_model import Company
+from app.models.company_membership_model import (
+    CompanyMembership,
+    CompanyMembershipStatus,
+)
 
 @pytest.fixture
 def comparison_data(db_session):
@@ -16,6 +25,7 @@ def comparison_data(db_session):
 
     first = Evaluation(
         user_id=data["user"].id,
+        company_id=data["company"].id,
         methodology_id=data["methodology"].id,
         status=EvaluationStatus.COMPLETED,
         global_score=7.5,
@@ -23,6 +33,7 @@ def comparison_data(db_session):
 
     second = Evaluation(
         user_id=data["user"].id,
+        company_id=data["company"].id,
         methodology_id=data["methodology"].id,
         status=EvaluationStatus.COMPLETED,
         global_score=8.5,
@@ -523,3 +534,112 @@ def test_get_comparison_with_different_methodology_versions(
 
     assert first_result["ambits"][0]["score"] == 7.0
     assert second_result["ambits"][0]["score"] == 8.0
+
+
+def test_get_comparison_rejects_evaluations_from_different_companies(
+    db_session,
+):
+    data = create_evaluation_data(db_session)
+    service = EvaluationService(db_session)
+
+    # Evaluación de la primera empresa.
+    first_result = service.submit_evaluation(
+        {
+            "company_id": data["company"].id,
+            "responses": build_responses(data),
+        },
+        data["user"].id,
+    )
+
+    # Segunda empresa con el mismo usuario.
+    other_company = Company(
+        name=f"Second Company {uuid4().hex}",
+        active=True,
+    )
+
+    db_session.add(other_company)
+    db_session.flush()
+
+    db_session.add(
+        CompanyMembership(
+            user_id=data["user"].id,
+            company_id=other_company.id,
+            status=CompanyMembershipStatus.ACTIVE,
+        )
+    )
+    db_session.flush()
+
+    # Evaluación de la segunda empresa.
+    second_result = service.submit_evaluation(
+        {
+            "company_id": other_company.id,
+            "responses": build_responses(data),
+        },
+        data["user"].id,
+    )
+
+    assert first_result["evaluation_id"] != second_result["evaluation_id"]
+
+    # No debe permitirse comparar evaluaciones de empresas distintas.
+    with pytest.raises(HTTPException) as exc_info:
+        service.get_comparison(
+            evaluation_id_1=first_result["evaluation_id"],
+            evaluation_id_2=second_result["evaluation_id"],
+            user_id=data["user"].id,
+            company_id=data["company"].id,
+        )
+
+    assert exc_info.value.status_code == 404
+    assert exc_info.value.detail == (
+        "One or both evaluations were not found"
+    )
+
+
+def test_get_comparison_rejects_inactive_company_membership(
+    db_session,
+):
+    data = create_evaluation_data(db_session)
+    service = EvaluationService(db_session)
+
+    first_result = service.submit_evaluation(
+        {
+            "company_id": data["company"].id,
+            "responses": build_responses(data),
+        },
+        data["user"].id,
+    )
+
+    second_result = service.submit_evaluation(
+        {
+            "company_id": data["company"].id,
+            "responses": build_responses(data),
+        },
+        data["user"].id,
+    )
+
+    assert first_result["evaluation_id"] != second_result["evaluation_id"]
+
+    membership = (
+        db_session.query(CompanyMembership)
+        .filter(
+            CompanyMembership.user_id == data["user"].id,
+            CompanyMembership.company_id == data["company"].id,
+        )
+        .one()
+    )
+
+    membership.status = CompanyMembershipStatus.INACTIVE
+    db_session.flush()
+
+    with pytest.raises(HTTPException) as exc_info:
+        service.get_comparison(
+            evaluation_id_1=first_result["evaluation_id"],
+            evaluation_id_2=second_result["evaluation_id"],
+            user_id=data["user"].id,
+            company_id=data["company"].id,
+        )
+
+    assert exc_info.value.status_code == 403
+    assert exc_info.value.detail == (
+        "User does not have an active membership in this company"
+    )

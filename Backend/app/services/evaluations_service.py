@@ -22,11 +22,63 @@ from ..models.maturity_level_model import MaturityLevel;
 from ..services.evidence_storage_service import EvidenceStorageService
 from ..services.methodology_service import MethodologyService
 from ..models.methodology_model import Methodology
+from ..models.company_model import Company
+from ..models.company_membership_model import (
+    CompanyMembership,
+    CompanyMembershipStatus,
+)
 
 class EvaluationService:
 
     def __init__(self, db):
         self.db = db
+
+    def _resolve_company_id(
+        self,
+        user_id: int,
+        company_id: int | None = None,
+    ) -> int:
+        query = (
+            self.db.query(CompanyMembership)
+            .join(
+                Company,
+                CompanyMembership.company_id == Company.id,
+            )
+            .filter(
+                CompanyMembership.user_id == user_id,
+                CompanyMembership.status == CompanyMembershipStatus.ACTIVE,
+                Company.active.is_(True),
+            )
+        )
+
+        if company_id is not None:
+            membership = query.filter(
+                CompanyMembership.company_id == company_id
+            ).first()
+
+            if membership is None:
+                raise HTTPException(
+                    status_code=403,
+                    detail="User does not have an active membership in this company",
+                )
+
+            return membership.company_id
+
+        memberships = query.limit(2).all()
+
+        if not memberships:
+            raise HTTPException(
+                status_code=403,
+                detail="User does not have an active company membership",
+            )
+
+        if len(memberships) > 1:
+            raise HTTPException(
+                status_code=400,
+                detail="Company selection is required",
+            )
+
+        return memberships[0].company_id
 
     def get_structure(self):
         methodology = MethodologyService(self.db).get_active()
@@ -102,6 +154,11 @@ class EvaluationService:
         if not user:
             raise HTTPException(404, "User not found")
 
+        company_id = self._resolve_company_id(
+            user_id=user_id,
+            company_id=payload.get("company_id"),
+        )
+
         methodology = MethodologyService(self.db).get_active()
 
         self.validate_duplicate_indicators(responses)
@@ -144,6 +201,7 @@ class EvaluationService:
                 self.db.query(Evaluation)
                 .filter(
                     Evaluation.user_id == user_id,
+                    Evaluation.company_id == company_id,
                     Evaluation.methodology_id == methodology.id,
                     Evaluation.status == EvaluationStatus.DRAFT,
                 )
@@ -154,6 +212,7 @@ class EvaluationService:
             if not evaluation:
                 evaluation = Evaluation(
                     user_id=user_id,
+                    company_id=company_id,
                     methodology_id=methodology.id,
                     date=date.today(),
                     status=EvaluationStatus.DRAFT,
@@ -274,7 +333,11 @@ class EvaluationService:
         }
 
 
-    def get_draft(self, user_id: int):
+    def get_draft(
+        self,
+        user_id: int,
+        company_id: int | None = None,
+    ):
         user = self.db.query(User).filter(
             User.id == user_id
         ).first()
@@ -285,12 +348,18 @@ class EvaluationService:
                 detail="User not found"
             )
 
+        company_id = self._resolve_company_id(
+            user_id=user_id,
+            company_id=company_id,
+        )
+
         methodology = MethodologyService(self.db).get_active()
 
         evaluation = (
             self.db.query(Evaluation)
             .filter(
                 Evaluation.user_id == user_id,
+                Evaluation.company_id == company_id,
                 Evaluation.methodology_id == methodology.id,
                 Evaluation.status == EvaluationStatus.DRAFT,
             )
@@ -327,6 +396,11 @@ class EvaluationService:
         if not user:
             raise HTTPException(404, "User not found")
 
+        company_id = self._resolve_company_id(
+            user_id=user_id,
+            company_id=payload.get("company_id"),
+        )
+
         methodology = MethodologyService(self.db).get_active()
 
         self.validate_duplicate_indicators(responses)
@@ -337,6 +411,7 @@ class EvaluationService:
                 self.db.query(Evaluation)
                 .filter(
                     Evaluation.user_id == user_id,
+                    Evaluation.company_id == company_id,
                     Evaluation.methodology_id == methodology.id,
                     Evaluation.status == EvaluationStatus.DRAFT,
                 )
@@ -347,6 +422,7 @@ class EvaluationService:
             if evaluation is None:
                 evaluation = Evaluation(
                     user_id=user_id,
+                    company_id=company_id,
                     methodology_id=methodology.id,
                     date=date.today(),
                     status=EvaluationStatus.COMPLETED,
@@ -449,40 +525,66 @@ class EvaluationService:
             "status": evaluation.status.value,
         }
 
-    def get_latest_results(self, user_id: int):
+    def get_latest_results(
+        self,
+        user_id: int,
+        company_id: int | None = None,
+    ):
+        resolved_company_id = self._resolve_company_id(
+            user_id=user_id,
+            company_id=company_id,
+        )
 
         evaluation = (
             self.db.query(Evaluation)
             .filter(
                 Evaluation.user_id == user_id,
-                Evaluation.status == EvaluationStatus.COMPLETED
+                Evaluation.company_id == resolved_company_id,
+                Evaluation.status == EvaluationStatus.COMPLETED,
             )
             .order_by(Evaluation.id.desc())
             .first()
         )
-        if not evaluation:
-            raise HTTPException(404, "No evaluations found")
+
+        if evaluation is None:
+            raise HTTPException(
+                status_code=404,
+                detail="No evaluations found",
+            )
 
         return self._build_evaluation_results(evaluation)
+
 
     def get_results_by_id(self, evaluation_id: int, user_id: int):
         evaluation = (
             self.db.query(Evaluation)
+            .join(
+                CompanyMembership,
+                CompanyMembership.company_id == Evaluation.company_id,
+            )
+            .join(
+                Company,
+                Company.id == Evaluation.company_id,
+            )
             .filter(
                 Evaluation.id == evaluation_id,
                 Evaluation.user_id == user_id,
                 Evaluation.status == EvaluationStatus.COMPLETED,
+                CompanyMembership.user_id == user_id,
+                CompanyMembership.status == CompanyMembershipStatus.ACTIVE,
+                Company.active.is_(True),
             )
             .first()
         )
 
-        if not evaluation:
+        if evaluation is None:
             raise HTTPException(
                 status_code=404,
                 detail="Evaluation not found",
             )
 
         return self._build_evaluation_results(evaluation)
+
 
     def _build_evaluation_results(self, evaluation: Evaluation):
         ambit_results = []
@@ -547,12 +649,22 @@ class EvaluationService:
             "ambits": ambit_results
         }
 
-    def get_evaluation_history(self, user_id: int):
+    def get_evaluation_history(
+        self,
+        user_id: int,
+        company_id: int | None = None,
+    ):
+        resolved_company_id = self._resolve_company_id(
+            user_id=user_id,
+            company_id=company_id,
+        )
+
         evaluations = (
             self.db.query(Evaluation)
             .filter(
                 Evaluation.user_id == user_id,
-                Evaluation.status == EvaluationStatus.COMPLETED
+                Evaluation.company_id == resolved_company_id,
+                Evaluation.status == EvaluationStatus.COMPLETED,
             )
             .order_by(Evaluation.id.asc())
             .all()
@@ -567,7 +679,6 @@ class EvaluationService:
                 .filter(EvaluationAmbitScore.evaluation_id == ev.id)
                 .all()
             )
-
 
             ambit_data = []
 
@@ -672,6 +783,7 @@ class EvaluationService:
         evaluation_id_1: int,
         evaluation_id_2: int,
         user_id: int,
+        company_id: int | None = None,
     ):
         if evaluation_id_1 == evaluation_id_2:
             raise HTTPException(
@@ -689,9 +801,21 @@ class EvaluationService:
             .all()
         )
 
+        if len(evaluations) != 2:
+            raise HTTPException(
+                status_code=404,
+                detail="One or both evaluations were not found",
+            )
+
+        resolved_company_id = self._resolve_company_id(
+            user_id=user_id,
+            company_id=company_id,
+        )
+
         evaluations_by_id = {
             evaluation.id: evaluation
             for evaluation in evaluations
+            if evaluation.company_id == resolved_company_id
         }
 
         if len(evaluations_by_id) != 2:
@@ -775,7 +899,16 @@ class EvaluationService:
             "differences": differences,
         }
 
-    def get_historical_dashboard(self, user_id: int):
+    def get_historical_dashboard(
+        self,
+        user_id: int,
+        company_id: int | None = None,
+    ):
+        resolved_company_id = self._resolve_company_id(
+            user_id=user_id,
+            company_id=company_id,
+        )
+
         evaluations = (
             self.db.query(Evaluation)
             .options(
@@ -784,6 +917,7 @@ class EvaluationService:
             )
             .filter(
                 Evaluation.user_id == user_id,
+                Evaluation.company_id == resolved_company_id,
                 Evaluation.status == EvaluationStatus.COMPLETED,
             )
             .order_by(Evaluation.date.asc(), Evaluation.id.asc())

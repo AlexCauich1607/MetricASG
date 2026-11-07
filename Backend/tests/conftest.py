@@ -72,3 +72,9 @@ def client(db_session):
         yield test_client
 
     app.dependency_overrides.clear()
+
+@pytest.fixture
+def independent_db_connections():
+    with engine.connect() as first_connection:
+        with engine.connect() as second_connection:
+            yield first_connection, second_connection

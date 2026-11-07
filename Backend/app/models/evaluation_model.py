@@ -9,6 +9,8 @@ from sqlalchemy import (
     DateTime,
     Float,
     ForeignKey,
+    Index,
+    text,
     Enum as SqlEnum,
 )
 from sqlalchemy.orm import relationship
@@ -21,12 +23,30 @@ class EvaluationStatus(str, PyEnum):
 class Evaluation(Base):
     __tablename__ = "evaluations"
 
+    __table_args__ = (
+        Index(
+            "uq_evaluations_company_user_methodology_draft",
+            "company_id",
+            "user_id",
+            "methodology_id",
+            unique=True,
+            postgresql_where=text("status = 'DRAFT'"),
+        ),
+    )
+
     id = Column(Integer, primary_key=True, autoincrement=True)
 
     user_id = Column(
         Integer,
         ForeignKey("users.id", ondelete="CASCADE"),
         nullable=False
+    )
+
+    company_id = Column(
+        Integer,
+        ForeignKey("companies.id", ondelete="RESTRICT"),
+        nullable=False,
+        index=True,
     )
 
     methodology_id = Column(
@@ -92,3 +112,7 @@ class Evaluation(Base):
         passive_deletes=True,
     )
 
+    company = relationship(
+        "Company",
+        back_populates="evaluations",
+    )

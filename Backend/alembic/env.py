@@ -24,7 +24,9 @@ import app.models.maturity_level_score_range_model
 import app.models.refresh_session_model
 import app.models.user_model
 import app.models.methodology_model
-
+import app.models.company_model
+import app.models.company_membership_model
+from app.models.company_invitation_model import CompanyInvitation
 
 config = context.config
 

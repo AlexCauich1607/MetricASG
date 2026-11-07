@@ -10,6 +10,7 @@ from ..services.token_service import get_current_user
 from app.services.evidence_storage_service import EvidenceStorageService
 from app.controllers.evidence_controller import get_evidence_storage_service
 
+
 class EvaluationResponseRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
     indicator_id: int
@@ -18,9 +19,12 @@ class EvaluationResponseRequest(BaseModel):
 
 class EvaluationSubmitRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
+    company_id: int | None = None
     responses: list[EvaluationResponseRequest]
 
+
 class EvaluationsController(BaseController):
+
     model = Evaluation
     prefix = "evaluations"
     read_only_admin = True
@@ -53,11 +57,13 @@ class EvaluationsController(BaseController):
 
         @self.router.get("/draft")
         def get_draft(
+            company_id: int | None = None,
             current_user: User = Depends(get_current_user),
-            db: Session = Depends(get_db)
+            db: Session = Depends(get_db),
         ):
             return EvaluationService(db).get_draft(
-                current_user.id
+                user_id=current_user.id,
+                company_id=company_id,
             )
 
         @self.router.post("/submit")
@@ -73,11 +79,13 @@ class EvaluationsController(BaseController):
         
         @self.router.get("/results/me")
         def get_latest_results(
+            company_id: int | None = None,
             current_user: User = Depends(get_current_user),
-            db: Session = Depends(get_db)
+            db: Session = Depends(get_db),
         ):
             return EvaluationService(db).get_latest_results(
-                current_user.id
+                user_id=current_user.id,
+                company_id=company_id,
             )
 
         @self.router.get("/{evaluation_id}/results")
@@ -93,26 +101,31 @@ class EvaluationsController(BaseController):
 
         @self.router.get("/history/me")
         def get_history(
+            company_id: int | None = None,
             current_user: User = Depends(get_current_user),
-            db: Session = Depends(get_db)
+            db: Session = Depends(get_db),
         ):
             return EvaluationService(db).get_evaluation_history(
-                current_user.id
+                user_id=current_user.id,
+                company_id=company_id,
             )
 
         @self.router.get("/dashboard/history/me")
         def get_historical_dashboard(
+            company_id: int | None = None,
             current_user: User = Depends(get_current_user),
             db: Session = Depends(get_db),
         ):
             return EvaluationService(db).get_historical_dashboard(
-                current_user.id
+                user_id=current_user.id,
+                company_id=company_id,
             )
 
         @self.router.get("/compare")
         def compare_evaluations(
             evaluation_id_1: int,
             evaluation_id_2: int,
+            company_id: int | None = None,
             current_user: User = Depends(get_current_user),
             db: Session = Depends(get_db),
         ):
@@ -120,8 +133,8 @@ class EvaluationsController(BaseController):
                 evaluation_id_1=evaluation_id_1,
                 evaluation_id_2=evaluation_id_2,
                 user_id=current_user.id,
+                company_id=company_id,
             )
-
 
                 # Register specific GET routes before the inherited dynamic route.
         dynamic_route = next(

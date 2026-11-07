@@ -85,6 +85,7 @@ def test_reconciliation_ignores_referenced_file(
 
     evaluation = Evaluation(
         user_id=user.id,
+        company_id=data["company"].id,
         methodology_id=methodology.id,
         status=EvaluationStatus.DRAFT,
     )

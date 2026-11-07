@@ -14,6 +14,11 @@ from app.models.refresh_session_model import RefreshSession
 
 from app.core.roles import UserRole
 
+from ..models.company_model import Company
+from ..models.company_membership_model import (
+    CompanyMembership,
+    CompanyMembershipStatus,
+)
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
@@ -167,35 +172,52 @@ class AuthService:
             }
         }
 
-    def create_user(self, data: dict, db: Session):
+    def _create_company_account(self, data: dict, db: Session):
         if db.query(User).filter(User.email == data["email"]).first():
             raise HTTPException(400, "Email already registered")
 
-        data["password"] = self.hash_password(data["password"])
-        data["role"] = UserRole.USER.value
-        data["next_evaluation"] = datetime.now()
+        user_data = data.copy()
+        user_data["password"] = self.hash_password(user_data["password"])
+        user_data["role"] = UserRole.USER.value
+        user_data["next_evaluation"] = datetime.now()
 
-        user = User(**data)
-        db.add(user)
-        db.commit()
-        db.refresh(user)
+        try:
+            company = Company(
+                name=user_data["company_name"],
+                sector_id=user_data.get("company_sector_id"),
+                size_id=user_data.get("company_size_id"),
+                active=True,
+            )
 
-        return user
+            db.add(company)
+            db.flush()
+
+            user = User(**user_data)
+            db.add(user)
+            db.flush()
+
+            membership = CompanyMembership(
+                user_id=user.id,
+                company_id=company.id,
+                status=CompanyMembershipStatus.ACTIVE,
+            )
+
+            db.add(membership)
+            db.commit()
+            db.refresh(user)
+
+            return user
+
+        except Exception:
+            db.rollback()
+            raise
+
+    def create_user(self, data: dict, db: Session):
+        return self._create_company_account(data, db)
 
     def create_company(self, data: dict, db: Session):
-        if db.query(User).filter(User.email == data["email"]).first():
-            raise HTTPException(400, "Email already registered")
+        return self._create_company_account(data, db)
 
-        data["password"] = self.hash_password(data["password"])
-        data["role"] = UserRole.USER.value
-        data["next_evaluation"] = datetime.now()
-
-        user = User(**data)
-        db.add(user)
-        db.commit()
-        db.refresh(user)
-
-        return user
 
     def create_admin(self, data: dict, db: Session):
         if db.query(User).filter(User.email == data["email"]).first():

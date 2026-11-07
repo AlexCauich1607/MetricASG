@@ -924,6 +924,7 @@ def test_reject_delete_evidence_from_invalid_evaluation(
 
         other_evaluation = Evaluation(
             user_id=user.id,
+            company_id=data["company"].id,
             methodology_id=other_methodology.id,
             status=EvaluationStatus.DRAFT,
         )
