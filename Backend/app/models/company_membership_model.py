@@ -13,7 +13,7 @@ from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 
 from ..database.database import Base
-
+from ..core.roles import CompanyRole
 
 class CompanyMembershipStatus(str, PyEnum):
     ACTIVE = "ACTIVE"
@@ -41,6 +41,19 @@ class CompanyMembership(Base):
         ForeignKey("companies.id", ondelete="RESTRICT"),
         nullable=False,
         index=True,
+    )
+
+    role = Column(
+        SqlEnum(
+            CompanyRole,
+            name="ck_company_memberships_role",
+            native_enum=False,
+            create_constraint=True,
+            validate_strings=True,
+        ),
+        nullable=False,
+        default=CompanyRole.COLLABORATOR,
+        server_default=CompanyRole.COLLABORATOR.value,
     )
 
     status = Column(

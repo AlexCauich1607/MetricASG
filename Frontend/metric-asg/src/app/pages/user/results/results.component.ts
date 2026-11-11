@@ -1,9 +1,18 @@
-import { firstValueFrom } from 'rxjs';
+import {
+  EMPTY,
+  firstValueFrom,
+  switchMap,
+  tap,
+  catchError,
+  Subscription
+} from 'rxjs';
+import { toObservable, takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import {
   Component,
   ChangeDetectionStrategy,
   ChangeDetectorRef,
   Injector,
+  DestroyRef,
   afterNextRender
 } from '@angular/core';
 import { ResultEvaluation } from '../../../models/evaluation_result';
@@ -20,6 +29,7 @@ import { AsgReportService } from '../../../services/asg-report.service';
 import { AsgReportPaginatorService } from '../../../services/asg-report-paginator.service';
 import { AsgPdfService } from '../../../services/asg-pdf.service';
 import { AsgReportTemplateComponent } from '../../../shared/asg-report-template/asg-report-template.component';
+import { CompanyContextService } from '../../../services/company-context.service';
 
 @Component({
   selector: 'app-results',
@@ -62,6 +72,9 @@ export class ResultsComponent {
   asgReportError: string | null = null;
 
   loadingChart = false;
+  private evidenceRequest?: Subscription;
+  private evidenceDownloadRequest?: Subscription;
+
   constructor(
     private resultService: EvaluationService,
     private evidenceService: EvidenceService,
@@ -70,12 +83,48 @@ export class ResultsComponent {
     private asgReportPaginator: AsgReportPaginatorService,
     private asgPdfService: AsgPdfService,
     private cdr: ChangeDetectorRef,
-    private injector: Injector
-  ) { }
-  chart: any;
-  ngOnInit(): void {
-    this.loadResults();
+    private injector: Injector,
+    private companyContext: CompanyContextService,
+    private destroyRef: DestroyRef
+  ) {
+
+    toObservable(this.companyContext.selectedCompanyId)
+      .pipe(
+        tap(() => {
+          this.evidenceRequest?.unsubscribe();
+          this.evidenceDownloadRequest?.unsubscribe();
+
+          this.clearResultsState();
+
+          this.downloadingEvidenceId = null;
+
+          this.name =
+            this.companyContext.selectedMembership()?.company_name ?? '';
+        }),
+        switchMap(companyId => {
+          if (companyId === null) {
+            return EMPTY;
+          }
+
+          return this.resultService.getLastEvaluationResult().pipe(
+            catchError(error => {
+              console.error('Error al cargar resultados:', error);
+              return EMPTY;
+            })
+          );
+        }),
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe(data => {
+        this.results = data;
+        this.getPeriodo(data.date);
+        this.cargarGrafica();
+        this.loadEvidences(data.evaluation_id);
+      });
+
   }
+  chart: any;
+
 
   openImprovementPlan(): void {
     const evaluationId = this.results?.evaluation_id;
@@ -95,23 +144,28 @@ export class ResultsComponent {
     ]);
   }
 
+
   loadEvidences(evaluationId: number): void {
+    this.evidenceRequest?.unsubscribe();
+
     this.loadingEvidences = true;
     this.evidencesError = false;
     this.evidences = [];
 
-    this.evidenceService.getEvidences(evaluationId).subscribe({
-      next: (evidences) => {
-        this.evidences = evidences;
-        this.loadingEvidences = false;
-      },
-      error: () => {
-        this.evidencesError = true;
-        this.loadingEvidences = false;
-      }
-    });
+    this.evidenceRequest = this.evidenceService
+      .getEvidences(evaluationId)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: evidences => {
+          this.evidences = evidences;
+          this.loadingEvidences = false;
+        },
+        error: () => {
+          this.evidencesError = true;
+          this.loadingEvidences = false;
+        }
+      });
   }
-
 
   downloadEvidence(evidence: EvaluationEvidence): void {
     if (
@@ -127,9 +181,11 @@ export class ResultsComponent {
     this.downloadingEvidenceId = evidence.id;
     this.evidenceDownloadError = null;
 
-    this.evidenceService.downloadEvidence(
+    this.evidenceDownloadRequest = this.evidenceService.downloadEvidence(
       evaluationId,
       evidence.id
+    ).pipe(
+      takeUntilDestroyed(this.destroyRef)
     ).subscribe({
       next: (blob) => {
         this.downloadingEvidenceId = null;
@@ -170,6 +226,32 @@ export class ResultsComponent {
 
   }
 
+  private clearResultsState(): void {
+    this.results = null;
+
+    // Periodos de evaluación
+    this.mesActual = '';
+    this.anioActual = '';
+    this.mesAnterior = '';
+    this.anioAnterior = '';
+
+    // Datos de la gráfica
+    this.ambits = [];
+    this.scores = [];
+    this.colors = [];
+    this.bordes = [];
+    this.loadingChart = false;
+
+    // Evidencias
+    this.evidences = [];
+    this.loadingEvidences = false;
+    this.evidencesError = false;
+    this.evidenceDownloadError = null;
+
+    // Reporte ASG
+    this.asgReport = null;
+    this.asgReportError = null;
+  }
 
   loadResults(): void {
     this.resultService.getLastEvaluationResult().subscribe({
@@ -268,9 +350,11 @@ export class ResultsComponent {
 
   async downloadAsgReport(): Promise<void> {
     const evaluationId = this.results?.evaluation_id;
+    const companyId = this.companyContext.selectedCompanyId();
 
     if (
       evaluationId === undefined ||
+      companyId === null ||
       !Number.isSafeInteger(evaluationId) ||
       evaluationId <= 0 ||
       this.generatingAsgReport
@@ -283,14 +367,33 @@ export class ResultsComponent {
     this.asgReport = null;
 
     try {
+
       const report = await firstValueFrom(
         this.asgReportService.getReport(evaluationId)
       );
 
+      // Verificar que seguimos en la misma empresa y evaluación.
+      if (
+        this.companyContext.selectedCompanyId() !== companyId ||
+        this.results?.evaluation_id !== evaluationId
+      ) {
+        return;
+      }
+
       this.asgReport = report;
 
       await this.waitForReportRender();
+
+      // Verificar nuevamente antes de generar el PDF.
+      if (
+        this.companyContext.selectedCompanyId() !== companyId ||
+        this.results?.evaluation_id !== evaluationId
+      ) {
+        return;
+      }
+
       await this.exportAsgReport();
+
 
     } catch (error) {
       console.error('Error al generar el reporte ASG:', error);

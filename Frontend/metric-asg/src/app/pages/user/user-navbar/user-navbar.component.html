@@ -11,23 +11,102 @@
 
     <div id="mainNavbar" class="collapse navbar-collapse justify-content-end">
       <ul class="navbar-nav fw-bold align-items-center">
-        @if (!first) {
-        <li class="nav-item mx-2 ">
-          <a class="nav-link fw-bold" routerLink="/user/home" routerLinkActive="active">Inicio</a>
+
+        @if (companyContext.loading()) {
+        <li class="nav-item mx-2">
+          <span class="nav-link text-muted">
+            Cargando empresas...
+          </span>
+        </li>
+        } @else if (companyContext.error()) {
+        <li class="nav-item mx-2">
+          <span class="nav-link text-danger">
+            No se pudieron cargar las empresas
+          </span>
+        </li>
+        } @else if (companyContext.memberships().length > 0) {
+        <li class="nav-item mx-2">
+          <label for="selected-company" class="visually-hidden">
+            Empresa seleccionada
+          </label>
+
+
+          <select id="selected-company" class="form-select form-select-sm" aria-label="Empresa seleccionada"
+            [value]="companyContext.selectedCompanyId()" [disabled]="companySelectionLocked"
+            (change)="selectCompany(+$any($event.target).value)">
+
+            @for (
+            membership of companyContext.memberships();
+            track membership.membership_id
+            ) {
+            <option [value]="membership.company_id">
+              {{ membership.company_name }}
+            </option>
+            }
+          </select>
+
+          @if (companyContext.selectedRole()) {
+          <div class="text-muted sw-fs-7 mt-1">
+            <i class="bi bi-shield-check me-1"></i>
+            {{ getCompanyRoleLabel() }}
+          </div>
+          }
+
         </li>
         }
 
-        @if (!first) {
-        <li class="nav-item mx-2">
-          <a class="nav-link fw-bold" routerLink="/user/history" routerLinkActive="active">Historial</a>
-        </li>
-        }
 
         @if (!first) {
         <li class="nav-item mx-2">
-          <a class="nav-link fw-bold" routerLink="/user/feedback" routerLinkActive="active">Retroalimentación</a>
+          <a class="nav-link fw-bold" routerLink="/user/home" routerLinkActive="active">
+            Inicio
+          </a>
+        </li>
+
+        <li class="nav-item mx-2">
+          <a class="nav-link fw-bold" routerLink="/user/evaluation" routerLinkActive="active">
+            Evaluación
+          </a>
+        </li>
+
+        <li class="nav-item mx-2">
+          <a class="nav-link fw-bold" routerLink="/user/results" routerLinkActive="active">
+            Resultados
+          </a>
+        </li>
+
+        <li class="nav-item dropdown mx-2">
+          <button type="button" class="nav-link fw-bold dropdown-toggle border-0 bg-transparent"
+            data-bs-toggle="dropdown" aria-expanded="false">
+            Más
+          </button>
+
+          <ul class="dropdown-menu">
+            <li>
+              <a class="dropdown-item" routerLink="/user/history" routerLinkActive="active">
+                Historial
+              </a>
+            </li>
+
+            <li>
+              <a class="dropdown-item" routerLink="/user/feedback" routerLinkActive="active">
+                Retroalimentación
+              </a>
+            </li>
+          </ul>
         </li>
         }
+
+        @if (!first && canManageMembers) {
+        <li class="nav-item mx-2">
+          <a class="nav-link fw-bold" routerLink="/user/members" routerLinkActive="active">
+            <i class="bi bi-people-fill me-1"></i>
+            Miembros
+          </a>
+        </li>
+        }
+
+
         <!-- Recordatorios de reevaluación -->
         <li class="nav-item dropdown mx-2 notification-dropdown">
           <button type="button" class="nav-link notification-trigger d-flex align-items-center justify-content-center"

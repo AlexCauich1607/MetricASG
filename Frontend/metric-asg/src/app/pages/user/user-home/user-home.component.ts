@@ -1,4 +1,4 @@
-import { Component, ComponentRef, ViewContainerRef, ChangeDetectionStrategy } from '@angular/core';
+import { Component, ComponentRef, ViewContainerRef, ChangeDetectionStrategy, DestroyRef } from '@angular/core';
 import { ResultEvaluation } from '../../../models/evaluation_result';
 import { EvaluationService } from '../../../services/evaluation.service';
 import { Chart, ChartConfiguration, registerables } from 'chart.js';
@@ -9,7 +9,9 @@ import { SessionService } from '../../../shared/class/temporalStorage';
 import { MatDialog } from '@angular/material/dialog';
 import { AmbitCardComponent } from '../../../shared/ambit-card/ambit-card.component';
 import { BarChartComponent } from '../../../shared/bar-chart/bar-chart.component';
-
+import { toObservable, takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { EMPTY, switchMap, tap, catchError } from 'rxjs';
+import { CompanyContextService } from '../../../services/company-context.service';
 
 Chart.register(...registerables);
 
@@ -43,32 +45,89 @@ export class UserHomeComponent {
   user: User | null = null;
 
   loadingChart = false;
-  constructor(private resultService: EvaluationService, private userService: UserService, private router: Router, private dialog: MatDialog, private vcr: ViewContainerRef) {
 
+  constructor(
+    private resultService: EvaluationService,
+    private userService: UserService,
+    private router: Router,
+    private dialog: MatDialog,
+    private vcr: ViewContainerRef,
+    private companyContext: CompanyContextService,
+    private destroyRef: DestroyRef
+  ) {
+    toObservable(this.companyContext.selectedCompanyId)
+      .pipe(
+        tap(() => {
+          this.clearResultsState();
+        }),
+        switchMap(companyId => {
+          if (companyId === null) {
+            return EMPTY;
+          }
+
+          return this.resultService.getLastEvaluationResult().pipe(
+            catchError(error => {
+              console.error('Error al cargar resultados:', error);
+              return EMPTY;
+            })
+          );
+        }),
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe(data => {
+        this.results = data;
+        this.getPeriodo(data.date);
+        this.cargarGrafica();
+      });
   }
+
+  private clearResultsState(): void {
+    this.results = null;
+
+    this.mesActual = '';
+    this.anioActual = '';
+    this.mesAnterior = '';
+    this.anioAnterior = '';
+
+    this.ambits = [];
+    this.scores = [];
+    this.colors = [];
+    this.bordes = [];
+
+    this.loadingChart = false;
+  }
+
   chart: any;
   ngOnInit(): void {
     this.loadUser();
   }
 
+
   loadUser() {
     this.userService.getMe().subscribe({
       next: (value) => {
         this.user = value;
-        if (this.formatDateDDMMYYString(this.user.joined) == this.formatDateDDMMYYString(this.user.next_evaluation)) {
+
+        if (
+          this.formatDateDDMMYYString(this.user.joined) ===
+          this.formatDateDDMMYYString(this.user.next_evaluation)
+        ) {
           SessionService.setSessionItem('first-time', true);
         } else {
           SessionService.setSessionItem('first-time', false);
         }
+
         console.log(this.user.joined);
         console.log(this.user.next_evaluation);
-        this.loadResults();
+
         this.getNextEvaluation();
-      }, error: (err) => {
-        console.log(err)
+      },
+      error: (err) => {
+        console.log(err);
       }
     });
   }
+
   cargarGrafica(): void {
     this.loadingChart = false;
     this.results?.ambits.forEach(a => {

@@ -2,9 +2,13 @@ import {
   Component,
   Input,
   OnChanges,
+  OnDestroy,
   SimpleChanges,
-  signal
+  signal,
+  DestroyRef,
+  inject
 } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 import { HttpErrorResponse } from '@angular/common/http';
 import {
@@ -14,6 +18,7 @@ import {
 import { EventEmitter, Output } from '@angular/core';
 import { EvidenceService } from '../../../services/evidence.service';
 import { EvaluationEvidence } from '../../../models/evaluation_evidence';
+import { Subject, takeUntil } from 'rxjs';
 
 @Component({
   selector: 'app-evaluation-evidences',
@@ -22,7 +27,7 @@ import { EvaluationEvidence } from '../../../models/evaluation_evidence';
   templateUrl: './evaluation-evidences.component.html',
   styleUrl: './evaluation-evidences.component.scss'
 })
-export class EvaluationEvidencesComponent implements OnChanges {
+export class EvaluationEvidencesComponent implements OnChanges, OnDestroy {
   @Input() evaluationId: number | null = null;
   @Input({ required: true }) indicatorId!: number;
   @Input() readonly = false;
@@ -39,6 +44,7 @@ export class EvaluationEvidencesComponent implements OnChanges {
   readonly deleteError = signal<string | null>(null);
 
   private requestVersion = 0;
+  private readonly cancelRequests$ = new Subject<void>();
 
   readonly evidenceType = signal<TextEvidenceType>('COMMENT');
   readonly evidenceContent = signal('');
@@ -56,6 +62,7 @@ export class EvaluationEvidencesComponent implements OnChanges {
 
   readonly maxFileSize = 10 * 1024 * 1024;
 
+  private readonly destroyRef = inject(DestroyRef);
   readonly allowedFileTypes = [
     'application/pdf',
     'image/png',
@@ -135,6 +142,23 @@ export class EvaluationEvidencesComponent implements OnChanges {
     this.selectedFile.set(file);
   }
 
+  private invalidatePendingOperations(): void {
+    // Invalidar las respuestas de solicitudes anteriores.
+    this.requestVersion++;
+
+    // Cancelar las suscripciones HTTP que estén activas.
+    this.cancelRequests$.next();
+
+    // Restablecer los estados de las operaciones.
+    this.saving.set(false);
+    this.uploading.set(false);
+    this.deletingId.set(null);
+    this.downloadingId.set(null);
+
+    // Informar al componente padre que no hay una operación pendiente.
+    this.operationPending.emit(false);
+  }
+
   downloadEvidence(evidence: EvaluationEvidence): void {
     if (
       this.evaluationId === null ||
@@ -154,48 +178,53 @@ export class EvaluationEvidencesComponent implements OnChanges {
     this.evidenceService.downloadEvidence(
       evaluationId,
       evidence.id
-    ).subscribe({
-      next: blob => {
-        if (
-          this.requestVersion !== requestVersion ||
-          this.evaluationId !== evaluationId ||
-          this.indicatorId !== indicatorId
-        ) {
-          return;
+    )
+      .pipe(
+        takeUntil(this.cancelRequests$),
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe({
+        next: blob => {
+          if (
+            this.requestVersion !== requestVersion ||
+            this.evaluationId !== evaluationId ||
+            this.indicatorId !== indicatorId
+          ) {
+            return;
+          }
+
+          this.downloadingId.set(null);
+
+          const objectUrl = URL.createObjectURL(blob);
+          const anchor = document.createElement('a');
+
+          anchor.href = objectUrl;
+          anchor.download =
+            evidence.original_filename || 'evidencia';
+
+          document.body.appendChild(anchor);
+          anchor.click();
+          anchor.remove();
+
+          setTimeout(() => {
+            URL.revokeObjectURL(objectUrl);
+          }, 1000);
+        },
+        error: () => {
+          if (
+            this.requestVersion !== requestVersion ||
+            this.evaluationId !== evaluationId ||
+            this.indicatorId !== indicatorId
+          ) {
+            return;
+          }
+
+          this.downloadingId.set(null);
+          this.downloadError.set(
+            'No se pudo descargar el archivo. Inténtalo nuevamente.'
+          );
         }
-
-        this.downloadingId.set(null);
-
-        const objectUrl = URL.createObjectURL(blob);
-        const anchor = document.createElement('a');
-
-        anchor.href = objectUrl;
-        anchor.download =
-          evidence.original_filename || 'evidencia';
-
-        document.body.appendChild(anchor);
-        anchor.click();
-        anchor.remove();
-
-        setTimeout(() => {
-          URL.revokeObjectURL(objectUrl);
-        }, 1000);
-      },
-      error: () => {
-        if (
-          this.requestVersion !== requestVersion ||
-          this.evaluationId !== evaluationId ||
-          this.indicatorId !== indicatorId
-        ) {
-          return;
-        }
-
-        this.downloadingId.set(null);
-        this.downloadError.set(
-          'No se pudo descargar el archivo. Inténtalo nuevamente.'
-        );
-      }
-    });
+      });
   }
 
   uploadEvidence(): void {
@@ -218,54 +247,60 @@ export class EvaluationEvidencesComponent implements OnChanges {
     this.uploadError.set(null);
     this.operationPending.emit(true);
 
+
     this.evidenceService.uploadEvidence(
       evaluationId,
       indicatorId,
       file
-    ).subscribe({
-      next: evidence => {
-        this.operationPending.emit(false);
+    )
+      .pipe(
+        takeUntil(this.cancelRequests$),
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe({
+        next: evidence => {
+          this.operationPending.emit(false);
 
-        if (
-          this.requestVersion !== requestVersion ||
-          this.evaluationId !== evaluationId ||
-          this.indicatorId !== indicatorId
-        ) {
-          return;
+          if (
+            this.requestVersion !== requestVersion ||
+            this.evaluationId !== evaluationId ||
+            this.indicatorId !== indicatorId
+          ) {
+            return;
+          }
+
+          this.uploading.set(false);
+          this.selectedFile.set(null);
+          this.evidences.update(items => [...items, evidence]);
+        },
+        error: (error: HttpErrorResponse) => {
+          this.operationPending.emit(false);
+
+          if (
+            this.requestVersion !== requestVersion ||
+            this.evaluationId !== evaluationId ||
+            this.indicatorId !== indicatorId
+          ) {
+            return;
+          }
+
+          this.uploading.set(false);
+
+          if (error.status === 409) {
+            this.uploadError.set(
+              'No es posible agregar más evidencias o la evaluación ya está finalizada.'
+            );
+          } else if (error.status === 422 || error.status === 413) {
+            this.uploadError.set(
+              'El archivo no cumple con las restricciones permitidas.'
+            );
+          } else {
+            this.uploadError.set(
+              'No se pudo cargar el archivo. Inténtalo nuevamente.'
+            );
+          }
         }
-
-        this.uploading.set(false);
-        this.selectedFile.set(null);
-        this.evidences.update(items => [...items, evidence]);
-      },
-      error: (error: HttpErrorResponse) => {
-        this.operationPending.emit(false);
-
-        if (
-          this.requestVersion !== requestVersion ||
-          this.evaluationId !== evaluationId ||
-          this.indicatorId !== indicatorId
-        ) {
-          return;
-        }
-
-        this.uploading.set(false);
-
-        if (error.status === 409) {
-          this.uploadError.set(
-            'No es posible agregar más evidencias o la evaluación ya está finalizada.'
-          );
-        } else if (error.status === 422 || error.status === 413) {
-          this.uploadError.set(
-            'El archivo no cumple con las restricciones permitidas.'
-          );
-        } else {
-          this.uploadError.set(
-            'No se pudo cargar el archivo. Inténtalo nuevamente.'
-          );
-        }
-      }
-    });
+      });
   }
 
 
@@ -323,6 +358,10 @@ export class EvaluationEvidencesComponent implements OnChanges {
       evaluationId,
       payload
     )
+      .pipe(
+        takeUntil(this.cancelRequests$),
+        takeUntilDestroyed(this.destroyRef)
+      )
       .subscribe({
         next: evidence => {
           this.operationPending.emit(false);
@@ -393,6 +432,10 @@ export class EvaluationEvidencesComponent implements OnChanges {
       evaluationId,
       evidence.id
     )
+      .pipe(
+        takeUntil(this.cancelRequests$),
+        takeUntilDestroyed(this.destroyRef)
+      )
       .subscribe({
         next: () => {
           this.operationPending.emit(false);
@@ -434,14 +477,44 @@ export class EvaluationEvidencesComponent implements OnChanges {
 
   constructor(private evidenceService: EvidenceService) { }
 
+
+
   ngOnChanges(changes: SimpleChanges): void {
-    if (
+    const evaluationChanged =
       changes['evaluationId'] ||
-      changes['indicatorId']
-    ) {
+      changes['indicatorId'];
+
+    const permissionsRevoked =
+      changes['canEdit'] &&
+      !this.canEdit;
+
+    if (evaluationChanged || permissionsRevoked) {
+      this.invalidatePendingOperations();
+    }
+
+    if (evaluationChanged) {
       this.loadEvidences();
+      return;
+    }
+
+    if (permissionsRevoked) {
+      this.isExpanded.set(false);
+      this.selectedFile.set(null);
+      this.evidenceContent.set('');
+      this.saveError.set(null);
+      this.uploadError.set(null);
     }
   }
+
+
+  ngOnDestroy(): void {
+    // Cancelar las solicitudes pendientes.
+    this.cancelRequests$.next();
+
+    // Liberar el Subject.
+    this.cancelRequests$.complete();
+  }
+
 
   loadEvidences(): void {
     const version = ++this.requestVersion;
@@ -470,23 +543,28 @@ export class EvaluationEvidencesComponent implements OnChanges {
     this.evidenceService.getEvidences(
       this.evaluationId,
       this.indicatorId
-    ).subscribe({
-      next: evidences => {
-        if (version !== this.requestVersion) {
-          return;
-        }
+    )
+      .pipe(
+        takeUntil(this.cancelRequests$),
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe({
+        next: evidences => {
+          if (version !== this.requestVersion) {
+            return;
+          }
 
-        this.evidences.set(evidences);
-        this.loading.set(false);
-      },
-      error: () => {
-        if (version !== this.requestVersion) {
-          return;
-        }
+          this.evidences.set(evidences);
+          this.loading.set(false);
+        },
+        error: () => {
+          if (version !== this.requestVersion) {
+            return;
+          }
 
-        this.loadError.set(true);
-        this.loading.set(false);
-      }
-    });
+          this.loadError.set(true);
+          this.loading.set(false);
+        }
+      });
   }
 }

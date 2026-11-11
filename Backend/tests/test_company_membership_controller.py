@@ -1,4 +1,4 @@
-
+from app.core.roles import CompanyRole
 import pytest
 from datetime import datetime, timezone
 from unittest.mock import MagicMock, patch
@@ -50,6 +50,7 @@ def test_list_company_members_http_success(client):
         lastname="López",
         email=authenticated_user.email,
         position="Analista ASG",
+        role=CompanyRole.ASG_MANAGER,
         status=CompanyMembershipStatus.ACTIVE,
         joined_at=datetime(
             2026, 11, 6, 15, 0, tzinfo=timezone.utc
@@ -94,7 +95,7 @@ def test_list_company_members_http_success(client):
 
         assert "password" not in body[0]
         assert "phone" not in body[0]
-        assert "role" not in body[0]
+        assert body[0]["role"] == "ASG_MANAGER"
 
     finally:
         app.dependency_overrides.pop(

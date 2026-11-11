@@ -1,8 +1,7 @@
 
 from datetime import datetime, timedelta, timezone
 import uuid
-
-from app.core.roles import UserRole
+from app.core.roles import UserRole, CompanyRole
 from app.models.company_model import Company
 from app.models.company_membership_model import (
     CompanyMembership,
@@ -64,6 +63,7 @@ def create_invitation_data(db_session):
     membership = CompanyMembership(
         company_id=company.id,
         user_id=inviter.id,
+        role=CompanyRole.COMPANY_ADMIN,
         status=CompanyMembershipStatus.ACTIVE,
     )
 
@@ -128,6 +128,37 @@ def test_create_invitation_success(db_session):
         == 0
     )
 
+@pytest.mark.parametrize(
+    "role",
+    [
+        CompanyRole.COMPANY_ADMIN,
+        CompanyRole.ASG_MANAGER,
+        CompanyRole.COLLABORATOR,
+        CompanyRole.AUDITOR,
+    ],
+)
+def test_create_invitation_assigns_requested_role(
+    db_session,
+    role,
+):
+    data = create_invitation_data(db_session)
+    service = CompanyInvitationService()
+
+    invitation, token = service.create_invitation(
+        db=db_session,
+        company_id=data["company"].id,
+        invited_by_user_id=data["inviter"].id,
+        email=data["recipient"].email,
+        role=role,
+    )
+
+    assert token
+    assert invitation.role == role
+    assert invitation.status == CompanyInvitationStatus.PENDING
+
+    db_session.refresh(invitation)
+
+    assert invitation.role == role
 
 @pytest.mark.parametrize(
     "scenario, expected_status",
@@ -337,6 +368,7 @@ def test_accept_invitation_creates_active_membership(db_session):
     assert membership.user_id == data["recipient"].id
     assert membership.company_id == data["company"].id
     assert membership.status == CompanyMembershipStatus.ACTIVE
+    assert membership.role == CompanyRole.COLLABORATOR
 
     db_session.refresh(invitation)
 
@@ -381,6 +413,7 @@ def test_accept_invitation_reactivates_inactive_membership(
     existing_membership = CompanyMembership(
         user_id=data["recipient"].id,
         company_id=data["company"].id,
+        role=CompanyRole.ASG_MANAGER,
         status=CompanyMembershipStatus.INACTIVE,
     )
 
@@ -394,6 +427,7 @@ def test_accept_invitation_reactivates_inactive_membership(
         company_id=data["company"].id,
         invited_by_user_id=data["inviter"].id,
         email=data["recipient"].email,
+        role=CompanyRole.AUDITOR,
     )
 
     membership = service.accept_invitation(
@@ -404,6 +438,7 @@ def test_accept_invitation_reactivates_inactive_membership(
 
     assert membership.id == original_membership_id
     assert membership.status == CompanyMembershipStatus.ACTIVE
+    assert membership.role == CompanyRole.AUDITOR
 
     db_session.refresh(invitation)
 
@@ -422,6 +457,46 @@ def test_accept_invitation_reactivates_inactive_membership(
     assert len(memberships) == 1
     assert memberships[0].id == original_membership_id
 
+@pytest.mark.parametrize(
+    "role",
+    [
+        CompanyRole.COMPANY_ADMIN,
+        CompanyRole.ASG_MANAGER,
+        CompanyRole.COLLABORATOR,
+        CompanyRole.AUDITOR,
+    ],
+)
+def test_accept_invitation_assigns_requested_role(
+    db_session,
+    role,
+):
+    data = create_invitation_data(db_session)
+    service = CompanyInvitationService()
+
+    invitation, token = service.create_invitation(
+        db=db_session,
+        company_id=data["company"].id,
+        invited_by_user_id=data["inviter"].id,
+        email=data["recipient"].email,
+        role=role,
+    )
+
+    membership = service.accept_invitation(
+        db=db_session,
+        token=token,
+        current_user_id=data["recipient"].id,
+    )
+
+    assert membership.status == CompanyMembershipStatus.ACTIVE
+    assert membership.role == role
+
+    db_session.refresh(membership)
+    db_session.refresh(invitation)
+
+    assert membership.role == role
+    assert invitation.role == role
+    assert invitation.status == CompanyInvitationStatus.ACCEPTED
+    assert invitation.accepted_at is not None
 
 @pytest.mark.parametrize(
     "scenario, expected_status",
@@ -668,6 +743,7 @@ def test_resend_invitation_rotates_token(db_session):
         company_id=data["company"].id,
         invited_by_user_id=data["inviter"].id,
         email=data["recipient"].email,
+        role=CompanyRole.ASG_MANAGER,
     )
 
     original_id = invitation.id
@@ -693,6 +769,7 @@ def test_resend_invitation_rotates_token(db_session):
     new_token = mock_send.call_args.kwargs["token"]
 
     assert resent_invitation.id == original_id
+    assert resent_invitation.role == CompanyRole.ASG_MANAGER
     assert resent_invitation.status == CompanyInvitationStatus.PENDING
     assert resent_invitation.token_hash != original_hash
     assert resent_invitation.token_hash == service._hash_token(new_token)
@@ -722,6 +799,7 @@ def test_resend_invitation_rotates_token(db_session):
     db_session.refresh(resent_invitation)
 
     assert resent_invitation.status == CompanyInvitationStatus.PENDING
+    assert resent_invitation.role == CompanyRole.ASG_MANAGER
 
 
 @pytest.mark.parametrize(
@@ -1151,3 +1229,92 @@ def test_accept_invitation_handles_membership_integrity_error(
     )
 
     assert membership is None
+
+
+@pytest.mark.parametrize(
+    "role",
+    [
+        CompanyRole.ASG_MANAGER,
+        CompanyRole.COLLABORATOR,
+        CompanyRole.AUDITOR,
+    ],
+)
+def test_create_invitation_rejects_non_admin_roles(
+    db_session,
+    role,
+):
+    data = create_invitation_data(db_session)
+
+    membership = (
+        db_session.query(CompanyMembership)
+        .filter(
+            CompanyMembership.user_id == data["inviter"].id,
+            CompanyMembership.company_id == data["company"].id,
+        )
+        .one()
+    )
+
+    membership.role = role
+    db_session.flush()
+
+    service = CompanyInvitationService()
+
+    with pytest.raises(HTTPException) as exc:
+        service.create_invitation(
+            db=db_session,
+            company_id=data["company"].id,
+            invited_by_user_id=data["inviter"].id,
+            email=data["recipient"].email,
+        )
+
+    assert exc.value.status_code == 403
+    assert exc.value.detail == "Insufficient company permissions"
+
+
+@pytest.mark.parametrize(
+    "role",
+    [
+        CompanyRole.ASG_MANAGER,
+        CompanyRole.COLLABORATOR,
+        CompanyRole.AUDITOR,
+    ],
+)
+def test_resend_invitation_rejects_non_admin_roles(
+    db_session,
+    role,
+):
+    data = create_invitation_data(db_session)
+    service = CompanyInvitationService()
+
+    invitation, _ = service.create_invitation(
+        db=db_session,
+        company_id=data["company"].id,
+        invited_by_user_id=data["inviter"].id,
+        email=data["recipient"].email,
+    )
+
+    membership = (
+        db_session.query(CompanyMembership)
+        .filter(
+            CompanyMembership.user_id == data["inviter"].id,
+            CompanyMembership.company_id == data["company"].id,
+        )
+        .one()
+    )
+
+    membership.role = role
+    db_session.flush()
+
+    with patch.object(
+        CompanyInvitationEmailService,
+        "ensure_available",
+    ):
+        with pytest.raises(HTTPException) as exc:
+            service.resend_invitation(
+                db=db_session,
+                invitation_id=invitation.id,
+                requested_by_user_id=data["inviter"].id,
+            )
+
+    assert exc.value.status_code == 403
+    assert exc.value.detail == "Insufficient company permissions"

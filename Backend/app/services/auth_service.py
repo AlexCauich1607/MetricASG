@@ -12,7 +12,7 @@ from app.models.user_model import User
 
 from app.models.refresh_session_model import RefreshSession
 
-from app.core.roles import UserRole
+from app.core.roles import UserRole, CompanyRole
 
 from ..models.company_model import Company
 from ..models.company_membership_model import (
@@ -199,6 +199,7 @@ class AuthService:
             membership = CompanyMembership(
                 user_id=user.id,
                 company_id=company.id,
+                role=CompanyRole.COMPANY_ADMIN,
                 status=CompanyMembershipStatus.ACTIVE,
             )
 

@@ -3,6 +3,8 @@ import hashlib
 import secrets
 from datetime import datetime, timedelta, timezone
 
+from app.core.roles import CompanyRole
+
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
 
@@ -20,6 +22,8 @@ from sqlalchemy.exc import IntegrityError
 from app.services.company_invitation_email_service import (
     CompanyInvitationEmailService,
 )
+from app.core.roles import CompanyRole
+from app.core.company_permissions import require_company_role
 
 class CompanyInvitationService:
     INVITATION_EXPIRATION_DAYS = 7
@@ -67,22 +71,12 @@ class CompanyInvitationService:
                 detail="Company not found or inactive",
             )
 
-        inviter_membership = (
-            db.query(CompanyMembership)
-            .filter(
-                CompanyMembership.user_id == invited_by_user_id,
-                CompanyMembership.company_id == company_id,
-                CompanyMembership.status
-                == CompanyMembershipStatus.ACTIVE,
-            )
-            .first()
+        require_company_role(
+            db,
+            inviter,
+            company_id,
+            CompanyRole.COMPANY_ADMIN,
         )
-
-        if not inviter_membership:
-            raise HTTPException(
-                status_code=403,
-                detail="Active company membership required",
-            )
 
         recipient = (
             db.query(User)
@@ -166,6 +160,7 @@ class CompanyInvitationService:
         company_id: int,
         invited_by_user_id: int,
         email: str,
+        role: CompanyRole = CompanyRole.COLLABORATOR,
     ) -> tuple[CompanyInvitation, str]:
         normalized_email = self._normalize_email(email)
 
@@ -182,6 +177,7 @@ class CompanyInvitationService:
             company_id=company_id,
             invited_by_user_id=invited_by_user_id,
             email=normalized_email,
+            role=role,
             token_hash=self._hash_token(token),
             status=CompanyInvitationStatus.PENDING,
             expires_at=(
@@ -233,6 +229,7 @@ class CompanyInvitationService:
         company_id: int,
         invited_by_user_id: int,
         email: str,
+        role: CompanyRole = CompanyRole.COLLABORATOR,
     ) -> CompanyInvitation:
         email_service = CompanyInvitationEmailService()
 
@@ -243,6 +240,7 @@ class CompanyInvitationService:
             company_id=company_id,
             invited_by_user_id=invited_by_user_id,
             email=email,
+            role=role,
         )
 
         company = db.get(Company, company_id)
@@ -447,11 +445,13 @@ class CompanyInvitationService:
                     )
 
                 membership.status = CompanyMembershipStatus.ACTIVE
+                membership.role = invitation.role
 
             else:
                 membership = CompanyMembership(
                     user_id=user.id,
                     company_id=company.id,
+                    role=invitation.role,
                     status=CompanyMembershipStatus.ACTIVE,
                 )
 

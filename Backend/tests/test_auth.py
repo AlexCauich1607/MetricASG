@@ -4,7 +4,7 @@ from app.core.config import settings
 from app.models.refresh_session_model import RefreshSession
 from app.models.user_model import User
 from app.services.auth_service import AuthService
-from app.core.roles import UserRole
+from app.core.roles import UserRole, CompanyRole
 from app.models.company_model import Company
 from app.models.company_membership_model import (
     CompanyMembership,
@@ -290,6 +290,7 @@ def test_register_creates_company_and_active_membership(client, db_session):
     assert user.role == UserRole.USER.value
     assert company.active is True
     assert membership.status == CompanyMembershipStatus.ACTIVE
+    assert membership.role == CompanyRole.COMPANY_ADMIN
     assert user.company_name == company.name
 
 
@@ -335,6 +336,7 @@ def test_register_company_creates_active_membership(client, db_session):
     assert user.role == UserRole.USER.value
     assert company.active is True
     assert membership.status == CompanyMembershipStatus.ACTIVE
+    assert membership.role == CompanyRole.COMPANY_ADMIN
     assert user.company_name == company.name
 
 def test_register_company_rolls_back_on_commit_failure(db_session):

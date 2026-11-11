@@ -1,4 +1,4 @@
-
+import { CompanyRole } from '../../../models/company_membership';
 import {
   Component,
   ChangeDetectionStrategy,
@@ -18,7 +18,7 @@ import { SessionService } from '../../../shared/class/temporalStorage';
 import { SidebarComponent } from '../../modals/settings/sidebar/sidebar.component';
 import { AuthService } from '../../../services/auth.service';
 import { NotificationService } from '../../../services/notification.service';
-
+import { CompanyContextService } from '../../../services/company-context.service';
 import {
   ReevaluationNotification,
   ReminderType
@@ -49,11 +49,34 @@ export class UserNavbarComponent implements OnInit {
     private router: Router,
     private dialog: MatDialog,
     private authService: AuthService,
-    private notificationService: NotificationService
-  ) {}
+    private notificationService: NotificationService,
+    public companyContext: CompanyContextService
+  ) { }
 
   ngOnInit(): void {
     this.loadNotifications();
+    this.companyContext.loadMemberships();
+  }
+  get canManageMembers(): boolean {
+    return this.companyContext.selectedRole() === CompanyRole.COMPANY_ADMIN;
+  }
+  getCompanyRoleLabel(): string {
+    switch (this.companyContext.selectedRole()) {
+      case CompanyRole.COMPANY_ADMIN:
+        return 'Administrador empresarial';
+
+      case CompanyRole.ASG_MANAGER:
+        return 'Responsable ASG';
+
+      case CompanyRole.COLLABORATOR:
+        return 'Colaborador';
+
+      case CompanyRole.AUDITOR:
+        return 'Auditor';
+
+      default:
+        return '';
+    }
   }
 
   loadNotifications(): void {
@@ -124,10 +147,16 @@ export class UserNavbarComponent implements OnInit {
         })
       )
       .subscribe({
-        error: () => {}
+        error: () => { }
       });
   }
+  selectCompany(companyId: number): void {
+    if (this.companySelectionLocked) {
+      return;
+    }
 
+    this.companyContext.selectCompany(companyId);
+  }
   getImage(): string {
     return 'data:image/jpeg;base64,' + this.photo;
   }
@@ -142,5 +171,9 @@ export class UserNavbarComponent implements OnInit {
     );
 
     dialogRef.afterClosed().subscribe();
+  }
+
+  get companySelectionLocked(): boolean {
+    return this.router.url.split('?')[0].split('#')[0] === '/user/evaluation';
   }
 }

@@ -27,6 +27,8 @@ from ..models.company_membership_model import (
     CompanyMembership,
     CompanyMembershipStatus,
 )
+from app.core.company_permissions import require_company_role
+from app.core.roles import CompanyRole
 
 class EvaluationService:
 
@@ -157,6 +159,15 @@ class EvaluationService:
         company_id = self._resolve_company_id(
             user_id=user_id,
             company_id=payload.get("company_id"),
+        )
+
+        require_company_role(
+            self.db,
+            user,
+            company_id,
+            CompanyRole.COMPANY_ADMIN,
+            CompanyRole.ASG_MANAGER,
+            CompanyRole.COLLABORATOR,
         )
 
         methodology = MethodologyService(self.db).get_active()
@@ -353,6 +364,15 @@ class EvaluationService:
             company_id=company_id,
         )
 
+        require_company_role(
+            self.db,
+            user,
+            company_id,
+            CompanyRole.COMPANY_ADMIN,
+            CompanyRole.ASG_MANAGER,
+            CompanyRole.COLLABORATOR,
+        )
+
         methodology = MethodologyService(self.db).get_active()
 
         evaluation = (
@@ -399,6 +419,14 @@ class EvaluationService:
         company_id = self._resolve_company_id(
             user_id=user_id,
             company_id=payload.get("company_id"),
+        )
+
+        require_company_role(
+            self.db,
+            user,
+            company_id,
+            CompanyRole.COMPANY_ADMIN,
+            CompanyRole.ASG_MANAGER,
         )
 
         methodology = MethodologyService(self.db).get_active()

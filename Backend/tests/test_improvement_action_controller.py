@@ -14,6 +14,9 @@ from app.models.improvement_action_model import (
     ImprovementAction,
     ImprovementStatus,
 )
+from app.core.roles import CompanyRole
+from app.models.company_membership_model import CompanyMembershipStatus
+
 def test_create_improvement_action_http(client, db_session):
     data = create_evidence_data(db_session)
 
@@ -124,6 +127,7 @@ def test_update_and_delete_improvement_action_http(client, db_session):
     user = data["user"]
 
     evaluation.status = EvaluationStatus.COMPLETED
+    data["membership"].role = CompanyRole.COMPANY_ADMIN
     db_session.flush()
 
     app.dependency_overrides[get_current_user] = lambda: user
@@ -908,3 +912,306 @@ def test_improvement_progress_requires_authentication(client):
     )
 
     assert response.status_code == 401
+
+@pytest.mark.parametrize(
+    "role, expected_status",
+    [
+        (CompanyRole.COMPANY_ADMIN, 201),
+        (CompanyRole.ASG_MANAGER, 201),
+        (CompanyRole.COLLABORATOR, 403),
+        (CompanyRole.AUDITOR, 403),
+    ],
+)
+def test_create_improvement_action_enforces_company_roles(
+    client,
+    db_session,
+    role,
+    expected_status,
+):
+    data = create_evidence_data(db_session)
+
+    evaluation = data["evaluation"]
+    user = data["user"]
+
+    evaluation.status = EvaluationStatus.COMPLETED
+    data["membership"].role = role
+    db_session.flush()
+
+    app.dependency_overrides[get_current_user] = lambda: user
+
+    response = client.post(
+        f"/api/evaluations/{evaluation.id}/improvement-actions",
+        json={
+            "gap_description": "Consumo energético elevado",
+            "description": "Implementar iluminación LED",
+            "priority": "HIGH",
+            "responsible": "Operaciones",
+            "target_date": "2026-12-15",
+        },
+    )
+
+    assert response.status_code == expected_status, response.text
+
+    actions = (
+        db_session.query(ImprovementAction)
+        .filter(
+            ImprovementAction.evaluation_id == evaluation.id,
+        )
+        .all()
+    )
+
+    if expected_status == 201:
+        assert len(actions) == 1
+        assert actions[0].description == "Implementar iluminación LED"
+        assert response.json()["id"] == actions[0].id
+
+    else:
+        assert response.json()["detail"] == (
+            "Insufficient company permissions"
+        )
+        assert actions == []
+
+
+@pytest.mark.parametrize(
+    "role, membership_active, expected_status",
+    [
+        (CompanyRole.COMPANY_ADMIN, True, 200),
+        (CompanyRole.ASG_MANAGER, True, 200),
+        (CompanyRole.COLLABORATOR, True, 200),
+        (CompanyRole.AUDITOR, True, 200),
+        (CompanyRole.COMPANY_ADMIN, False, 403),
+        (CompanyRole.ASG_MANAGER, False, 403),
+        (CompanyRole.COLLABORATOR, False, 403),
+        (CompanyRole.AUDITOR, False, 403),
+    ],
+)
+def test_list_improvement_actions_enforces_membership(
+    client,
+    db_session,
+    role,
+    membership_active,
+    expected_status,
+):
+    data = create_evidence_data(db_session)
+
+    evaluation = data["evaluation"]
+    user = data["user"]
+
+    evaluation.status = EvaluationStatus.COMPLETED
+
+    data["membership"].role = role
+    data["membership"].status = (
+        CompanyMembershipStatus.ACTIVE
+        if membership_active
+        else CompanyMembershipStatus.INACTIVE
+    )
+
+    db_session.flush()
+
+    app.dependency_overrides[get_current_user] = lambda: user
+
+    response = client.get(
+        f"/api/evaluations/{evaluation.id}/improvement-actions"
+    )
+
+    assert response.status_code == expected_status, response.text
+
+    if expected_status == 200:
+        assert response.json() == []
+    else:
+        assert response.json()["detail"] == (
+            "Active company membership required"
+        )
+
+
+@pytest.mark.parametrize(
+    "role, expected_status",
+    [
+        (CompanyRole.COMPANY_ADMIN, 200),
+        (CompanyRole.ASG_MANAGER, 200),
+        (CompanyRole.COLLABORATOR, 403),
+        (CompanyRole.AUDITOR, 403),
+    ],
+)
+def test_update_improvement_action_enforces_company_roles(
+    client,
+    db_session,
+    role,
+    expected_status,
+):
+    from datetime import date
+
+    data = create_evidence_data(db_session)
+
+    evaluation = data["evaluation"]
+    user = data["user"]
+
+    evaluation.status = EvaluationStatus.COMPLETED
+    data["membership"].role = role
+
+    action = ImprovementAction(
+        evaluation_id=evaluation.id,
+        indicator_id=None,
+        gap_description="Consumo energético elevado",
+        description="Implementar iluminación LED",
+        priority="HIGH",
+        responsible="Operaciones",
+        target_date=date(2026, 12, 15),
+    )
+
+    db_session.add(action)
+    db_session.commit()
+
+    action_id = action.id
+
+    app.dependency_overrides[get_current_user] = lambda: user
+
+    response = client.patch(
+        f"/api/evaluations/{evaluation.id}/improvement-actions/{action.id}",
+        json={
+            "description": "Optimizar iluminación LED",
+        },
+    )
+
+    assert response.status_code == expected_status, response.text
+
+    db_session.expire_all()
+    action = db_session.get(ImprovementAction, action_id)
+
+    assert action is not None
+
+    if expected_status == 200:
+        assert action.description == "Optimizar iluminación LED"
+        assert response.json()["description"] == (
+            "Optimizar iluminación LED"
+        )
+    else:
+        assert response.json()["detail"] == (
+            "Insufficient company permissions"
+        )
+        assert action.description == "Implementar iluminación LED"
+
+
+@pytest.mark.parametrize(
+    "role, expected_status",
+    [
+        (CompanyRole.COMPANY_ADMIN, 204),
+        (CompanyRole.ASG_MANAGER, 403),
+        (CompanyRole.COLLABORATOR, 403),
+        (CompanyRole.AUDITOR, 403),
+    ],
+)
+def test_delete_improvement_action_enforces_company_roles(
+    client,
+    db_session,
+    role,
+    expected_status,
+):
+    from datetime import date
+
+    data = create_evidence_data(db_session)
+
+    evaluation = data["evaluation"]
+    user = data["user"]
+
+    evaluation.status = EvaluationStatus.COMPLETED
+    data["membership"].role = role
+
+    action = ImprovementAction(
+        evaluation_id=evaluation.id,
+        indicator_id=None,
+        gap_description="Consumo energético elevado",
+        description="Implementar iluminación LED",
+        priority="HIGH",
+        responsible="Operaciones",
+        target_date=date(2026, 12, 15),
+    )
+
+    db_session.add(action)
+    db_session.commit()
+
+    action_id = action.id
+
+    app.dependency_overrides[get_current_user] = lambda: user
+
+    response = client.delete(
+        f"/api/evaluations/{evaluation.id}/improvement-actions/{action_id}"
+    )
+
+    assert response.status_code == expected_status, response.text
+
+    db_session.expire_all()
+    saved_action = db_session.get(ImprovementAction, action_id)
+
+    if expected_status == 204:
+        assert response.content == b""
+        assert saved_action is None
+
+    else:
+        assert response.json()["detail"] == (
+            "Insufficient company permissions"
+        )
+        assert saved_action is not None
+        assert saved_action.description == "Implementar iluminación LED"
+
+
+@pytest.mark.parametrize(
+    "role",
+    [
+        CompanyRole.COMPANY_ADMIN,
+        CompanyRole.ASG_MANAGER,
+        CompanyRole.COLLABORATOR,
+        CompanyRole.AUDITOR,
+    ],
+)
+def test_improvement_action_reads_require_active_membership(
+    client,
+    db_session,
+    role,
+):
+    from datetime import date
+
+    data = create_evidence_data(db_session)
+
+    evaluation = data["evaluation"]
+    user = data["user"]
+
+    evaluation.status = EvaluationStatus.COMPLETED
+    data["membership"].role = role
+
+    action = ImprovementAction(
+        evaluation_id=evaluation.id,
+        indicator_id=None,
+        gap_description="Consumo energético elevado",
+        description="Implementar iluminación LED",
+        priority="HIGH",
+        responsible="Operaciones",
+        target_date=date(2026, 12, 15),
+    )
+
+    db_session.add(action)
+    db_session.commit()
+
+    action_id = action.id
+
+    app.dependency_overrides[get_current_user] = lambda: user
+
+    base = f"/api/evaluations/{evaluation.id}/improvement-actions"
+
+    # La membresía activa permite consultar.
+    detail_response = client.get(f"{base}/{action_id}")
+    assert detail_response.status_code == 200, detail_response.text
+
+    progress_response = client.get(f"{base}/progress")
+    assert progress_response.status_code == 200, progress_response.text
+
+    # Desactivar la membresía.
+    data["membership"].status = CompanyMembershipStatus.INACTIVE
+    db_session.commit()
+
+    # La membresía inactiva debe impedir ambas consultas.
+    detail_response = client.get(f"{base}/{action_id}")
+    assert detail_response.status_code == 403, detail_response.text
+
+    progress_response = client.get(f"{base}/progress")
+    assert progress_response.status_code == 403, progress_response.text

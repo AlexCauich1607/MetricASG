@@ -6,11 +6,12 @@ from pydantic import BaseModel, ConfigDict, EmailStr, Field
 from app.models.company_invitation_model import (
     CompanyInvitationStatus,
 )
-
+from app.core.roles import CompanyRole
 
 class CompanyInvitationCreate(BaseModel):
     company_id: int = Field(gt=0)
     email: EmailStr
+    role: CompanyRole = CompanyRole.COLLABORATOR
 
 
 class CompanyInvitationAccept(BaseModel):
@@ -24,6 +25,7 @@ class CompanyInvitationResponse(BaseModel):
     company_id: int
     invited_by_user_id: int
     email: EmailStr
+    role: CompanyRole
     status: CompanyInvitationStatus
     expires_at: datetime
     created_at: datetime

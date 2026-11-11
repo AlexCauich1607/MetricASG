@@ -767,4 +767,202 @@ describe('EvaluationEvidencesComponent', () => {
         expect(component.isExpanded()).toBeFalse();
     });
 
+    it('should clear the evidence form after losing edit permissions', () => {
+        // Simular un formulario abierto con datos pendientes.
+        component.canEdit = true;
+        component.isExpanded.set(true);
+        component.evidenceContent.set('Evidencia pendiente');
+        component.selectedFile.set(
+            new File(['contenido'], 'evidencia.pdf', {
+                type: 'application/pdf'
+            })
+        );
+
+        component.saveError.set('Error de prueba');
+        component.uploadError.set('Error de archivo');
+
+        // El usuario pierde permisos de edición.
+        component.canEdit = false;
+
+        component.ngOnChanges({
+            canEdit: {
+                previousValue: true,
+                currentValue: false,
+                firstChange: false,
+                isFirstChange: () => false
+            }
+        });
+
+        expect(component.isExpanded()).toBeFalse();
+        expect(component.evidenceContent()).toBe('');
+        expect(component.selectedFile()).toBeNull();
+
+        expect(component.saveError()).toBeNull();
+        expect(component.uploadError()).toBeNull();
+    });
+
+    it('should cancel pending evidence creation when edit permissions are revoked', () => {
+        const pendingCreate = new Subject<EvaluationEvidence>();
+
+        const createSpy = TestBed.inject(EvidenceService)
+            .createEvidence as jasmine.Spy;
+
+        createSpy.calls.reset();
+        createSpy.and.returnValue(pendingCreate.asObservable());
+
+        const pendingEvents: boolean[] = [];
+
+        component.operationPending.subscribe(pending => {
+            pendingEvents.push(pending);
+        });
+
+        // Preparar un formulario con permisos de edición.
+        fixture.componentRef.setInput('evaluationId', 10);
+        fixture.detectChanges();
+        component.indicatorId = 1;
+        component.canEdit = true;
+        component.readonly = false;
+        component.loading.set(false);
+        component.loadError.set(false);
+
+        component.evidenceType.set('COMMENT');
+        component.evidenceContent.set('Evidencia de prueba');
+        const evidencesBeforeCreate = [...component.evidences()];
+        // Iniciar la creación de la evidencia.
+        component.createEvidence();
+
+        expect(createSpy).toHaveBeenCalledTimes(1);
+        expect(pendingCreate.observed).toBeTrue();
+        expect(component.saving()).toBeTrue();
+        expect(pendingEvents).toEqual([true]);
+
+        // El usuario pierde permisos mientras la solicitud está pendiente.
+        component.canEdit = false;
+
+        component.ngOnChanges({
+            canEdit: {
+                previousValue: true,
+                currentValue: false,
+                firstChange: false,
+                isFirstChange: () => false
+            }
+        });
+
+        // La operación debe cancelarse.
+        expect(pendingCreate.observed).toBeFalse();
+        expect(component.saving()).toBeFalse();
+        expect(component.evidenceContent()).toBe('');
+        expect(component.isExpanded()).toBeFalse();
+
+        // El componente padre debe desbloquear la navegación.
+        expect(pendingEvents).toEqual([true, false]);
+
+        // Una respuesta tardía no debe agregar evidencias.
+        pendingCreate.next({
+            id: 99
+        } as EvaluationEvidence);
+
+        pendingCreate.complete();
+
+        expect(component.evidences()).toEqual(evidencesBeforeCreate);
+    });
+
+    it('should cancel pending evidence upload when evaluation changes', () => {
+        const pendingUpload = new Subject<EvaluationEvidence>();
+
+        const uploadSpy = TestBed.inject(EvidenceService)
+            .uploadEvidence as jasmine.Spy;
+
+        uploadSpy.calls.reset();
+        uploadSpy.and.returnValue(pendingUpload.asObservable());
+
+        const pendingEvents: boolean[] = [];
+
+        component.operationPending.subscribe(pending => {
+            pendingEvents.push(pending);
+        });
+
+        // Preparar una evaluación con permisos de edición.
+        component.evaluationId = 10;
+        component.indicatorId = 1;
+        component.canEdit = true;
+        component.readonly = false;
+        component.loading.set(false);
+        component.loadError.set(false);
+
+        component.selectedFile.set(
+            new File(['contenido'], 'evidencia.pdf', {
+                type: 'application/pdf'
+            })
+        );
+
+        // Iniciar la subida.
+        component.uploadEvidence();
+
+        expect(uploadSpy).toHaveBeenCalledTimes(1);
+        expect(pendingUpload.observed).toBeTrue();
+        expect(component.uploading()).toBeTrue();
+        expect(pendingEvents).toEqual([true]);
+
+        // Cambiar de evaluación mientras el archivo se está subiendo.
+        fixture.componentRef.setInput('evaluationId', 20);
+        fixture.detectChanges();
+
+        // La suscripción anterior debe cancelarse.
+        expect(pendingUpload.observed).toBeFalse();
+        expect(component.uploading()).toBeFalse();
+        expect(component.selectedFile()).toBeNull();
+
+        // El componente padre debe desbloquearse.
+        expect(pendingEvents).toEqual([true, false]);
+
+        // Registrar las evidencias actuales de la nueva evaluación.
+        const evidencesAfterChange = [...component.evidences()];
+
+        // Simular una respuesta tardía del servidor.
+        pendingUpload.next({
+            id: 99
+        } as EvaluationEvidence);
+
+        pendingUpload.complete();
+
+        // La respuesta anterior no debe modificar las evidencias actuales.
+        expect(component.evidences()).toEqual(evidencesAfterChange);
+    });
+
+    it('should cancel pending evidence loading when component is destroyed', () => {
+        const pendingLoad = new Subject<EvaluationEvidence[]>();
+
+        const getEvidencesSpy = TestBed.inject(EvidenceService)
+            .getEvidences as jasmine.Spy;
+
+        getEvidencesSpy.calls.reset();
+        getEvidencesSpy.and.returnValue(pendingLoad.asObservable());
+
+        // Iniciar la carga de evidencias.
+        fixture.componentRef.setInput('evaluationId', 10);
+        fixture.componentRef.setInput('indicatorId', 1);
+        fixture.detectChanges();
+
+        expect(getEvidencesSpy).toHaveBeenCalled();
+        expect(pendingLoad.observed).toBeTrue();
+        expect(component.loading()).toBeTrue();
+
+        const evidencesBeforeDestroy = [...component.evidences()];
+
+        // Destruir el componente con la solicitud pendiente.
+        fixture.destroy();
+
+        expect(pendingLoad.observed).toBeFalse();
+
+        // Simular una respuesta tardía.
+        pendingLoad.next([
+            { id: 99 } as EvaluationEvidence
+        ]);
+        pendingLoad.complete();
+
+        // La respuesta no debe modificar las evidencias.
+        expect(component.evidences()).toEqual(evidencesBeforeDestroy);
+    });
+
 });

@@ -19,6 +19,7 @@ from app.services.company_invitation_service import (
     CompanyInvitationService,
 )
 from fastapi import HTTPException
+from app.core.roles import CompanyRole
 
 @pytest.mark.parametrize(
     "endpoint, payload",
@@ -71,6 +72,7 @@ def test_create_company_invitation_http_success(client):
         invited_by_user_id=authenticated_user.id,
         email=f"recipient-{unique_id}@example.com",
         token_hash="a" * 64,
+        role=CompanyRole.ASG_MANAGER,
         status=CompanyInvitationStatus.PENDING,
         created_at=now,
         expires_at=now + timedelta(days=7),
@@ -95,6 +97,7 @@ def test_create_company_invitation_http_success(client):
                 json={
                     "company_id": 10,
                     "email": invitation.email,
+                    "role": "ASG_MANAGER",
                 },
             )
 
@@ -120,6 +123,8 @@ def test_create_company_invitation_http_success(client):
 
         assert "token" not in body
         assert "token_hash" not in body
+        assert mock_create.call_args.kwargs["role"] == CompanyRole.ASG_MANAGER
+        assert body["role"] == "ASG_MANAGER"
 
     finally:
         app.dependency_overrides.pop(
@@ -208,6 +213,7 @@ def test_resend_company_invitation_http_success(client):
         invited_by_user_id=authenticated_user.id,
         email=f"recipient-{unique_id}@example.com",
         token_hash="b" * 64,
+        role=CompanyRole.AUDITOR,
         status=CompanyInvitationStatus.PENDING,
         created_at=now,
         expires_at=now + timedelta(days=7),
@@ -253,6 +259,7 @@ def test_resend_company_invitation_http_success(client):
 
         assert "token" not in body
         assert "token_hash" not in body
+        assert body["role"] == "AUDITOR"
 
     finally:
         app.dependency_overrides.pop(

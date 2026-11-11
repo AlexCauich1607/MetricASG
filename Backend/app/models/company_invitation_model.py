@@ -1,6 +1,6 @@
 
 from enum import Enum as PyEnum
-
+from ..core.roles import CompanyRole
 from sqlalchemy import (
     Column,
     DateTime,
@@ -50,6 +50,20 @@ class CompanyInvitation(Base):
         String(255),
         nullable=False,
         index=True,
+    )
+
+    role = Column(
+        SqlEnum(
+            CompanyRole,
+            name="ck_company_invitations_role",
+            native_enum=False,
+            create_constraint=True,
+            validate_strings=True,
+            length=50,
+        ),
+        nullable=False,
+        default=CompanyRole.COLLABORATOR,
+        server_default=CompanyRole.COLLABORATOR.value,
     )
 
     token_hash = Column(

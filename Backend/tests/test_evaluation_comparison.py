@@ -18,6 +18,7 @@ from app.models.company_membership_model import (
     CompanyMembership,
     CompanyMembershipStatus,
 )
+from app.core.roles import CompanyRole
 
 @pytest.fixture
 def comparison_data(db_session):
@@ -564,6 +565,7 @@ def test_get_comparison_rejects_evaluations_from_different_companies(
         CompanyMembership(
             user_id=data["user"].id,
             company_id=other_company.id,
+            role=CompanyRole.ASG_MANAGER,
             status=CompanyMembershipStatus.ACTIVE,
         )
     )

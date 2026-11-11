@@ -7,18 +7,28 @@ import {
   HttpTestingController,
   provideHttpClientTesting
 } from '@angular/common/http/testing';
-
+import { signal } from '@angular/core';
+import { CompanyContextService } from './company-context.service';
 import { EvaluationService } from './evaluation.service';
 
 describe('EvaluationService', () => {
   let service: EvaluationService;
   let httpTestingController: HttpTestingController;
+  let selectedCompanyId = signal<number | null>(3);
 
   beforeEach(() => {
+    selectedCompanyId = signal<number | null>(3);
+
     TestBed.configureTestingModule({
       providers: [
         provideHttpClient(withXhr()),
-        provideHttpClientTesting()
+        provideHttpClientTesting(),
+        {
+          provide: CompanyContextService,
+          useValue: {
+            selectedCompanyId
+          }
+        }
       ]
     });
 
@@ -67,7 +77,10 @@ describe('EvaluationService', () => {
     );
 
     expect(request.request.method).toBe('POST');
-    expect(request.request.body).toEqual(payload);
+    expect(request.request.body).toEqual({
+      ...payload,
+      company_id: 3
+    });
 
     request.flush({ success: true });
   });
@@ -95,7 +108,10 @@ describe('EvaluationService', () => {
     );
 
     expect(request.request.method).toBe('POST');
-    expect(request.request.body).toEqual(payload);
+    expect(request.request.body).toEqual({
+      ...payload,
+      company_id: 3
+    });
 
     request.flush({ success: true });
   });
@@ -107,7 +123,9 @@ describe('EvaluationService', () => {
     });
 
     const request = httpTestingController.expectOne(
-      `http://localhost:8000/api/evaluations/results/me`
+      req =>
+        req.url === 'http://localhost:8000/api/evaluations/results/me' &&
+        req.params.get('company_id') === '3'
     );
 
     expect(request.request.method).toBe('GET');
@@ -122,7 +140,9 @@ describe('EvaluationService', () => {
     });
 
     const request = httpTestingController.expectOne(
-      `http://localhost:8000/api/evaluations/history/me`
+      req =>
+        req.url === 'http://localhost:8000/api/evaluations/history/me' &&
+        req.params.get('company_id') === '3'
     );
 
     expect(request.request.method).toBe('GET');
@@ -183,6 +203,10 @@ describe('EvaluationService', () => {
       request.request.params.get('evaluation_id_2')
     ).toBe('15');
 
+    expect(
+      request.request.params.get('company_id')
+    ).toBe('3');
+
     request.flush(mockResponse);
   });
   it('should get evaluation results by ID', () => {
@@ -222,4 +246,128 @@ describe('EvaluationService', () => {
 
     request.flush(mockResponse);
   });
+
+  it('should use the newly selected company when submitting', () => {
+    const payload = {
+      responses: [
+        {
+          indicator_id: 1,
+          indicator_answer_id: 2
+        }
+      ]
+    };
+
+    selectedCompanyId.set(7);
+
+    service.submitEvaluation(payload).subscribe();
+
+    const request = httpTestingController.expectOne(
+      'http://localhost:8000/api/evaluations/submit'
+    );
+
+    expect(request.request.method).toBe('POST');
+
+    expect(request.request.body).toEqual({
+      ...payload,
+      company_id: 7
+    });
+
+    request.flush({ success: true });
+  });
+
+  it('should reject evaluation writes without a selected company', () => {
+    const payload = {
+      responses: [
+        {
+          indicator_id: 1,
+          indicator_answer_id: 2
+        }
+      ]
+    };
+
+    selectedCompanyId.set(null);
+
+    let errors = 0;
+
+    service.saveDraft(payload).subscribe({
+      next: () => fail('Draft should not be saved'),
+      error: error => {
+        expect(error.message).toBe('No hay una empresa seleccionada.');
+        errors++;
+      }
+    });
+
+    service.submitEvaluation(payload).subscribe({
+      next: () => fail('Evaluation should not be submitted'),
+      error: error => {
+        expect(error.message).toBe('No hay una empresa seleccionada.');
+        errors++;
+      }
+    });
+
+    expect(errors).toBe(2);
+
+    httpTestingController.expectNone(
+      'http://localhost:8000/api/evaluations/draft'
+    );
+
+    httpTestingController.expectNone(
+      'http://localhost:8000/api/evaluations/submit'
+    );
+  });
+
+  it('should get the draft for the selected company', () => {
+    selectedCompanyId.set(3);
+
+    service.getDraft().subscribe(response => {
+      expect(response).toBeNull();
+    });
+
+    const request = httpTestingController.expectOne(
+      req =>
+        req.url === 'http://localhost:8000/api/evaluations/draft' &&
+        req.params.get('company_id') === '3'
+    );
+
+    expect(request.request.method).toBe('GET');
+
+    request.flush(null);
+  });
+
+  it('should reject draft queries without a selected company', () => {
+    selectedCompanyId.set(null);
+
+    service.getDraft().subscribe({
+      next: () => fail('Draft query should not succeed'),
+      error: error => {
+        expect(error.message).toBe(
+          'No hay una empresa seleccionada.'
+        );
+      }
+    });
+
+    httpTestingController.expectNone(
+      'http://localhost:8000/api/evaluations/draft'
+    );
+  });
+
+  it('should get the historical dashboard for the selected company', () => {
+    selectedCompanyId.set(3);
+
+    service.getHistoricalDashboard().subscribe(response => {
+      expect(response).toBeTruthy();
+    });
+
+    const request = httpTestingController.expectOne(
+      req =>
+        req.url ===
+        'http://localhost:8000/api/evaluations/dashboard/history/me' &&
+        req.params.get('company_id') === '3'
+    );
+
+    expect(request.request.method).toBe('GET');
+
+    request.flush({});
+  });
+
 });

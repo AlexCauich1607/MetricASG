@@ -1,4 +1,14 @@
-import { Component, ChangeDetectionStrategy } from '@angular/core';
+import {
+  Component,
+  ChangeDetectionStrategy,
+  DestroyRef
+} from '@angular/core';
+import { Subscription } from 'rxjs';
+import {
+  toObservable,
+  takeUntilDestroyed
+} from '@angular/core/rxjs-interop';
+import { CompanyContextService } from '../../../services/company-context.service';
 import { EvaluationService } from '../../../services/evaluation.service';
 import { EvaluationHistory } from '../../../models/history_evaluations';
 import { DatePipe } from '@angular/common';
@@ -30,7 +40,8 @@ export class HistoryComponent {
   improvementEvaluationId: number | null = null;
   dashboard: EvaluationDashboard | null = null;
   latestEvaluation: EvaluationDashboard['history'][number] | null = null;
-
+  private historyRequest?: Subscription;
+  private dashboardRequest?: Subscription;
   globalTrend: HistoricalDashboardChart = {
     labels: [],
     datasets: []
@@ -42,45 +53,97 @@ export class HistoryComponent {
     chart: HistoricalDashboardChart;
   }[] = [];
 
+
   constructor(
     private historyService: EvaluationService,
-    private router: Router
-  ) { }
+    private router: Router,
+    private companyContext: CompanyContextService,
+    private destroyRef: DestroyRef
+  ) {
+    toObservable(this.companyContext.selectedCompanyId)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(companyId => {
+        // Cancelar solicitudes de la empresa anterior.
+        this.historyRequest?.unsubscribe();
+        this.dashboardRequest?.unsubscribe();
+
+        // Limpiar el historial, las gráficas y las selecciones.
+        this.clearHistoryState();
+
+        if (companyId === null) {
+          return;
+        }
+
+        // Consultar los datos de la empresa seleccionada.
+        this.loadHistory();
+        this.loadHistoricalDashboard();
+      });
+  }
+
   ngOnInit(): void {
     this.loadHistory();
     this.loadHistoricalDashboard();
   }
+
+  private clearHistoryState(): void {
+    // Historial de evaluaciones
+    this.historial = null;
+
+    // Evaluaciones seleccionadas
+    this.evaluationId1 = null;
+    this.evaluationId2 = null;
+    this.improvementEvaluationId = null;
+
+    // Dashboard histórico
+    this.dashboard = null;
+    this.latestEvaluation = null;
+
+    // Gráfica global
+    this.globalTrend = {
+      labels: [],
+      datasets: []
+    };
+
+    // Gráficas por ámbito
+    this.ambitTrends = [];
+  }
+
   loadHistoricalDashboard(): void {
-    this.historyService.getHistoricalDashboard().subscribe({
-      next: (dashboard) => {
-        this.dashboard = dashboard;
-        this.latestEvaluation =
-          dashboard.history.at(-1) ?? null;
-        this.globalTrend = buildHistoricalChart(dashboard);
+    this.dashboardRequest?.unsubscribe();
 
-        const ambits = new Map<number, string>();
+    this.dashboardRequest = this.historyService
+      .getHistoricalDashboard()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (dashboard) => {
+          this.dashboard = dashboard;
+          this.latestEvaluation =
+            dashboard.history.at(-1) ?? null;
+          this.globalTrend = buildHistoricalChart(dashboard);
 
-        dashboard.history.forEach(evaluation => {
-          evaluation.ambits.forEach(ambit => {
-            if (!ambits.has(ambit.ambit_id)) {
-              ambits.set(
-                ambit.ambit_id,
-                ambit.ambit_name ?? `Ámbito ${ambit.ambit_id}`
-              );
-            }
+          const ambits = new Map<number, string>();
+
+          dashboard.history.forEach(evaluation => {
+            evaluation.ambits.forEach(ambit => {
+              if (!ambits.has(ambit.ambit_id)) {
+                ambits.set(
+                  ambit.ambit_id,
+                  ambit.ambit_name ?? `Ámbito ${ambit.ambit_id}`
+                );
+              }
+            });
           });
-        });
 
-        this.ambitTrends = Array.from(ambits, ([id, name]) => ({
-          id,
-          name,
-          chart: buildHistoricalChart(dashboard, id)
-        }));
-      },
-      error: (error) => {
-        console.error('Error al cargar el dashboard histórico', error);
-      }
-    });
+          this.ambitTrends = Array.from(ambits, ([id, name]) => ({
+            id,
+            name,
+            chart: buildHistoricalChart(dashboard, id)
+          }));
+        },
+        error: (error) => {
+          console.error('Error al cargar el dashboard histórico', error);
+        }
+      });
   }
   getLetter(id: number): string {
     return this.historial?.averages?.ambits.find(
@@ -93,14 +156,19 @@ export class HistoryComponent {
     )?.ambit_color ?? '';
   }
   loadHistory(): void {
-    this.historyService.getEvaluationHistory().subscribe({
-      next: (value) => {
-        this.historial = value;
-      },
-      error: (error) => {
-        console.error('Error al cargar el historial', error);
-      }
-    });
+    this.historyRequest?.unsubscribe();
+
+    this.historyRequest = this.historyService
+      .getEvaluationHistory()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (value) => {
+          this.historial = value;
+        },
+        error: (error) => {
+          console.error('Error al cargar el historial', error);
+        }
+      });
   }
 
   get hasComparableTrend(): boolean {
