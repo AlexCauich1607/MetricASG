@@ -9,7 +9,7 @@ from sqlalchemy.exc import OperationalError, IntegrityError
 
 from app.main import app
 from app.services.token_service import get_current_user
-from app.core.roles import UserRole
+from app.core.roles import UserRole, CompanyRole
 from app.models.ambit_model import Ambit
 from app.models.evaluation_ambit_score_model import EvaluationAmbitScore
 from app.models.evaluation_indicator_response_model import (
@@ -184,6 +184,7 @@ def create_evaluation_data(db_session):
     membership = CompanyMembership(
         user_id=user.id,
         company_id=company.id,
+        role=CompanyRole.ASG_MANAGER,
         status=CompanyMembershipStatus.ACTIVE,
     )
 
@@ -2080,6 +2081,7 @@ def test_get_latest_results_isolated_by_company(db_session):
     other_membership = CompanyMembership(
         user_id=data["user"].id,
         company_id=other_company.id,
+        role=CompanyRole.ASG_MANAGER,
         status=CompanyMembershipStatus.ACTIVE,
     )
 
@@ -2191,6 +2193,7 @@ def test_get_evaluation_history_isolated_by_company(db_session):
         CompanyMembership(
             user_id=data["user"].id,
             company_id=other_company.id,
+            role=CompanyRole.ASG_MANAGER,
             status=CompanyMembershipStatus.ACTIVE,
         )
     )
@@ -2324,6 +2327,7 @@ def test_get_historical_dashboard_isolated_by_company(db_session):
         CompanyMembership(
             user_id=data["user"].id,
             company_id=other_company.id,
+            role=CompanyRole.ASG_MANAGER,
             status=CompanyMembershipStatus.ACTIVE,
         )
     )
@@ -2372,3 +2376,178 @@ def test_get_historical_dashboard_isolated_by_company(db_session):
             ambit["delta"] is None
             for ambit in evaluation["ambits"]
         )
+
+
+@pytest.mark.parametrize(
+    "role, allowed",
+    [
+        (CompanyRole.COMPANY_ADMIN, True),
+        (CompanyRole.ASG_MANAGER, True),
+        (CompanyRole.COLLABORATOR, True),
+        (CompanyRole.AUDITOR, False),
+    ],
+)
+def test_save_draft_enforces_company_roles(
+    db_session,
+    role,
+    allowed,
+):
+    data = create_evaluation_data(db_session)
+
+    data["membership"].role = role
+    db_session.flush()
+
+    service = EvaluationService(db_session)
+
+    payload = {
+        "responses": build_responses(data)[:2],
+    }
+
+    if allowed:
+        result = service.save_draft(
+            payload,
+            data["user"].id,
+        )
+
+        evaluation = db_session.get(
+            Evaluation,
+            result["evaluation_id"],
+        )
+
+        assert evaluation is not None
+        assert evaluation.status == EvaluationStatus.DRAFT
+        assert evaluation.user_id == data["user"].id
+        assert evaluation.company_id == data["company"].id
+
+    else:
+        with pytest.raises(HTTPException) as exc:
+            service.save_draft(
+                payload,
+                data["user"].id,
+            )
+
+        assert exc.value.status_code == 403
+        assert exc.value.detail == (
+            "Insufficient company permissions"
+        )
+
+        evaluations = (
+            db_session.query(Evaluation)
+            .filter(
+                Evaluation.user_id == data["user"].id,
+                Evaluation.company_id == data["company"].id,
+            )
+            .all()
+        )
+
+        assert evaluations == []
+
+
+@pytest.mark.parametrize(
+    "role, allowed",
+    [
+        (CompanyRole.COMPANY_ADMIN, True),
+        (CompanyRole.ASG_MANAGER, True),
+        (CompanyRole.COLLABORATOR, True),
+        (CompanyRole.AUDITOR, False),
+    ],
+)
+def test_get_draft_enforces_company_roles(
+    db_session,
+    role,
+    allowed,
+):
+    data = create_evaluation_data(db_session)
+
+    data["membership"].role = role
+    db_session.flush()
+
+    service = EvaluationService(db_session)
+
+    if allowed:
+        result = service.get_draft(
+            user_id=data["user"].id,
+            company_id=data["company"].id,
+        )
+
+        # No existe un borrador: la consulta debe estar
+        # autorizada y devolver None.
+        assert result is None
+
+    else:
+        with pytest.raises(HTTPException) as exc:
+            service.get_draft(
+                user_id=data["user"].id,
+                company_id=data["company"].id,
+            )
+
+        assert exc.value.status_code == 403
+        assert exc.value.detail == (
+            "Insufficient company permissions"
+        )
+
+
+@pytest.mark.parametrize(
+    "role, allowed",
+    [
+        (CompanyRole.COMPANY_ADMIN, True),
+        (CompanyRole.ASG_MANAGER, True),
+        (CompanyRole.COLLABORATOR, False),
+        (CompanyRole.AUDITOR, False),
+    ],
+)
+def test_submit_evaluation_enforces_company_roles(
+    db_session,
+    role,
+    allowed,
+):
+    data = create_evaluation_data(db_session)
+
+    data["membership"].role = role
+    db_session.flush()
+
+    service = EvaluationService(db_session)
+
+    payload = {
+        "company_id": data["company"].id,
+        "responses": build_responses(data),
+    }
+
+    if allowed:
+        result = service.submit_evaluation(
+            payload,
+            data["user"].id,
+        )
+
+        evaluation = db_session.get(
+            Evaluation,
+            result["evaluation_id"],
+        )
+
+        assert evaluation is not None
+        assert evaluation.status == EvaluationStatus.COMPLETED
+        assert evaluation.user_id == data["user"].id
+        assert evaluation.company_id == data["company"].id
+
+    else:
+        with pytest.raises(HTTPException) as exc:
+            service.submit_evaluation(
+                payload,
+                data["user"].id,
+            )
+
+        assert exc.value.status_code == 403
+        assert exc.value.detail == (
+            "Insufficient company permissions"
+        )
+
+        evaluations = (
+            db_session.query(Evaluation)
+            .filter(
+                Evaluation.user_id == data["user"].id,
+                Evaluation.company_id == data["company"].id,
+            )
+            .all()
+        )
+
+        assert evaluations == []

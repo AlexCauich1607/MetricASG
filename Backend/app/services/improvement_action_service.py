@@ -1,4 +1,6 @@
-
+from app.core.company_permissions import require_company_role
+from app.core.roles import CompanyRole
+from app.models.user_model import User
 from fastapi import HTTPException, status
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
@@ -44,6 +46,21 @@ class ImprovementActionService:
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Evaluation not found",
             )
+
+        user = self.db.get(User, user_id)
+
+        if user is None:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Active company membership required",
+            )
+
+        require_company_role(
+            self.db,
+            user,
+            evaluation.company_id,
+            *list(CompanyRole),
+        )
 
         return evaluation
 
@@ -119,6 +136,21 @@ class ImprovementActionService:
                     status_code=status.HTTP_404_NOT_FOUND,
                     detail="Evaluation not found",
                 )
+            user = self.db.get(User, user_id)
+
+            if user is None:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Active company membership required",
+                )
+
+            require_company_role(
+                self.db,
+                user,
+                evaluation.company_id,
+                CompanyRole.COMPANY_ADMIN,
+                CompanyRole.ASG_MANAGER,
+            )
 
             self.validate_evaluation_completed(evaluation)
 
@@ -228,6 +260,22 @@ class ImprovementActionService:
                     detail="Evaluation not found",
                 )
 
+            user = self.db.get(User, user_id)
+
+            if user is None:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Active company membership required",
+                )
+
+            require_company_role(
+                self.db,
+                user,
+                evaluation.company_id,
+                CompanyRole.COMPANY_ADMIN,
+                CompanyRole.ASG_MANAGER,
+            )
+
             self.validate_evaluation_completed(evaluation)
 
             action = (
@@ -316,6 +364,21 @@ class ImprovementActionService:
                     status_code=status.HTTP_404_NOT_FOUND,
                     detail="Evaluation not found",
                 )
+
+            user = self.db.get(User, user_id)
+
+            if user is None:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Active company membership required",
+                )
+
+            require_company_role(
+                self.db,
+                user,
+                evaluation.company_id,
+                CompanyRole.COMPANY_ADMIN,
+            )
 
             action = (
                 self.db.query(ImprovementAction)

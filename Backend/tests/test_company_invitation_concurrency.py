@@ -9,7 +9,7 @@ import uuid
 
 from sqlalchemy.orm import Session
 
-from app.core.roles import UserRole
+from app.core.roles import CompanyRole, UserRole
 from app.models.company_model import Company
 from app.models.company_membership_model import (
     CompanyMembership,
@@ -206,6 +206,7 @@ def concurrent_invitation_data(independent_db_connections):
             CompanyMembership(
                 company_id=company_id,
                 user_id=inviter_id,
+                role=CompanyRole.COMPANY_ADMIN,
                 status=CompanyMembershipStatus.ACTIVE,
             )
         )

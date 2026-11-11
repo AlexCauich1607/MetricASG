@@ -1,7 +1,17 @@
-import { Component, ChangeDetectionStrategy } from '@angular/core';
+
+import {
+  Component,
+  ChangeDetectionStrategy,
+  DestroyRef,
+  effect,
+  inject
+} from '@angular/core';
+import { toObservable, takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { EMPTY, switchMap, catchError, tap } from 'rxjs';
+
 import { ResultEvaluation } from '../../../models/evaluation_result';
 import { EvaluationService } from '../../../services/evaluation.service';
-import { SessionService } from '../../../shared/class/temporalStorage';
+import { CompanyContextService } from '../../../services/company-context.service';
 import { FeedbackComponent as FeedbackCardComponent } from '../../../shared/feedback/feedback.component';
 
 @Component({
@@ -14,25 +24,36 @@ import { FeedbackComponent as FeedbackCardComponent } from '../../../shared/feed
   changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './feedback.component.scss'
 })
-
 export class FeedbackComponent {
-  id : number = SessionService.getSessionItem('id') ?? 0;
+  private readonly evaluationService = inject(EvaluationService);
+  private readonly companyContext = inject(CompanyContextService);
+  private readonly destroyRef = inject(DestroyRef);
+
   results: ResultEvaluation | null = null;
-  constructor(private evaluationService: EvaluationService) {
 
-  }
-  ngOnInit(): void {
-    this.loadFeedbacks();
-  }
+  constructor() {
+    toObservable(this.companyContext.selectedCompanyId)
+      .pipe(
+        tap(() => {
+          this.results = null;
+        }),
+        switchMap(companyId => {
+          if (companyId === null) {
+            return EMPTY;
+          }
 
-  loadFeedbacks() {
-    this.evaluationService.getLastEvaluationResult().subscribe({
-      next: (value) => {
-        this.results = value;
-      }, error: (err) => {
-        console.log(err);
-      }
-    });
+          return this.evaluationService.getLastEvaluationResult()
+            .pipe(
+              catchError(error => {
+                console.error(error);
+                return EMPTY;
+              })
+            );
+        }),
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe(results => {
+        this.results = results;
+      });
   }
-
 }

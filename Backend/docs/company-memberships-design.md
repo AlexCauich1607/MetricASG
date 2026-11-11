@@ -188,3 +188,63 @@ HU-039: definir y aplicar roles empresariales específicos.
 
 Este documento define el diseño objetivo y no acredita que las nuevas
 entidades, migraciones o controles ya estén implementados.
+
+## 11. Roles empresariales — HU-039
+
+Los roles empresariales se representan mediante CompanyRole
+y se almacenan en CompanyMembership.role.
+
+Roles disponibles:
+
+- COMPANY_ADMIN: administrador empresarial.
+- ASG_MANAGER: responsable ASG.
+- COLLABORATOR: colaborador.
+- AUDITOR: auditor o consultor.
+
+Los roles empresariales son independientes de UserRole,
+que continúa representando los permisos globales del sistema.
+
+Una misma persona puede tener roles diferentes en distintas empresas.
+
+### Asignación inicial
+
+- El registro de una nueva empresa asigna COMPANY_ADMIN
+  a la membresía del usuario fundador.
+- La aceptación de una invitación crea una membresía con
+  COLLABORATOR.
+- La reactivación de una membresía conserva su rol anterior.
+- Una membresía INACTIVE no debe conceder acceso organizacional.
+
+### Migración de membresías existentes
+
+La migración df7e2c07f1c0 incorpora el campo role y asigna
+COLLABORATOR a las membresías existentes como valor inicial
+conservador.
+
+La migración no identifica automáticamente a los fundadores
+ni concede privilegios administrativos a todas las membresías.
+
+Antes de habilitar autorización empresarial basada en roles,
+cada organización existente deberá contar con una asignación
+administrativa verificada.
+
+La inicialización debe realizarse mediante un procedimiento
+controlado que identifique explícitamente la empresa, el
+usuario y la membresía correspondiente.
+
+No deben utilizarse identificadores fijos ni inferir la
+administración únicamente a partir de fechas de creación,
+orden de inserción o cantidad de miembros.
+
+La asignación inicial realizada en la base de desarrollo
+es específica de ese entorno y no forma parte de la
+migración general.
+
+### Autorización
+
+La definición de permisos por rol corresponde a HU-039-T02.
+
+La aplicación de esos permisos en el backend corresponde
+a HU-039-T03.
+
+La interfaz deberá adaptarse posteriormente en HU-039-T04.

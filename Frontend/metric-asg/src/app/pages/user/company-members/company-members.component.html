@@ -1,0 +1,166 @@
+<section class="container py-5">
+    <h2 class="text-my-purple fw-bold mb-2">
+        <i class="bi bi-people-fill me-2"></i>
+        Miembros de la empresa
+    </h2>
+
+    <p class="sw-gris mb-4">
+        Administra los integrantes de la organización seleccionada.
+    </p>
+
+    @if (companyContext.selectedMembership(); as membership) {
+    @if (membership.role !== 'COMPANY_ADMIN') {
+    <div class="alert alert-warning" role="alert">
+        <i class="bi bi-shield-lock me-2"></i>
+        No tienes permisos para administrar los miembros de esta empresa.
+    </div>
+    } @else {
+
+    <div class="card shadow-sm mb-4">
+        <div class="card-body">
+            <h3 class="h5 fw-bold text-my-purple mb-3">
+                <i class="bi bi-person-plus-fill me-2"></i>
+                Invitar miembro
+            </h3>
+
+            <p class="sw-gris">
+                Invita a un usuario registrado para que forme parte
+                de la empresa seleccionada.
+            </p>
+
+            @if (invitationSuccess()) {
+            <div class="alert alert-success" role="status">
+                <i class="bi bi-check-circle me-2"></i>
+                La invitación se envió correctamente.
+            </div>
+            }
+
+            @if (invitationErrorMessage(); as message) {
+            <div class="alert alert-danger" role="alert">
+                <i class="bi bi-exclamation-circle me-2"></i>
+                {{ message }}
+            </div>
+            }
+
+            <form (submit)="$event.preventDefault(); sendInvitation()">
+                <div class="row g-3 align-items-end">
+                    <div class="col-12 col-lg-5">
+                        <label for="invitationEmail" class="form-label">
+                            Correo electrónico
+                        </label>
+
+                        <input id="invitationEmail" type="email" class="form-control" placeholder="usuario@ejemplo.com"
+                            autocomplete="email" required [value]="invitationEmail()" [disabled]="sendingInvitation()"
+                            (input)="invitationEmail.set($any($event.target).value)" />
+                    </div>
+
+                    <div class="col-12 col-lg-4">
+                        <label for="invitationRole" class="form-label">
+                            Rol empresarial
+                        </label>
+
+                        <select id="invitationRole" class="form-select" [value]="invitationRole()"
+                            [disabled]="sendingInvitation()" (change)="invitationRole.set($any($event.target).value)">
+                            <option value="COMPANY_ADMIN">Administrador</option>
+                            <option value="ASG_MANAGER">Responsable ASG</option>
+                            <option value="COLLABORATOR">Colaborador</option>
+                            <option value="AUDITOR">Auditor</option>
+                        </select>
+                    </div>
+
+                    <div class="col-12 col-lg-3">
+                        <button type="submit" class="btn btn-my-purple w-100"
+                            [disabled]="sendingInvitation() || !invitationEmail().trim()">
+                            @if (sendingInvitation()) {
+                            <span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>
+                            Enviando...
+                            } @else {
+                            <i class="bi bi-send me-2"></i>
+                            Enviar invitación
+                            }
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+    @if (loading()) {
+    <div class="text-center py-5" role="status">
+        <span class="spinner-border text-my-purple" aria-hidden="true">
+        </span>
+        <p class="mt-3">Cargando miembros...</p>
+    </div>
+    } @else if (error()) {
+    <div class="alert alert-danger" role="alert">
+        No fue posible recuperar los miembros de la empresa.
+    </div>
+
+    <button type="button" class="btn btn-outline-danger mt-2" (click)="retryLoadMembers()">
+        <i class="bi bi-arrow-clockwise me-2"></i>
+        Reintentar
+    </button>
+
+    } @else if (members().length === 0) {
+    <div class="alert alert-secondary">
+        No hay miembros disponibles para mostrar.
+    </div>
+    } @else {
+
+
+    @if (removeError()) {
+    <div class="alert alert-danger" role="alert">
+        <i class="bi bi-exclamation-circle me-2"></i>
+        {{ removeErrorMessage() }}
+    </div>
+    }
+
+
+    <div class="table-responsive">
+        <table class="table table-hover align-middle">
+            <thead>
+                <tr>
+                    <th>Nombre</th>
+                    <th>Correo electrónico</th>
+                    <th>Cargo</th>
+                    <th>Rol empresarial</th>
+                    <th>Estado</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                @for (member of members(); track member.membership_id) {
+                <tr>
+                    <td>
+                        {{ member.name }} {{ member.lastname }}
+                    </td>
+                    <td>{{ member.email }}</td>
+                    <td>{{ member.position || 'No especificado' }}</td>
+                    <td>{{ member.role }}</td>
+                    <td>{{ member.status }}</td>
+
+                    <td>
+                        <button type="button" class="btn btn-sm btn-outline-danger"
+                            [disabled]="removingMemberId() !== null" (click)="removeMember(member)"
+                            [attr.aria-label]="'Eliminar a ' + member.email">
+                            @if (removingMemberId() === member.membership_id) {
+                            <span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>
+                            Eliminando...
+                            } @else {
+                            <i class="bi bi-trash me-1"></i>
+                            Eliminar
+                            }
+                        </button>
+                    </td>
+
+                </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+    }
+    }} @else {
+    <div class="alert alert-warning">
+        Selecciona una empresa para consultar sus integrantes.
+    </div>
+    }
+</section>

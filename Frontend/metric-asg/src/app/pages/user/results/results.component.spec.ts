@@ -1,3 +1,6 @@
+import { signal, computed } from '@angular/core';
+import { CompanyContextService } from '../../../services/company-context.service';
+import { CompanyRole, UserCompanyMembership } from '../../../models/company_membership';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { of, Subject, throwError } from 'rxjs';
 import { EvidenceService } from '../../../services/evidence.service';
@@ -19,6 +22,11 @@ describe('ResultsComponent', () => {
   let asgReportServiceSpy: jasmine.SpyObj<AsgReportService>;
   let asgReportPaginatorSpy: jasmine.SpyObj<AsgReportPaginatorService>;
   let asgPdfServiceSpy: jasmine.SpyObj<AsgPdfService>;
+  let selectedCompanyId: ReturnType<typeof signal<number | null>>;
+  let companyContextMock: {
+    selectedCompanyId: typeof selectedCompanyId;
+    selectedMembership: () => UserCompanyMembership | null;
+  };
 
   const mockResults: ResultEvaluation = {
     evaluation_id: 1,
@@ -102,6 +110,29 @@ describe('ResultsComponent', () => {
       ['generatePdf']
     );
     evidenceServiceSpy.getEvidences.and.returnValue(of([]));
+    evaluationServiceSpy.getLastEvaluationResult.and.returnValue(
+      of(mockResults)
+    );
+
+    selectedCompanyId = signal<number | null>(3);
+
+    const membership: UserCompanyMembership = {
+      membership_id: 1,
+      company_id: 3,
+      company_name: 'Empresa A',
+      role: CompanyRole.COMPANY_ADMIN,
+      joined_at: '2026-11-09T10:00:00'
+    };
+
+    companyContextMock = {
+      selectedCompanyId,
+      selectedMembership: computed(() =>
+        selectedCompanyId() === membership.company_id
+          ? membership
+          : null
+      )
+    };
+
 
     await TestBed.configureTestingModule({
       imports: [
@@ -128,7 +159,11 @@ describe('ResultsComponent', () => {
         {
           provide: AsgPdfService,
           useValue: asgPdfServiceSpy
-        }
+        },
+        {
+          provide: CompanyContextService,
+          useValue: companyContextMock
+        },
       ]
 
     }).compileComponents();
@@ -333,6 +368,7 @@ describe('ResultsComponent', () => {
       of(mockEvidences)
     );
 
+    TestBed.flushEffects();
     fixture.detectChanges();
 
     const element: HTMLElement = fixture.nativeElement;
@@ -367,6 +403,7 @@ describe('ResultsComponent', () => {
       of(mockEvidences)
     );
 
+    TestBed.flushEffects();
     fixture.detectChanges();
 
     const element: HTMLElement = fixture.nativeElement;
@@ -404,6 +441,7 @@ describe('ResultsComponent', () => {
       of([fileEvidence])
     );
 
+    TestBed.flushEffects();
     fixture.detectChanges();
 
     const element: HTMLElement = fixture.nativeElement;
@@ -798,6 +836,136 @@ describe('ResultsComponent', () => {
     expect(component.asgReportError).toBe(
       'No se pudo generar el reporte ASG. Inténtalo nuevamente.'
     );
+  });
+
+  it('should ignore pending evidence from the previous company', () => {
+    const pendingEvidence = new Subject<EvaluationEvidence[]>();
+
+    const companyBResults: ResultEvaluation = {
+      ...mockResults,
+      evaluation_id: 2,
+      date: '2026-10-20T12:00:00'
+    };
+
+    const companyBEvidences: EvaluationEvidence[] = [
+      {
+        ...mockEvidences[0],
+        id: 10,
+        evaluation_id: 2,
+        content: 'Evidencia de Empresa B'
+      }
+    ];
+
+    evaluationServiceSpy.getLastEvaluationResult.and.returnValues(
+      of(mockResults),
+      of(companyBResults)
+    );
+
+    evidenceServiceSpy.getEvidences.and.returnValues(
+      pendingEvidence.asObservable(),
+      of(companyBEvidences)
+    );
+
+    // Empresa A
+    fixture.detectChanges();
+    TestBed.flushEffects();
+    fixture.detectChanges();
+
+    expect(component.results?.evaluation_id).toBe(1);
+    expect(component.loadingEvidences).toBeTrue();
+
+    // Cambiar a Empresa B
+    selectedCompanyId.set(7);
+
+    fixture.detectChanges();
+    TestBed.flushEffects();
+    fixture.detectChanges();
+
+    expect(component.results?.evaluation_id).toBe(2);
+    expect(component.evidences).toEqual(companyBEvidences);
+
+    // Simular una respuesta tardía de Empresa A
+    pendingEvidence.next(mockEvidences);
+
+    expect(component.evidences).toEqual(companyBEvidences);
+    expect(component.loadingEvidences).toBeFalse();
+
+    expect(
+      evidenceServiceSpy.getEvidences
+    ).toHaveBeenCalledTimes(2);
+  });
+
+  it('should cancel a pending evidence download when switching companies', () => {
+    const pendingDownload = new Subject<Blob>();
+
+    const fileEvidence: EvaluationEvidence = {
+      ...mockEvidences[0],
+      id: 3,
+      type: 'FILE',
+      content: null,
+      original_filename: 'evidencia.pdf',
+      mime_type: 'application/pdf',
+      file_size: 2048
+    };
+
+    evidenceServiceSpy.downloadEvidence.and.returnValue(
+      pendingDownload.asObservable()
+    );
+
+    component.results = mockResults;
+
+    component.downloadEvidence(fileEvidence);
+
+    expect(component.downloadingEvidenceId).toBe(3);
+    expect(pendingDownload.observed).toBeTrue();
+
+    selectedCompanyId.set(7);
+
+    fixture.detectChanges();
+    TestBed.flushEffects();
+    fixture.detectChanges();
+
+    expect(pendingDownload.observed).toBeFalse();
+    expect(component.downloadingEvidenceId).toBeNull();
+  });
+
+  it('should not export an ASG report after switching companies', async () => {
+    const pendingReport = new Subject<AsgReport>();
+
+    asgReportServiceSpy.getReport.and.returnValue(
+      pendingReport.asObservable()
+    );
+
+    component.results = mockResults;
+
+    // Comenzar la generación del reporte en Empresa A.
+    const downloadPromise = component.downloadAsgReport();
+
+    expect(asgReportServiceSpy.getReport).toHaveBeenCalledWith(
+      mockResults.evaluation_id
+    );
+
+    expect(component.generatingAsgReport).toBeTrue();
+
+    // Cambiar a Empresa B mientras el reporte está pendiente.
+    selectedCompanyId.set(7);
+
+    fixture.detectChanges();
+    TestBed.flushEffects();
+    fixture.detectChanges();
+
+    // El backend responde con el reporte de Empresa A.
+    pendingReport.next({} as AsgReport);
+    pendingReport.complete();
+
+    await downloadPromise;
+
+    // No debe iniciar la exportación del reporte anterior.
+    expect(asgReportPaginatorSpy.paginate).not.toHaveBeenCalled();
+    expect(asgPdfServiceSpy.generatePdf).not.toHaveBeenCalled();
+
+    expect(component.asgReport).toBeNull();
+    expect(component.generatingAsgReport).toBeFalse();
   });
 
 });

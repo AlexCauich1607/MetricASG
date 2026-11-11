@@ -1,9 +1,17 @@
-
-import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
+import {
+  Component,
+  OnInit,
+  ChangeDetectorRef,
+  DestroyRef,
+  Injector
+} from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { EvaluationService } from '../../../services/evaluation.service';
 import { EvaluationComparison } from '../../../models/evaluation_comparison';
 import { DatePipe } from '@angular/common';
+import { Subscription } from 'rxjs';
+import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
+import { CompanyContextService } from '../../../services/company-context.service';
 
 @Component({
   selector: 'app-compare',
@@ -16,11 +24,17 @@ export class CompareComponent implements OnInit {
   comparison: EvaluationComparison | null = null;
   loading = false;
   error: string | null = null;
+  private comparisonRequest?: Subscription;
+  private initialCompanyId: number | null = null;
+  private comparisonInvalidated = false;
 
   constructor(
     private route: ActivatedRoute,
     private evaluationService: EvaluationService,
-    private cdr: ChangeDetectorRef
+    private cdr: ChangeDetectorRef,
+    private companyContext: CompanyContextService,
+    private destroyRef: DestroyRef,
+    private injector: Injector
   ) { }
 
   ngOnInit(): void {
@@ -43,18 +57,66 @@ export class CompareComponent implements OnInit {
       return;
     }
 
-    this.loadComparison(evaluationId1, evaluationId2);
+    toObservable(this.companyContext.selectedCompanyId, {
+      injector: this.injector
+    })
+      .pipe(takeUntilDestroyed(this.destroyRef))
+
+      .subscribe(companyId => {
+        if (this.comparisonInvalidated) {
+          return;
+        }
+
+        // Esperar a que exista un contexto empresarial.
+        if (this.initialCompanyId === null) {
+          if (companyId === null) {
+            return;
+          }
+
+          this.initialCompanyId = companyId;
+          this.loadComparison(evaluationId1, evaluationId2);
+          return;
+        }
+
+        // Cualquier cambio respecto a la empresa inicial
+        // invalida permanentemente esta comparación.
+        if (companyId !== this.initialCompanyId) {
+          this.comparisonInvalidated = true;
+
+          this.clearComparisonState();
+
+          this.error =
+            'La empresa seleccionada cambió. Selecciona nuevamente las evaluaciones desde el historial.';
+
+          this.cdr.markForCheck();
+        }
+      });
+  }
+
+
+  private clearComparisonState(): void {
+    // Cancelar una consulta pendiente.
+    this.comparisonRequest?.unsubscribe();
+
+    // Eliminar los resultados anteriores.
+    this.comparison = null;
+    this.loading = false;
+    this.error = null;
   }
 
 
   loadComparison(evaluationId1: number, evaluationId2: number): void {
+    this.comparisonRequest?.unsubscribe();
+
     this.loading = true;
     this.error = null;
     this.comparison = null;
 
-    this.evaluationService.getEvaluationComparison(
+    this.comparisonRequest = this.evaluationService.getEvaluationComparison(
       evaluationId1,
       evaluationId2
+    ).pipe(
+      takeUntilDestroyed(this.destroyRef)
     ).subscribe({
       next: (response) => {
         this.comparison = response;

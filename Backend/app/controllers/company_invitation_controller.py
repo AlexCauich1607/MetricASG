@@ -38,7 +38,9 @@ class CompanyInvitationController:
                 company_id=payload.company_id,
                 invited_by_user_id=current_user.id,
                 email=payload.email,
+                role=payload.role,
             )
+
 
         @self.router.post(
             "/accept",

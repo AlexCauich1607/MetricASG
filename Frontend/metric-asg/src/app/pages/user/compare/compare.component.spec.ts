@@ -2,7 +2,8 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ActivatedRoute, convertToParamMap } from '@angular/router';
 import { of, Subject, throwError } from 'rxjs';
-
+import { signal } from '@angular/core';
+import { CompanyContextService } from '../../../services/company-context.service';
 import { CompareComponent } from './compare.component';
 import { EvaluationService } from '../../../services/evaluation.service';
 import { EvaluationComparison } from '../../../models/evaluation_comparison';
@@ -11,6 +12,7 @@ describe('CompareComponent', () => {
   let component: CompareComponent;
   let fixture: ComponentFixture<CompareComponent>;
   let evaluationService: jasmine.SpyObj<EvaluationService>;
+  let selectedCompanyId: ReturnType<typeof signal<number | null>>;
 
   const mockComparison: EvaluationComparison = {
     comparable: true,
@@ -52,7 +54,7 @@ describe('CompareComponent', () => {
     response$ = of(mockComparison)
   ): Promise<void> {
     TestBed.resetTestingModule();
-
+    selectedCompanyId = signal<number | null>(3);
     evaluationService = jasmine.createSpyObj<EvaluationService>(
       'EvaluationService',
       ['getEvaluationComparison']
@@ -66,6 +68,10 @@ describe('CompareComponent', () => {
         {
           provide: EvaluationService,
           useValue: evaluationService
+        },
+        {
+          provide: CompanyContextService,
+          useValue: { selectedCompanyId }
         },
         {
           provide: ActivatedRoute,
@@ -87,6 +93,9 @@ describe('CompareComponent', () => {
 
     fixture = TestBed.createComponent(CompareComponent);
     component = fixture.componentInstance;
+
+    fixture.detectChanges();
+    TestBed.flushEffects();
     fixture.detectChanges();
   }
 
@@ -206,4 +215,85 @@ describe('CompareComponent', () => {
     expect(text).toContain('Las metodologías no son comparables.');
     expect(text).not.toContain('Diferencias por ámbito');
   });
+
+  it('should permanently invalidate comparison after switching companies', async () => {
+    await createComponent();
+
+    // Iniciar una comparación en Empresa A.
+    // createComponent() ya inicializa la empresa con ID 3.
+    // La consulta inicial ya fue ejecutada por el componente.
+    const initialCalls =
+      evaluationService.getEvaluationComparison.calls.count();
+
+    expect(initialCalls).toBe(1);
+
+    // Cambiar de Empresa A a Empresa B.
+    selectedCompanyId.set(7);
+
+    fixture.detectChanges();
+    TestBed.flushEffects();
+    fixture.detectChanges();
+
+    expect(component.comparison).toBeNull();
+    expect(component.loading).toBeFalse();
+    expect(component.error).toContain(
+      'La empresa seleccionada cambió'
+    );
+
+    // Regresar a Empresa A.
+    selectedCompanyId.set(3);
+
+    fixture.detectChanges();
+    TestBed.flushEffects();
+    fixture.detectChanges();
+
+    // No debe reutilizar los identificadores anteriores.
+    expect(
+      evaluationService.getEvaluationComparison
+    ).toHaveBeenCalledTimes(initialCalls);
+
+    expect(component.comparison).toBeNull();
+  });
+
+  it('should cancel a pending comparison when switching companies', async () => {
+    const pendingComparison = new Subject<EvaluationComparison>();
+
+    await createComponent(
+      '12',
+      '15',
+      pendingComparison.asObservable()
+    );
+
+    // La comparación de Empresa A está pendiente.
+    expect(component.loading).toBeTrue();
+    expect(pendingComparison.observed).toBeTrue();
+
+    // Cambiar a Empresa B.
+    selectedCompanyId.set(7);
+
+    fixture.detectChanges();
+    TestBed.flushEffects();
+    fixture.detectChanges();
+
+    // La suscripción anterior debe cancelarse.
+    expect(pendingComparison.observed).toBeFalse();
+
+    expect(component.loading).toBeFalse();
+    expect(component.comparison).toBeNull();
+
+    expect(component.error).toContain(
+      'La empresa seleccionada cambió'
+    );
+
+    // Una respuesta tardía no debe modificar la comparación.
+    pendingComparison.next(mockComparison);
+
+    expect(component.comparison).toBeNull();
+
+    // No debe consultar automáticamente las mismas evaluaciones.
+    expect(
+      evaluationService.getEvaluationComparison
+    ).toHaveBeenCalledOnceWith(12, 15);
+  });
+
 });

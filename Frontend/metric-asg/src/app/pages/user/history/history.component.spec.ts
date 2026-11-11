@@ -1,22 +1,29 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideHttpClient, withXhr } from '@angular/common/http';
-import { of } from 'rxjs';
+import { of, Subject } from 'rxjs';
 import { EvaluationService } from '../../../services/evaluation.service';
 import { EvaluationDashboard } from '../../../models/evaluation_dashboard';
 import { HistoryComponent } from './history.component';
 import { EvaluationHistory } from '../../../models/history_evaluations';
 import { Router } from '@angular/router';
+import { signal } from '@angular/core';
+import { CompanyContextService } from '../../../services/company-context.service';
 
 describe('HistoryComponent', () => {
   let component: HistoryComponent;
   let fixture: ComponentFixture<HistoryComponent>;
-
+  let selectedCompanyId: ReturnType<typeof signal<number | null>>;
 
   beforeEach(async () => {
+    selectedCompanyId = signal<number | null>(3);
     await TestBed.configureTestingModule({
       imports: [HistoryComponent],
       providers: [
-        provideHttpClient(withXhr())
+        provideHttpClient(withXhr()),
+        {
+          provide: CompanyContextService,
+          useValue: { selectedCompanyId }
+        }
       ]
     }).compileComponents();
 
@@ -306,6 +313,74 @@ describe('HistoryComponent', () => {
     });
 
     expect(navigateSpy).not.toHaveBeenCalled();
+  });
+
+  it('should cancel pending requests and reset state when switching companies', () => {
+    const pendingHistory = new Subject<EvaluationHistory>();
+    const pendingDashboard = new Subject<EvaluationDashboard>();
+
+    const service = TestBed.inject(EvaluationService);
+
+    const historySpy = service.getEvaluationHistory as jasmine.Spy;
+    const dashboardSpy = service.getHistoricalDashboard as jasmine.Spy;
+
+    historySpy.and.returnValue(pendingHistory.asObservable());
+    dashboardSpy.and.returnValue(pendingDashboard.asObservable());
+    historySpy.calls.reset();
+    dashboardSpy.calls.reset();
+
+    // Simular una consulta pendiente para Empresa A.
+    selectedCompanyId.set(7);
+
+    fixture.detectChanges();
+    TestBed.flushEffects();
+    fixture.detectChanges();
+
+    expect(pendingHistory.observed).toBeTrue();
+    expect(pendingDashboard.observed).toBeTrue();
+
+    // Seleccionar evaluaciones de Empresa A.
+    component.evaluationId1 = 10;
+    component.evaluationId2 = 11;
+    component.improvementEvaluationId = 10;
+
+    // Preparar las respuestas de Empresa B.
+    historySpy.and.returnValue(of({
+      history: [],
+      averages: {
+        global_score: null,
+        ambits: []
+      }
+    } as unknown as EvaluationHistory));
+
+    dashboardSpy.and.returnValue(of({
+      history: []
+    } as EvaluationDashboard));
+
+    // Cambiar a Empresa B.
+    selectedCompanyId.set(9);
+
+    fixture.detectChanges();
+    TestBed.flushEffects();
+    fixture.detectChanges();
+
+    // Las solicitudes anteriores deben estar canceladas.
+    expect(pendingHistory.observed).toBeFalse();
+    expect(pendingDashboard.observed).toBeFalse();
+
+    // Las selecciones anteriores deben desaparecer.
+    expect(component.evaluationId1).toBeNull();
+    expect(component.evaluationId2).toBeNull();
+    expect(component.improvementEvaluationId).toBeNull();
+
+    // El nuevo dashboard debe corresponder a la segunda consulta.
+    expect(component.dashboard?.history).toEqual([]);
+    expect(component.latestEvaluation).toBeNull();
+    expect(component.ambitTrends).toEqual([]);
+    expect(component.globalTrend.datasets).toEqual([]);
+
+    expect(historySpy).toHaveBeenCalledTimes(2);
+    expect(dashboardSpy).toHaveBeenCalledTimes(2);
   });
 
 });

@@ -3,6 +3,7 @@ import { authGuard } from '../core/guards/auth.guard';
 import { adminGuard } from '../core/guards/admin.guard';
 import { userGuard } from '../core/guards/user.guard';
 import { evaluationExitGuard } from '../core/guards/evaluation-exit.guard';
+import { companyAdminGuard } from '../core/guards/company-admin.guard';
 
 export const pagesRoutes: Routes = [
   {
@@ -104,6 +105,13 @@ export const pagesRoutes: Routes = [
         loadComponent: () =>
           import('./user/compare/compare.component')
             .then(m => m.CompareComponent)
+      },
+      {
+        path: 'members',
+        loadComponent: () =>
+          import('./user/company-members/company-members.component')
+            .then(m => m.CompanyMembersComponent),
+        canActivate: [companyAdminGuard]
       },
 
       { path: '', redirectTo: 'home', pathMatch: 'full' }

@@ -4,7 +4,10 @@ import {
   ChangeDetectionStrategy,
   computed,
   signal,
-  HostListener
+  HostListener,
+  DestroyRef,
+  Injector,
+  inject
 } from '@angular/core';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { EvaluationService } from '../../../services/evaluation.service';
@@ -16,6 +19,9 @@ import {
 import { Router } from '@angular/router';
 import { EvaluationSubmitPayload } from '../../../models/evaluation_submit';
 import { EvaluationEvidencesComponent } from '../evaluation-evidences/evaluation-evidences.component';
+import { CompanyContextService } from '../../../services/company-context.service';
+import { CompanyRole } from '../../../models/company_membership';
+import { toObservable, takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 @Component({
   selector: 'app-evaluation',
@@ -52,8 +58,14 @@ export class EvaluationComponent {
   private savingDraft = false;
   private pendingDraft = false;
   private draftReady = false;
+  private evaluationCompanyId: number | null = null;
+  private companyContextInvalidated = false;
   readonly evidenceOperationPending = signal(false);
-
+  private readonly injector = inject(Injector);
+  private readonly destroyRef = inject(DestroyRef);
+  private readonly companyInvalidated$ = new Subject<void>();
+  private readonly submissionPermissionsRevoked$ = new Subject<void>();
+  private readonly editPermissionsRevoked$ = new Subject<void>();
   ambit = signal(0);
   question = signal(0);
 
@@ -88,7 +100,13 @@ export class EvaluationComponent {
   readonly canEditCurrentEvidence = computed(() => {
     const indicator = this.currentQuestion();
 
-    if (!indicator || this.evaluationId() === null) {
+    if (
+      !this.canEditEvaluation() ||
+      !this.hasValidCompanyContext() ||
+      this.loadError() ||
+      !indicator ||
+      this.evaluationId() === null
+    ) {
       return false;
     }
 
@@ -117,6 +135,27 @@ export class EvaluationComponent {
     );
   });
 
+
+  readonly canEditEvaluation = computed(() => {
+    const role = this.companyContext.selectedRole();
+
+    return (
+      role === CompanyRole.COMPANY_ADMIN ||
+      role === CompanyRole.ASG_MANAGER ||
+      role === CompanyRole.COLLABORATOR
+    );
+  });
+
+  readonly canSubmitEvaluation = computed(() => {
+    const role = this.companyContext.selectedRole();
+
+    return (
+      role === CompanyRole.COMPANY_ADMIN ||
+      role === CompanyRole.ASG_MANAGER
+    );
+  });
+
+
   fondo = '#6d2828ff';
 
   mesActual = '';
@@ -128,11 +167,14 @@ export class EvaluationComponent {
 
   constructor(
     private evaluationService: EvaluationService,
-    private router: Router
+    private router: Router,
+    private companyContext: CompanyContextService
   ) { }
 
+  get companyChanged(): boolean {
+    return this.companyContextInvalidated;
+  }
   ngOnInit(): void {
-    this.loadSurvey();
     this.getPeriodo();
 
     this.autosaveChanges$
@@ -144,22 +186,134 @@ export class EvaluationComponent {
         this.draftReady = true;
         this.saveDraft();
       });
+
+    toObservable(this.companyContext.selectedCompanyId, {
+      injector: this.injector
+    })
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(companyId => {
+        if (this.companyContextInvalidated) {
+          return;
+        }
+
+        // Esperar hasta que exista una empresa seleccionada.
+        if (this.evaluationCompanyId === null) {
+          if (companyId === null) {
+            return;
+          }
+
+          this.evaluationCompanyId = companyId;
+          this.loadSurvey();
+          return;
+        }
+
+        // La evaluación pertenece a otra empresa.
+        if (companyId !== this.evaluationCompanyId) {
+          this.companyContextInvalidated = true;
+          this.companyInvalidated$.next();
+
+          this.loadError.set(true);
+          this.loading.set(false);
+
+          this.responses.set(new Map());
+          this.savedResponses.set(new Map());
+          this.completadas.set(new Map());
+
+          this.structure.set(null);
+          this.evaluationId.set(null);
+
+          this.pendingDraft = false;
+          this.draftReady = false;
+
+          this.autosaveStatus.set('idle');
+
+          this.submitting.set(false);
+          this.finalizing = false;
+          this.submitPending = false;
+        }
+      });
+
+
+    toObservable(this.companyContext.selectedRole, {
+      injector: this.injector
+    })
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => {
+        // Cancelar la finalización si se pierde ese permiso.
+        if (
+          this.finalizing &&
+          !this.canSubmitEvaluation()
+        ) {
+          this.submissionPermissionsRevoked$.next();
+
+          this.finalizing = false;
+          this.submitPending = false;
+          this.submitting.set(false);
+        }
+
+        // Cancelar el guardado cuando se pierden
+        // los permisos de edición.
+        if (!this.canEditEvaluation()) {
+          this.editPermissionsRevoked$.next();
+
+          this.savingDraft = false;
+          this.pendingDraft = false;
+          this.draftReady = false;
+
+          if (this.autosaveStatus() === 'saving' ||
+            this.autosaveStatus() === 'pending') {
+            this.autosaveStatus.set('idle');
+          }
+        }
+      });
   }
+
+  private hasValidCompanyContext(): boolean {
+    return (
+      !this.companyContextInvalidated &&
+      this.evaluationCompanyId !== null &&
+      this.companyContext.selectedCompanyId() ===
+      this.evaluationCompanyId
+    );
+  }
+
+  public hasUnsavedResponses(): boolean {
+    const current = this.responses();
+    const saved = this.savedResponses();
+
+    if (current.size !== saved.size) {
+      return true;
+    }
+
+    for (const [indicatorId, answerId] of current) {
+      if (saved.get(indicatorId) !== answerId) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
 
   ngOnDestroy(): void {
     this.destroyed = true;
-
+    this.companyInvalidated$.complete();
     this.destroy$.next();
     this.destroy$.complete();
     this.autosaveChanges$.complete();
+    this.submissionPermissionsRevoked$.complete();
+    this.editPermissionsRevoked$.complete();
   }
 
   onEvidenceOperationPending(pending: boolean): void {
     this.evidenceOperationPending.set(pending);
   }
 
+
   private saveDraft(): void {
     if (
+      !this.hasValidCompanyContext() ||
+      !this.canEditEvaluation() ||
       this.finalizing ||
       this.savingDraft ||
       !this.pendingDraft ||
@@ -183,44 +337,52 @@ export class EvaluationComponent {
     };
     const submittedResponses = new Map(this.responses());
 
-    this.evaluationService.saveDraft(payload).subscribe({
-      next: (result) => {
-        this.evaluationId.set(result.evaluation_id);
-        this.savedResponses.set(submittedResponses);
-        if (this.destroyed) {
-          return;
+
+    this.evaluationService.saveDraft(payload)
+      .pipe(
+        takeUntil(this.editPermissionsRevoked$),
+        takeUntil(this.companyInvalidated$),
+        takeUntil(this.destroy$)
+      )
+      .subscribe({
+
+        next: (result) => {
+          this.evaluationId.set(result.evaluation_id);
+          this.savedResponses.set(submittedResponses);
+          if (this.destroyed) {
+            return;
+          }
+
+          this.savingDraft = false;
+
+
+          if (this.finalizing) {
+            this.submitFinalEvaluation();
+            return;
+          }
+
+          if (this.pendingDraft) {
+            this.autosaveStatus.set('pending');
+            this.saveDraft();
+          } else {
+            this.autosaveStatus.set('saved');
+          }
+        },
+        error: () => {
+          if (this.destroyed) {
+            return;
+          }
+
+          this.savingDraft = false;
+
+          this.pendingDraft = true;
+          this.autosaveStatus.set('error');
+
+          if (this.finalizing) {
+            this.submitFinalEvaluation();
+          }
         }
-
-        this.savingDraft = false;
-
-
-        if (this.finalizing) {
-          this.submitFinalEvaluation();
-          return;
-        }
-
-        if (this.pendingDraft) {
-          this.autosaveStatus.set('pending');
-          this.saveDraft();
-        } else {
-          this.autosaveStatus.set('saved');
-        }
-      },
-      error: () => {
-        if (this.destroyed) {
-          return;
-        }
-
-        this.savingDraft = false;
-
-        this.pendingDraft = true;
-        this.autosaveStatus.set('error');
-
-        if (this.finalizing) {
-          this.submitFinalEvaluation();
-        }
-      }
-    });
+      });
   }
 
   retrySaveDraft(): void {
@@ -234,10 +396,18 @@ export class EvaluationComponent {
     this.saveDraft();
   }
 
+
   private submitFinalEvaluation(): void {
-    if (!this.finalizing || !this.submitPending || this.savingDraft) {
+    if (
+      !this.hasValidCompanyContext() ||
+      !this.canSubmitEvaluation() ||
+      !this.finalizing ||
+      !this.submitPending ||
+      this.savingDraft
+    ) {
       return;
     }
+
 
     this.submitPending = false;
 
@@ -250,21 +420,29 @@ export class EvaluationComponent {
       )
     };
 
-    this.evaluationService.submitEvaluation(payload).subscribe({
-      next: () => {
-        this.evaluationSubmitted = true;
-        this.router.navigate(['/user/results']);
-      },
-      error: () => {
-        this.finalizing = false;
-        this.submitting.set(false);
 
-        this.pendingDraft = true;
-        this.draftReady = false;
-        this.autosaveStatus.set('pending');
-        this.autosaveChanges$.next();
-      }
-    });
+    this.evaluationService.submitEvaluation(payload)
+      .pipe(
+        takeUntil(this.submissionPermissionsRevoked$),
+        takeUntil(this.companyInvalidated$),
+        takeUntil(this.destroy$)
+      )
+      .subscribe({
+
+        next: () => {
+          this.evaluationSubmitted = true;
+          this.router.navigate(['/user/results']);
+        },
+        error: () => {
+          this.finalizing = false;
+          this.submitting.set(false);
+
+          this.pendingDraft = true;
+          this.draftReady = false;
+          this.autosaveStatus.set('pending');
+          this.autosaveChanges$.next();
+        }
+      });
   }
 
   canLeaveEvaluation(): boolean {
@@ -278,11 +456,14 @@ export class EvaluationComponent {
 
     const status = this.autosaveStatus();
 
+
     if (
+      this.hasUnsavedResponses() ||
       status === 'pending' ||
       status === 'saving' ||
       status === 'error'
     ) {
+
       return confirm(
         'Hay respuestas que todavía no se han guardado. ' +
         '¿Desea abandonar la evaluación?'
@@ -296,15 +477,18 @@ export class EvaluationComponent {
   onBeforeUnload(event: BeforeUnloadEvent): void {
     const status = this.autosaveStatus();
 
+
     if (
       !this.evaluationSubmitted &&
       (
         this.finalizing ||
+        this.hasUnsavedResponses() ||
         status === 'pending' ||
         status === 'saving' ||
         status === 'error'
       )
     ) {
+
       event.preventDefault();
       event.returnValue = '';
     }
@@ -388,6 +572,9 @@ export class EvaluationComponent {
   }
 
   loadSurvey(): void {
+    if (this.companyContextInvalidated) {
+      return;
+    }
     this.loading.set(true);
     this.loadError.set(false);
 
@@ -395,6 +582,7 @@ export class EvaluationComponent {
       structure: this.evaluationService.getEvaluation(),
       draft: this.evaluationService.getDraft()
     }).pipe(
+      takeUntil(this.companyInvalidated$),
       takeUntil(this.destroy$)
     ).subscribe({
       next: ({ structure, draft }) => {
@@ -462,6 +650,7 @@ export class EvaluationComponent {
     ambitId: number
   ): void {
     if (
+      !this.canEditEvaluation() ||
       this.finalizing ||
       this.loading() ||
       this.loadError() ||
@@ -498,6 +687,7 @@ export class EvaluationComponent {
 
   submit(): void {
     if (
+      !this.canSubmitEvaluation() ||
       this.finalizing ||
       this.submitting() ||
       this.loading() ||
