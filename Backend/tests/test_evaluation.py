@@ -39,6 +39,8 @@ from app.models.company_membership_model import (
     CompanyMembershipStatus,
 )
 
+from app.models.audit_log_model import AuditLog
+
 def create_evaluation_data(db_session):
     active_methodology = (
         db_session.query(Methodology)
@@ -264,6 +266,28 @@ def test_submit_evaluation_calculates_scores(db_session):
 
     assert len(indicator_responses) == 3
     assert all(response.score == 8 for response in indicator_responses)
+
+    # Verificar la auditoría del envío de evaluación.
+    audit_events = (
+        db_session.query(AuditLog)
+        .filter(
+            AuditLog.action == "evaluation.submitted",
+            AuditLog.resource_type == "evaluation",
+            AuditLog.resource_id == evaluation.id,
+        )
+        .all()
+    )
+
+    assert len(audit_events) == 1
+
+    audit_event = audit_events[0]
+
+    assert audit_event.actor_id == data["user"].id
+    assert audit_event.company_id == evaluation.company_id
+    assert audit_event.context == {
+        "methodology_id": data["methodology"].id,
+    }
+    assert audit_event.created_at is not None
 
 
 def test_submit_evaluation_rejects_incomplete_responses(
@@ -1275,6 +1299,19 @@ def test_submit_evaluation_rolls_back_when_calculation_fails(
 
     assert evaluation is not None
     assert evaluation.status == EvaluationStatus.DRAFT
+
+    # Un envío fallido no debe generar auditoría de envío.
+    audit_events = (
+        db_session.query(AuditLog)
+        .filter(
+            AuditLog.action == "evaluation.submitted",
+            AuditLog.resource_type == "evaluation",
+            AuditLog.resource_id == draft_id,
+        )
+        .all()
+    )
+
+    assert audit_events == []
 
     saved_responses = (
         db_session.query(EvaluationIndicatorResponse)

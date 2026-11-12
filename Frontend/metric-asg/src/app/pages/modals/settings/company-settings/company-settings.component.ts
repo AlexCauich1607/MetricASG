@@ -68,16 +68,17 @@ export class CompanySettingsComponent {
     })
   }
   update() {
-    if(this.user!.company_name!.length<3){
+    if (this.user!.company_name!.length < 3) {
       return
     }
+
     const payload = {
       company_name: this.user?.company_name,
-      company_size_id:this.sizeSeleccionado?.id,
+      company_size_id: this.sizeSeleccionado?.id,
       company_sector_id: this.sectorSeleccionado?.id,
-    }
-    const id = this.user?.id ?? 0;
-    this.userService.update(id, payload).subscribe({
+    };
+
+    this.userService.updateMe(payload).subscribe({
       next: (value) => {
         alert("Usuario actualizado con exito")
       },

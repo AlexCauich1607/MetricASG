@@ -29,6 +29,7 @@ from ..models.company_membership_model import (
 )
 from app.core.company_permissions import require_company_role
 from app.core.roles import CompanyRole
+from app.services.audit_service import AuditService
 
 class EvaluationService:
 
@@ -537,8 +538,19 @@ class EvaluationService:
             evaluation.status = EvaluationStatus.COMPLETED
 
             user.biannual_evaluation = True
-
             user.next_evaluation = date.today() + relativedelta(months=6)
+
+            AuditService.record(
+                db=self.db,
+                action="evaluation.submitted",
+                resource_type="evaluation",
+                resource_id=evaluation.id,
+                actor_id=user_id,
+                company_id=company_id,
+                context={
+                    "methodology_id": methodology.id,
+                },
+            )
 
             self.db.commit()
 

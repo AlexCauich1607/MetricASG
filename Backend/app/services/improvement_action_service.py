@@ -22,7 +22,7 @@ from app.models.improvement_action_request import (
     ImprovementActionUpdate,
 )
 from app.models.indicator_model import Indicator
-
+from app.services.audit_service import AuditService
 class ImprovementActionService:
     def __init__(self, db: Session):
         self.db = db
@@ -170,6 +170,21 @@ class ImprovementActionService:
             )
 
             self.db.add(action)
+            self.db.flush()
+
+            AuditService.record(
+                db=self.db,
+                action="improvement_action.created",
+                resource_type="improvement_action",
+                resource_id=action.id,
+                actor_id=user_id,
+                company_id=evaluation.company_id,
+                context={
+                    "evaluation_id": evaluation.id,
+                    "indicator_id": action.indicator_id,
+                },
+            )
+
             self.db.commit()
             self.db.refresh(action)
 
@@ -325,8 +340,28 @@ class ImprovementActionService:
                     changes["indicator_id"],
                 )
 
+            changed_fields = [
+                field
+                for field, value in changes.items()
+                if getattr(action, field) != value
+            ]
+
             for field, value in changes.items():
                 setattr(action, field, value)
+
+            if changed_fields:
+                AuditService.record(
+                    db=self.db,
+                    action="improvement_action.updated",
+                    resource_type="improvement_action",
+                    resource_id=action.id,
+                    actor_id=user_id,
+                    company_id=evaluation.company_id,
+                    context={
+                        "evaluation_id": evaluation.id,
+                        "changed_fields": sorted(changed_fields),
+                    },
+                )
 
             self.db.commit()
             self.db.refresh(action)
@@ -395,6 +430,19 @@ class ImprovementActionService:
                     detail="Improvement action not found",
                 )
 
+            AuditService.record(
+                db=self.db,
+                action="improvement_action.deleted",
+                resource_type="improvement_action",
+                resource_id=action.id,
+                actor_id=user_id,
+                company_id=evaluation.company_id,
+                context={
+                    "evaluation_id": evaluation.id,
+                    "indicator_id": action.indicator_id,
+                },
+            )
+
             self.db.delete(action)
             self.db.commit()
 
@@ -405,7 +453,6 @@ class ImprovementActionService:
         except SQLAlchemyError:
             self.db.rollback()
             raise
-
 
 
     def get_progress_metrics(
