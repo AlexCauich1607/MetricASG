@@ -1,7 +1,7 @@
 from fastapi import HTTPException
 
 from ..models.methodology_model import Methodology, MethodologyStatus
-
+from .audit_service import AuditService
 
 class MethodologyService:
     def __init__(self, db):
@@ -21,7 +21,7 @@ class MethodologyService:
             .first()
         )
 
-    def create(self, data: dict):
+    def create(self, data: dict, *, actor_id: int):
         name = data.get("name")
         version = data.get("version")
 
@@ -51,12 +51,31 @@ class MethodologyService:
         )
 
         self.db.add(methodology)
+        self.db.flush()
+
+        AuditService.record(
+            db=self.db,
+            action="methodology.created",
+            resource_type="methodology",
+            resource_id=methodology.id,
+            actor_id=actor_id,
+            context={
+                "version": methodology.version,
+            },
+        )
+
         self.db.commit()
         self.db.refresh(methodology)
 
         return methodology
 
-    def update(self, methodology_id: int, data: dict):
+    def update(
+        self,
+        methodology_id: int,
+        data: dict,
+        *,
+        actor_id: int,
+    ):
         methodology = self.get_or_error(methodology_id)
 
         if methodology.status != MethodologyStatus.DRAFT:
@@ -94,15 +113,34 @@ class MethodologyService:
                     detail="Methodology version already exists",
                 )
 
+        changed_fields = [
+            key
+            for key, value in data.items()
+            if getattr(methodology, key) != value
+        ]
+
         for key, value in data.items():
             setattr(methodology, key, value)
+
+        if changed_fields:
+            AuditService.record(
+                db=self.db,
+                action="methodology.updated",
+                resource_type="methodology",
+                resource_id=methodology.id,
+                actor_id=actor_id,
+                context={
+                    "changed_fields": sorted(changed_fields),
+                },
+            )
 
         self.db.commit()
         self.db.refresh(methodology)
 
         return methodology
 
-    def publish(self, methodology_id: int):
+
+    def publish(self, methodology_id: int, *, actor_id: int):
         methodology = self.get_or_error(methodology_id)
 
         if methodology.status != MethodologyStatus.DRAFT:
@@ -113,12 +151,24 @@ class MethodologyService:
 
         methodology.status = MethodologyStatus.PUBLISHED
 
+        AuditService.record(
+            db=self.db,
+            action="methodology.published",
+            resource_type="methodology",
+            resource_id=methodology.id,
+            actor_id=actor_id,
+            context={
+                "status": MethodologyStatus.PUBLISHED.value,
+            },
+        )
+
         self.db.commit()
         self.db.refresh(methodology)
 
         return methodology
 
-    def activate(self, methodology_id: int):
+
+    def activate(self, methodology_id: int, *, actor_id: int):
         methodology = self.get_or_error(methodology_id)
 
         if methodology.status != MethodologyStatus.PUBLISHED:
@@ -143,12 +193,24 @@ class MethodologyService:
 
         methodology.is_active = True
 
+        AuditService.record(
+            db=self.db,
+            action="methodology.activated",
+            resource_type="methodology",
+            resource_id=methodology.id,
+            actor_id=actor_id,
+            context={
+                "is_active": True,
+                "version": methodology.version,
+            },
+        )
+
         self.db.commit()
         self.db.refresh(methodology)
 
         return methodology
 
-    def archive(self, methodology_id: int):
+    def archive(self, methodology_id: int, *, actor_id: int):
         methodology = self.get_or_error(methodology_id)
 
         if methodology.status != MethodologyStatus.PUBLISHED:
@@ -167,6 +229,18 @@ class MethodologyService:
             )
 
         methodology.status = MethodologyStatus.ARCHIVED
+
+        AuditService.record(
+            db=self.db,
+            action="methodology.archived",
+            resource_type="methodology",
+            resource_id=methodology.id,
+            actor_id=actor_id,
+            context={
+                "status": MethodologyStatus.ARCHIVED.value,
+                "version": methodology.version,
+            },
+        )
 
         self.db.commit()
         self.db.refresh(methodology)

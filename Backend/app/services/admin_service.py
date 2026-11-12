@@ -9,19 +9,49 @@ from sqlalchemy import func, extract
 
 from ..models.user_model import User
 from ..models.evaluation_model import Evaluation
+from ..services.audit_service import AuditService
 
 class AdminService:
     
-    def change_user_state(self, id: int, db:Session):
+
+    def change_user_state(
+        self,
+        id: int,
+        db: Session,
+        actor_id: int,
+    ):
         user = db.query(User).filter(User.id == id).first()
+
         if not user:
-             raise HTTPException(status_code=401, detail="The user is not exist")
-        if user.active is True:
-            user.active = False
-        else:
-            user.active = True
-        db.commit()
-        return {"message": "User update success"}
+            raise HTTPException(
+                status_code=401,
+                detail="The user is not exist",
+            )
+
+        previous_state = user.active
+        user.active = not user.active
+
+        try:
+            AuditService.record(
+                db=db,
+                action="user.state_changed",
+                resource_type="user",
+                resource_id=user.id,
+                actor_id=actor_id,
+                context={
+                    "previous_active": previous_state,
+                    "current_active": user.active,
+                },
+            )
+
+            db.commit()
+
+            return {"message": "User update success"}
+
+        except Exception:
+            db.rollback()
+            raise
+
         
     def get_summary(self, db: Session):
 

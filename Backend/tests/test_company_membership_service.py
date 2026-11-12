@@ -13,6 +13,7 @@ from app.services.company_membership_service import (
 from app.core.roles import CompanyRole
 import pytest
 from fastapi import HTTPException
+from app.models.audit_log_model import AuditLog
 
 @pytest.mark.parametrize(
     "member_role",
@@ -267,6 +268,32 @@ def test_remove_company_member_success(db_session):
 
     assert remaining_active_members == 1
 
+    # Verificar el evento de auditoría de la baja.
+    audit_events = (
+        db_session.query(AuditLog)
+        .filter(
+            AuditLog.action == "company_member.removed",
+            AuditLog.resource_type == "company_membership",
+            AuditLog.resource_id == target_membership.id,
+        )
+        .all()
+    )
+
+    assert len(audit_events) == 1
+
+    audit_event = audit_events[0]
+
+    assert audit_event.actor_id == target_user.id
+    assert audit_event.company_id == company.id
+    assert audit_event.context == {
+        "user_id": target_user.id,
+        "previous_status": "ACTIVE",
+        "new_status": "INACTIVE",
+        "role": target_membership.role.value,
+    }
+    assert audit_event.created_at is not None
+
+
 def test_remove_last_active_company_member_is_rejected(db_session):
     unique_id = uuid4().hex
 
@@ -309,6 +336,24 @@ def test_remove_last_active_company_member_is_rejected(db_session):
     assert exc_info.value.detail == (
         "Cannot remove the last active company member"
     )
+
+    # La membresía debe permanecer activa.
+    db_session.refresh(membership)
+
+    assert membership.status == CompanyMembershipStatus.ACTIVE
+
+    # Una eliminación rechazada no debe generar auditoría de baja.
+    audit_events = (
+        db_session.query(AuditLog)
+        .filter(
+            AuditLog.action == "company_member.removed",
+            AuditLog.resource_type == "company_membership",
+            AuditLog.resource_id == membership.id,
+        )
+        .all()
+    )
+
+    assert audit_events == []
 
     db_session.expire_all()
 

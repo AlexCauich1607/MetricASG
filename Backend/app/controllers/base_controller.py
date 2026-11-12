@@ -95,20 +95,73 @@ class BaseController:
                 raise HTTPException(404, "Item not found")
             return obj
 
-        @self.router.post("/", response_model=self.Schema, dependencies=create_dependencies)
-        def create(data: Dict[str, Any], db: Session = Depends(get_db)):
-            return self.service_class(self.model, db).create(data)
+        @self.router.post(
+            "/",
+            response_model=self.Schema,
+            dependencies=create_dependencies,
+        )
+        def create(
+            data: Dict[str, Any],
+            db: Session = Depends(get_db),
+            current_user = Depends(get_current_user),
+        ):
+            service = self.service_class(self.model, db)
 
-        @self.router.put("/{item_id}", response_model=self.Schema, dependencies=update_dependencies)
-        def update(item_id: int, data: Dict[str, Any], db: Session = Depends(get_db)):
-            updated = self.service_class(self.model, db).update(item_id, data)
+            if getattr(service, "requires_actor", False):
+                return service.create(
+                    data,
+                    actor_id=current_user.id,
+                )
+
+            return service.create(data)
+
+        @self.router.put(
+            "/{item_id}",
+            response_model=self.Schema,
+            dependencies=update_dependencies,
+        )
+        def update(
+            item_id: int,
+            data: Dict[str, Any],
+            db: Session = Depends(get_db),
+            current_user = Depends(get_current_user),
+        ):
+            service = self.service_class(self.model, db)
+
+            if getattr(service, "requires_actor", False):
+                updated = service.update(
+                    item_id,
+                    data,
+                    actor_id=current_user.id,
+                )
+            else:
+                updated = service.update(item_id, data)
+
             if not updated:
                 raise HTTPException(404, "Item not found")
+
             return updated
 
-        @self.router.delete("/{item_id}", dependencies=delete_dependencies)
-        def delete(item_id: int, db: Session = Depends(get_db)):
-            deleted = self.service_class(self.model, db).delete(item_id)
+        @self.router.delete(
+            "/{item_id}",
+            dependencies=delete_dependencies,
+        )
+        def delete(
+            item_id: int,
+            db: Session = Depends(get_db),
+            current_user = Depends(get_current_user),
+        ):
+            service = self.service_class(self.model, db)
+
+            if getattr(service, "requires_actor", False):
+                deleted = service.delete(
+                    item_id,
+                    actor_id=current_user.id,
+                )
+            else:
+                deleted = service.delete(item_id)
+
             if not deleted:
                 raise HTTPException(404, "Item not found")
+
             return {"success": True}

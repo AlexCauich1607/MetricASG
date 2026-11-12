@@ -17,10 +17,10 @@ import { SessionService } from '../../../../shared/class/temporalStorage';
 export class UserSettingsComponent {
   @Input() user: User | null = null;
   imageSrc = this.user?.profile_photo;
-  constructor(private userService: UserService){
+  constructor(private userService: UserService) {
 
   }
-  ngOnInit():void{
+  ngOnInit(): void {
     this.imageSrc = this.user?.profile_photo;
   }
 
@@ -45,29 +45,29 @@ export class UserSettingsComponent {
     reader.readAsDataURL(file);
   }
 
-  deleteImg(){
+  deleteImg() {
     this.user!.profile_photo = "";
   }
 
-  update(){
-    if(this.user!.name!.length<3 || (!this.user?.lastname || this.user.lastname.length < 3) || 
-    ((!this.user?.position || this.user.position.length < 3)&&this.user.role!="admin")){
+  update() {
+    if (this.user!.name!.length < 3 || (!this.user?.lastname || this.user.lastname.length < 3) ||
+      ((!this.user?.position || this.user.position.length < 3) && this.user.role != "admin")) {
       return;
     }
+
     const payload = {
       name: this.user?.name,
       lastname: this.user?.lastname,
       position: this.user?.position,
       profile_photo: this.user?.profile_photo,
-      active: true
-    }
-    const id= this.user?.id ?? 0;
-    this.userService.update(id, payload).subscribe({
-      next:(value)=> {
+    };
+
+    this.userService.updateMe(payload).subscribe({
+      next: (value) => {
         SessionService.setSessionItem('photo', this.user?.profile_photo);
         alert("Usuario actualizado con exito");
       },
-      error: (err)=>{
+      error: (err) => {
         alert("Error al actualizar el usuario")
       }
     })

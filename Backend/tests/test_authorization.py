@@ -99,22 +99,32 @@ def test_user_cannot_update_user(client, db_session):
 
     assert response.status_code == 403
 
-
-def test_user_cannot_delete_user(client, db_session):
-    user = create_authorization_user(
+def test_delete_user_endpoint_is_not_available(client, db_session):
+    admin = create_authorization_user(
         db_session,
-        "authorization-delete@test.local",
+        "authorization-delete-admin@test.local",
+        UserRole.ADMIN,
+    )
+
+    target = create_authorization_user(
+        db_session,
+        "authorization-delete-target@test.local",
         UserRole.USER,
     )
 
-    token = login(client, user.email)
+    token = login(client, admin.email)
 
     response = client.delete(
-        f"/api/users/{user.id}",
+        f"/api/users/{target.id}",
         headers=auth_headers(token),
     )
 
-    assert response.status_code == 403
+    assert response.status_code == 405
+
+    db_session.refresh(target)
+
+    assert target.id is not None
+    assert target.active is True
 
 
 def test_admin_can_access_another_user(client, db_session):

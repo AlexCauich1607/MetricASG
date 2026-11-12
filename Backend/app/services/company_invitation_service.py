@@ -24,6 +24,7 @@ from app.services.company_invitation_email_service import (
 )
 from app.core.roles import CompanyRole
 from app.core.company_permissions import require_company_role
+from app.services.audit_service import AuditService
 
 class CompanyInvitationService:
     INVITATION_EXPIRATION_DAYS = 7
@@ -194,6 +195,21 @@ class CompanyInvitationService:
             )
 
             db.add(invitation)
+            db.flush()
+
+            AuditService.record(
+                db=db,
+                action="company_invitation.created",
+                resource_type="company_invitation",
+                resource_id=invitation.id,
+                actor_id=invited_by_user_id,
+                company_id=company_id,
+                context={
+                    "role": invitation.role.value,
+                    "status": CompanyInvitationStatus.PENDING.value,
+                },
+            )
+
             db.commit()
             db.refresh(invitation)
 
@@ -331,7 +347,21 @@ class CompanyInvitationService:
             invitation.expires_at = now + timedelta(
                 days=self.INVITATION_EXPIRATION_DAYS
             )
+
             invitation.last_resent_at = now
+
+            AuditService.record(
+                db=db,
+                action="company_invitation.resent",
+                resource_type="company_invitation",
+                resource_id=invitation.id,
+                actor_id=requested_by_user_id,
+                company_id=invitation.company_id,
+                context={
+                    "status": CompanyInvitationStatus.PENDING.value,
+                    "role": invitation.role.value,
+                },
+            )
 
             db.commit()
             db.refresh(invitation)
@@ -459,6 +489,22 @@ class CompanyInvitationService:
 
             invitation.status = CompanyInvitationStatus.ACCEPTED
             invitation.accepted_at = self._utc_now()
+
+            db.flush()
+
+            AuditService.record(
+                db=db,
+                action="company_invitation.accepted",
+                resource_type="company_invitation",
+                resource_id=invitation.id,
+                actor_id=current_user_id,
+                company_id=invitation.company_id,
+                context={
+                    "membership_id": membership.id,
+                    "role": membership.role.value,
+                    "status": CompanyInvitationStatus.ACCEPTED.value,
+                },
+            )
 
             db.commit()
             db.refresh(membership)

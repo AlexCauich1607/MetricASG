@@ -25,6 +25,8 @@ from app.services.company_invitation_email_service import (
     CompanyInvitationEmailService,
 )
 
+from app.models.audit_log_model import AuditLog
+
 def create_invitation_data(db_session):
     unique_id = uuid.uuid4().hex
 
@@ -127,6 +129,34 @@ def test_create_invitation_success(db_session):
         .count()
         == 0
     )
+
+    # Verificar el evento de auditoría de creación.
+    audit_events = (
+        db_session.query(AuditLog)
+        .filter(
+            AuditLog.action == "company_invitation.created",
+            AuditLog.resource_type == "company_invitation",
+            AuditLog.resource_id == invitation.id,
+        )
+        .all()
+    )
+
+    assert len(audit_events) == 1
+
+    audit_event = audit_events[0]
+
+    assert audit_event.actor_id == data["inviter"].id
+    assert audit_event.company_id == data["company"].id
+    assert audit_event.context == {
+        "role": CompanyRole.COLLABORATOR.value,
+        "status": CompanyInvitationStatus.PENDING.value,
+    }
+    assert audit_event.created_at is not None
+
+    # No almacenar información sensible en el contexto.
+    assert "email" not in audit_event.context
+    assert "token" not in audit_event.context
+    assert "token_hash" not in audit_event.context
 
 @pytest.mark.parametrize(
     "role",
@@ -375,6 +405,35 @@ def test_accept_invitation_creates_active_membership(db_session):
     assert invitation.status == CompanyInvitationStatus.ACCEPTED
     assert invitation.accepted_at is not None
 
+    # Verificar la auditoría de aceptación de la invitación.
+    audit_events = (
+        db_session.query(AuditLog)
+        .filter(
+            AuditLog.action == "company_invitation.accepted",
+            AuditLog.resource_type == "company_invitation",
+            AuditLog.resource_id == invitation.id,
+        )
+        .all()
+    )
+
+    assert len(audit_events) == 1
+
+    audit_event = audit_events[0]
+
+    assert audit_event.actor_id == data["recipient"].id
+    assert audit_event.company_id == data["company"].id
+    assert audit_event.context == {
+        "membership_id": membership.id,
+        "role": CompanyRole.COLLABORATOR.value,
+        "status": CompanyInvitationStatus.ACCEPTED.value,
+    }
+    assert audit_event.created_at is not None
+
+    # Verificar que no se almacenan datos sensibles.
+    assert "email" not in audit_event.context
+    assert "token" not in audit_event.context
+    assert "token_hash" not in audit_event.context
+
     stored_memberships = (
         db_session.query(CompanyMembership)
         .filter(
@@ -456,6 +515,38 @@ def test_accept_invitation_reactivates_inactive_membership(
 
     assert len(memberships) == 1
     assert memberships[0].id == original_membership_id
+
+    # Verificar la auditoría de aceptación con reactivación.
+    audit_events = (
+        db_session.query(AuditLog)
+        .filter(
+            AuditLog.action == "company_invitation.accepted",
+            AuditLog.resource_type == "company_invitation",
+            AuditLog.resource_id == invitation.id,
+        )
+        .all()
+    )
+
+    assert len(audit_events) == 1
+
+    audit_event = audit_events[0]
+
+    assert audit_event.actor_id == data["recipient"].id
+    assert audit_event.company_id == data["company"].id
+    assert audit_event.context == {
+        "membership_id": original_membership_id,
+        "role": CompanyRole.AUDITOR.value,
+        "status": CompanyInvitationStatus.ACCEPTED.value,
+    }
+    assert audit_event.created_at is not None
+
+    # El evento debe referenciar la membresía original.
+    assert audit_event.context["membership_id"] == membership.id
+
+    # El contexto no debe contener información sensible.
+    assert "email" not in audit_event.context
+    assert "token" not in audit_event.context
+    assert "token_hash" not in audit_event.context
 
 @pytest.mark.parametrize(
     "role",
@@ -582,6 +673,19 @@ def test_accept_invitation_rejects_invalid_requests(
         )
 
     assert stored_invitation.accepted_at is None
+
+    # Una aceptación rechazada no debe generar auditoría de éxito.
+    audit_events = (
+        db_session.query(AuditLog)
+        .filter(
+            AuditLog.action == "company_invitation.accepted",
+            AuditLog.resource_type == "company_invitation",
+            AuditLog.resource_id == invitation.id,
+        )
+        .all()
+    )
+
+    assert audit_events == []
 
 
 def test_create_and_send_invitation_success(db_session):
@@ -786,6 +890,34 @@ def test_resend_invitation_rotates_token(db_session):
         .count()
         == 1
     )
+
+    # Verificar la auditoría del reenvío.
+    audit_events = (
+        db_session.query(AuditLog)
+        .filter(
+            AuditLog.action == "company_invitation.resent",
+            AuditLog.resource_type == "company_invitation",
+            AuditLog.resource_id == original_id,
+        )
+        .all()
+    )
+
+    assert len(audit_events) == 1
+
+    audit_event = audit_events[0]
+
+    assert audit_event.actor_id == data["inviter"].id
+    assert audit_event.company_id == data["company"].id
+    assert audit_event.context == {
+        "status": CompanyInvitationStatus.PENDING.value,
+        "role": CompanyRole.ASG_MANAGER.value,
+    }
+    assert audit_event.created_at is not None
+
+    # El contexto no debe incluir credenciales ni datos sensibles.
+    assert "email" not in audit_event.context
+    assert "token" not in audit_event.context
+    assert "token_hash" not in audit_event.context
 
     with pytest.raises(HTTPException) as exc:
         service.accept_invitation(

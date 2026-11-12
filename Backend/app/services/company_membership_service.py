@@ -14,6 +14,7 @@ from ..models.company_membership_response import (
 from ..models.user_model import User
 from app.core.company_permissions import require_company_role
 from app.core.roles import CompanyRole
+from app.services.audit_service import AuditService
 
 class CompanyMembershipService:
 
@@ -230,6 +231,21 @@ class CompanyMembershipService:
                 )
 
         membership.status = CompanyMembershipStatus.INACTIVE
+
+        AuditService.record(
+            db=db,
+            action="company_member.removed",
+            resource_type="company_membership",
+            resource_id=membership.id,
+            actor_id=current_user_id,
+            company_id=company_id,
+            context={
+                "user_id": membership.user_id,
+                "previous_status": CompanyMembershipStatus.ACTIVE.value,
+                "new_status": CompanyMembershipStatus.INACTIVE.value,
+                "role": membership.role.value,
+            },
+        )
 
         db.flush()
 

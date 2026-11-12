@@ -10,6 +10,7 @@ from .base_controller import generate_schema
 from ..models.user_model import User
 from ..utils.orm import orm_to_dict
 from ..models.user_response_model import UserResponse
+from ..services.user_service import UserService
 
 class UsersController:
     model: Type = User 
@@ -51,36 +52,48 @@ class UsersController:
 
             return data
 
-        @self.router.post("/", response_model=self.Schema, dependencies=[Depends(require_admin)])
-        def create(data: Dict[str, Any], db: Session = Depends(get_db)):
-            return BaseService(self.model, db).create(data)
+        @self.router.post(
+            "/",
+            response_model=self.Schema,
+            dependencies=[Depends(require_admin)],
+        )
+        def create(
+            data: Dict[str, Any],
+            db: Session = Depends(get_db),
+            current_user: User = Depends(get_current_user),
+        ):
+            return UserService(self.model, db).create(
+                data,
+                actor_id=current_user.id,
+            )
 
         @self.router.put(
             "/{item_id}",
             response_model=self.Schema,
-            dependencies=[Depends(require_admin)]
+            dependencies=[Depends(require_admin)],
         )
+
         def update(
             item_id: int,
             data: Dict[str, Any],
-            db: Session = Depends(get_db)
+            db: Session = Depends(get_db),
+            current_user: User = Depends(get_current_user),
         ):
             data.pop("role", None)
             data.pop("active", None)
+            data.pop("password", None)
 
-            updated = BaseService(self.model, db).update(item_id, data)
+            updated = UserService(self.model, db).update(
+                item_id,
+                data,
+                actor_id=current_user.id,
+            )
 
             if not updated:
                 raise HTTPException(404, "Item not found")
 
             return updated
 
-        @self.router.delete("/{item_id}", dependencies=[Depends(require_admin)])
-        def delete(item_id: int, db: Session = Depends(get_db)):
-            deleted = BaseService(self.model, db).delete(item_id)
-            if not deleted:
-                raise HTTPException(404, "Item not found")
-            return {"success": True}
         @self.router.get("/profile/me", response_model=UserResponse)
         def read_current_user(
             current_user: User = Depends(get_current_user)
@@ -89,6 +102,7 @@ class UsersController:
             data.pop("password", None)
 
             return data
+
         @self.router.put("/profile/me", response_model=UserResponse)
         def update_current_user(
             data: Dict[str, Any],
@@ -100,9 +114,9 @@ class UsersController:
             data.pop("active", None)
             data.pop("password", None)
 
-            updated = BaseService(self.model, db).update(
+            updated = UserService(self.model, db).update_profile(
                 current_user.id,
-                data
+                data,
             )
 
             if not updated:

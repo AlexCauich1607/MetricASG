@@ -8,6 +8,7 @@ from app.core.config import settings
 
 from app.database.database import get_db
 from app.services.auth_service import AuthService
+from ..models.user_model import User
 
 
 auth_service = AuthService()
@@ -95,8 +96,12 @@ class AuthController:
             return auth_service.create_company(payload.dict(), db)
      
         @self.router.post("/create-admin", dependencies=[Depends(require_admin)])
-        def create_admin(payload: AdminRequest, db: Session = Depends(get_db)):
-            return auth_service.create_admin(payload.dict(), db)
+        def create_admin(payload: AdminRequest, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+            return auth_service.create_admin(
+                payload.dict(),
+                db,
+                actor_id=current_user.id,
+            )
         
         @self.router.post("/refresh-token")
         def refresh_token(

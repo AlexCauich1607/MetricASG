@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 from app.database.database import get_db
 from app.services.methodology_service import MethodologyService
 from app.services.token_service import get_current_user, require_admin
-
+from app.models.user_model import User
 
 class MethodologiesController:
     def __init__(self):
@@ -42,8 +42,12 @@ class MethodologiesController:
         def create(
             data: Dict[str, Any],
             db: Session = Depends(get_db),
+            current_user: User = Depends(get_current_user),
         ):
-            return MethodologyService(db).create(data)
+            return MethodologyService(db).create(
+                data,
+                actor_id=current_user.id,
+            )
 
         @self.router.put(
             "/{methodology_id}",
@@ -53,11 +57,14 @@ class MethodologiesController:
             methodology_id: int,
             data: Dict[str, Any],
             db: Session = Depends(get_db),
+            current_user: User = Depends(get_current_user),
         ):
             return MethodologyService(db).update(
                 methodology_id,
                 data,
+                actor_id=current_user.id,
             )
+
 
         @self.router.post(
             "/{methodology_id}/publish",
@@ -66,8 +73,12 @@ class MethodologiesController:
         def publish(
             methodology_id: int,
             db: Session = Depends(get_db),
+            current_user: User = Depends(get_current_user),
         ):
-            return MethodologyService(db).publish(methodology_id)
+            return MethodologyService(db).publish(
+                methodology_id,
+                actor_id=current_user.id,
+            )
 
         @self.router.post(
             "/{methodology_id}/activate",
@@ -76,8 +87,12 @@ class MethodologiesController:
         def activate(
             methodology_id: int,
             db: Session = Depends(get_db),
+            current_user: User = Depends(get_current_user),
         ):
-            return MethodologyService(db).activate(methodology_id)
+            return MethodologyService(db).activate(
+                methodology_id,
+                actor_id=current_user.id,
+            )
 
         @self.router.post(
             "/{methodology_id}/archive",
@@ -86,5 +101,9 @@ class MethodologiesController:
         def archive(
             methodology_id: int,
             db: Session = Depends(get_db),
+            current_user: User = Depends(get_current_user),
         ):
-            return MethodologyService(db).archive(methodology_id)
+            return MethodologyService(db).archive(
+                methodology_id,
+                actor_id=current_user.id,
+            )

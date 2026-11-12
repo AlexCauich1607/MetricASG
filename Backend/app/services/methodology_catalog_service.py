@@ -8,16 +8,41 @@ from app.models.maturity_level_model import MaturityLevel
 from app.models.maturity_level_score_range_model import MaturityLevelScoreRange
 from app.models.methodology_model import Methodology, MethodologyStatus
 from app.services.base_service import BaseService
-
+from app.services.audit_service import AuditService
 
 class MethodologyCatalogService(BaseService):
-    def create(self, data: dict):
+    requires_actor = True
+
+    def create(self, data: dict, actor_id: int):
         methodology_id = self._methodology_id_from_data(data)
         self._ensure_draft(methodology_id)
 
-        return super().create(data)
+        try:
+            obj = self.model(**data)
+            self.db.add(obj)
+            self.db.flush()
 
-    def update(self, item_id: int, data: dict):
+            AuditService.record(
+                db=self.db,
+                action="methodology_catalog.created",
+                resource_type=self.model.__tablename__,
+                resource_id=obj.id,
+                actor_id=actor_id,
+                context={
+                    "methodology_id": methodology_id,
+                },
+            )
+
+            self.db.commit()
+            self.db.refresh(obj)
+
+            return obj
+
+        except Exception:
+            self.db.rollback()
+            raise
+
+    def update(self, item_id: int, data: dict, actor_id: int):
         obj = self.read(item_id)
 
         if not obj:
@@ -27,9 +52,7 @@ class MethodologyCatalogService(BaseService):
         self._ensure_draft(current_methodology_id)
 
         candidate_data = self._build_candidate_data(obj, data)
-        target_methodology_id = self._methodology_id_from_data(
-            candidate_data
-        )
+        target_methodology_id = self._methodology_id_from_data(candidate_data)
 
         if target_methodology_id != current_methodology_id:
             raise HTTPException(
@@ -40,9 +63,33 @@ class MethodologyCatalogService(BaseService):
                 ),
             )
 
-        return super().update(item_id, data)
+        try:
+            for key, value in data.items():
+                setattr(obj, key, value)
 
-    def delete(self, item_id: int):
+            self.db.flush()
+
+            AuditService.record(
+                db=self.db,
+                action="methodology_catalog.updated",
+                resource_type=self.model.__tablename__,
+                resource_id=obj.id,
+                actor_id=actor_id,
+                context={
+                    "methodology_id": current_methodology_id,
+                },
+            )
+
+            self.db.commit()
+            self.db.refresh(obj)
+
+            return obj
+
+        except Exception:
+            self.db.rollback()
+            raise
+
+    def delete(self, item_id: int, actor_id: int):
         obj = self.read(item_id)
 
         if not obj:
@@ -51,7 +98,28 @@ class MethodologyCatalogService(BaseService):
         methodology_id = self._methodology_id_from_object(obj)
         self._ensure_draft(methodology_id)
 
-        return super().delete(item_id)
+        try:
+            self.db.delete(obj)
+            self.db.flush()
+
+            AuditService.record(
+                db=self.db,
+                action="methodology_catalog.deleted",
+                resource_type=self.model.__tablename__,
+                resource_id=item_id,
+                actor_id=actor_id,
+                context={
+                    "methodology_id": methodology_id,
+                },
+            )
+
+            self.db.commit()
+
+            return True
+
+        except Exception:
+            self.db.rollback()
+            raise
 
     def _ensure_draft(self, methodology_id: int):
         methodology = (

@@ -29,11 +29,13 @@ export class ContactSettingsComponent {
       if (this.user!.phone!.length > 0 && !this.isPhoneValidate()) {
         return;
       }
+
       const payload = {
         phone: this.user?.phone,
-      }
-      const id = this.user?.id ?? 0;
-      this.userService.update(id, payload).subscribe({
+      };
+
+      this.userService.updateMe(payload).subscribe({
+
         next: (value) => {
           this.tel_bf = this.user?.phone;
           alert("Telefono actualizado con exito")
@@ -65,9 +67,9 @@ export class ContactSettingsComponent {
     return phoneValidate(this.user?.phone!);
   }
 
-  isChangePassword(){
-    if(this.password.length <= 0){
-      this.bf_password="";
+  isChangePassword() {
+    if (this.password.length <= 0) {
+      this.bf_password = "";
     }
     return this.password.length > 0;
   }

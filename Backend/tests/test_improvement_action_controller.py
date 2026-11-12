@@ -16,6 +16,8 @@ from app.models.improvement_action_model import (
 )
 from app.core.roles import CompanyRole
 from app.models.company_membership_model import CompanyMembershipStatus
+from sqlalchemy import select
+from app.models.audit_log_model import AuditLog
 
 def test_create_improvement_action_http(client, db_session):
     data = create_evidence_data(db_session)
@@ -55,6 +57,26 @@ def test_create_improvement_action_http(client, db_session):
 
     assert body["created_at"] is not None
     assert body["updated_at"] is not None
+
+    audit_events = db_session.execute(
+        select(AuditLog).where(
+            AuditLog.action == "improvement_action.created",
+            AuditLog.resource_type == "improvement_action",
+            AuditLog.resource_id == body["id"],
+        )
+    ).scalars().all()
+
+    assert len(audit_events) == 1
+
+    audit_event = audit_events[0]
+
+    assert audit_event.actor_id == user.id
+    assert audit_event.company_id == evaluation.company_id
+    assert audit_event.context == {
+        "evaluation_id": evaluation.id,
+        "indicator_id": None,
+    }
+    assert audit_event.created_at is not None
 
 
 def test_list_and_get_improvement_actions_http(client, db_session):
@@ -169,6 +191,52 @@ def test_update_and_delete_improvement_action_http(client, db_session):
     assert updated["status"] == "IN_PROGRESS"
     assert updated["responsible"] == "Operaciones"
 
+    # Verificar el evento de auditoría de actualización.
+    audit_events = db_session.execute(
+        select(AuditLog).where(
+            AuditLog.action == "improvement_action.updated",
+            AuditLog.resource_type == "improvement_action",
+            AuditLog.resource_id == action_id,
+        )
+    ).scalars().all()
+
+    assert len(audit_events) == 1
+
+    audit_event = audit_events[0]
+
+    assert audit_event.actor_id == user.id
+    assert audit_event.company_id == evaluation.company_id
+    assert audit_event.context == {
+        "evaluation_id": evaluation.id,
+        "changed_fields": [
+            "description",
+            "priority",
+            "status",
+        ],
+    }
+    assert audit_event.created_at is not None
+
+    # Enviar los mismos valores no debe generar otro evento.
+    response = client.patch(
+        f"{base}/{action_id}",
+        json={
+            "description": updated["description"],
+            "priority": updated["priority"],
+            "status": updated["status"],
+        },
+    )
+
+    assert response.status_code == 200, response.text
+
+    audit_events = db_session.execute(
+        select(AuditLog).where(
+            AuditLog.action == "improvement_action.updated",
+            AuditLog.resource_id == action_id,
+        )
+    ).scalars().all()
+
+    assert len(audit_events) == 1
+
     # Confirmar los cambios mediante GET.
     response = client.get(f"{base}/{action_id}")
 
@@ -182,6 +250,30 @@ def test_update_and_delete_improvement_action_http(client, db_session):
 
     assert response.status_code == 204, response.text
     assert response.content == b""
+
+    # Verificar que la eliminación conserva su evento de auditoría.
+    audit_events = db_session.execute(
+        select(AuditLog).where(
+            AuditLog.action == "improvement_action.deleted",
+            AuditLog.resource_type == "improvement_action",
+            AuditLog.resource_id == action_id,
+        )
+    ).scalars().all()
+
+    assert len(audit_events) == 1
+
+    audit_event = audit_events[0]
+
+    assert audit_event.actor_id == user.id
+    assert audit_event.company_id == evaluation.company_id
+    assert audit_event.context == {
+        "evaluation_id": evaluation.id,
+        "indicator_id": None,
+    }
+    assert audit_event.created_at is not None
+
+    # El recurso ya no debe existir en la base de datos.
+    assert db_session.get(ImprovementAction, action_id) is None
 
     # La acción eliminada ya no debe existir.
     response = client.get(f"{base}/{action_id}")
