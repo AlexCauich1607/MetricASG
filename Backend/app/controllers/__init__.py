@@ -19,6 +19,7 @@ from .improvement_action_controller import ImprovementActionController
 from .notification_controller import NotificationController
 from .company_invitation_controller import CompanyInvitationController
 from .company_membership_controller import CompanyMembershipController
+from .benchmark_controller import BenchmarkController
 controllers = [
     UsersController(),
     AmbitsController(),
@@ -40,5 +41,6 @@ controllers = [
     ImprovementActionController(),
     NotificationController(),
     CompanyInvitationController(),
-    CompanyMembershipController()
+    CompanyMembershipController(),
+    BenchmarkController()
 ]

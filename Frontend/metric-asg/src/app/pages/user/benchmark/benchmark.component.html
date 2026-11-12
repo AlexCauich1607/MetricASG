@@ -1,0 +1,145 @@
+﻿<section class="benchmark-page container py-4">
+  <header class="mb-4">
+    <h1 class="benchmark-title">Benchmarking ASG</h1>
+    <p class="text-muted mb-0">
+      Compara el desempeño de tu empresa con los promedios
+      agregados de otras organizaciones.
+    </p>
+  </header>
+
+  @if (state().loading) {
+    <div class="benchmark-message" role="status">
+      <div class="spinner-border text-primary mb-3" aria-hidden="true"></div>
+      <p class="mb-0">Cargando datos de benchmarking...</p>
+    </div>
+  } @else if (state().error) {
+    <div class="alert alert-danger" role="alert">
+      {{ state().error }}
+    </div>
+  } @else if (!state().available) {
+    <div class="benchmark-message">
+      <i class="bi bi-bar-chart-line fs-1 text-muted"></i>
+      <h2 class="h5 mt-3">Comparación no disponible</h2>
+      <p class="text-muted mb-0">
+        No hay suficientes empresas comparables para mostrar
+        resultados agregados de forma segura.
+      </p>
+    </div>
+  } @else {
+    <div class="benchmark-methodology mb-4">
+      <i class="bi bi-clipboard-data me-2"></i>
+      Metodología:
+      <strong>{{ state().methodologyVersion }}</strong>
+    </div>
+
+    <div class="row g-3 mb-4">
+      <div class="col-md-4">
+        <article class="benchmark-card">
+          <span class="benchmark-label">Mi empresa</span>
+          <span class="benchmark-value">
+            {{ state().companyScore | number:'1.2-2' }}
+          </span>
+          <span class="benchmark-description">
+            Puntuación global ASG
+          </span>
+        </article>
+      </div>
+
+      <div class="col-md-4">
+        <article class="benchmark-card">
+          <span class="benchmark-label">Grupo comparable</span>
+          <span class="benchmark-value">
+            {{ state().benchmarkAverage | number:'1.2-2' }}
+          </span>
+          <span class="benchmark-description">
+            Promedio global agregado
+          </span>
+        </article>
+      </div>
+
+      <div class="col-md-4">
+        <article class="benchmark-card">
+          <span class="benchmark-label">Diferencia global</span>
+          <span
+            class="benchmark-value"
+            [class.positive]="(state().globalDifference ?? 0) > 0"
+            [class.negative]="(state().globalDifference ?? 0) < 0">
+            {{ (state().globalDifference ?? 0) > 0 ? '+' : '' }}
+            {{ state().globalDifference | number:'1.2-2' }}
+          </span>
+          <span class="benchmark-description">
+            Respecto al promedio del grupo
+          </span>
+        </article>
+      </div>
+    </div>
+
+    <section class="benchmark-panel">
+      <h2 class="h5 mb-2">Comparación por ámbito</h2>
+      <p class="text-muted small mb-4">
+        Las barras representan las puntuaciones de tu empresa
+        y los promedios agregados disponibles.
+      </p>
+
+      @if (state().comparisons.length === 0) {
+        <p class="text-muted mb-0">
+          No hay datos comparables por ámbito.
+        </p>
+      } @else {
+        <div class="benchmark-legend mb-4">
+          <span>
+            <i class="benchmark-dot company-dot"></i>
+            Mi empresa
+          </span>
+          <span>
+            <i class="benchmark-dot group-dot"></i>
+            Grupo comparable
+          </span>
+        </div>
+
+        @for (ambit of state().comparisons; track ambit.ambit_id) {
+          <article class="benchmark-ambit">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+              <h3 class="h6 mb-0">{{ ambit.name }}</h3>
+              <span
+                class="benchmark-difference"
+                [class.positive]="ambit.difference > 0"
+                [class.negative]="ambit.difference < 0">
+                {{ ambit.difference > 0 ? '+' : '' }}{{ ambit.difference | number:'1.2-2' }}
+              </span>
+            </div>
+
+            <div class="benchmark-bar-row">
+              <span class="benchmark-bar-label">Mi empresa</span>
+              <div class="benchmark-track">
+                <div
+                  class="benchmark-fill company-fill"
+                  [style.width.%]="Math.min(100, Math.max(0, ambit.companyScore * 10))">
+                </div>
+              </div>
+              <strong>{{ ambit.companyScore | number:'1.2-2' }}</strong>
+            </div>
+
+            <div class="benchmark-bar-row">
+              <span class="benchmark-bar-label">Promedio</span>
+              <div class="benchmark-track">
+                <div
+                  class="benchmark-fill group-fill"
+                  [style.width.%]="Math.min(100, Math.max(0, ambit.benchmarkAverage * 10))">
+                </div>
+              </div>
+              <strong>{{ ambit.benchmarkAverage | number:'1.2-2' }}</strong>
+            </div>
+          </article>
+        }
+      }
+    </section>
+
+    <p class="benchmark-privacy-note mt-4">
+      <i class="bi bi-shield-lock me-2"></i>
+      Los promedios se muestran únicamente cuando existe un
+      grupo suficientemente amplio. No se presentan resultados
+      individuales de otras empresas.
+    </p>
+  }
+</section>
