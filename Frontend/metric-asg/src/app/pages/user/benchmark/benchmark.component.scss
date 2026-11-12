@@ -1,0 +1,148 @@
+﻿.benchmark-page {
+  max-width: 1100px;
+}
+
+.benchmark-title {
+  font-size: 1.9rem;
+  font-weight: 700;
+  color: #33234f;
+}
+
+.benchmark-methodology {
+  color: #615875;
+  font-size: 0.95rem;
+}
+
+.benchmark-card,
+.benchmark-panel,
+.benchmark-message {
+  background: #fff;
+  border: 1px solid #e8e4ef;
+  border-radius: 14px;
+  box-shadow: 0 3px 14px rgb(30 20 50 / 5%);
+}
+
+.benchmark-card {
+  padding: 1.5rem;
+  min-height: 155px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.benchmark-label {
+  font-size: 0.9rem;
+  color: #706781;
+}
+
+.benchmark-value {
+  font-size: 2.1rem;
+  font-weight: 700;
+  color: #33234f;
+}
+
+.benchmark-description {
+  color: #80788b;
+  font-size: 0.85rem;
+}
+
+.positive {
+  color: #18784e;
+}
+
+.negative {
+  color: #b54747;
+}
+
+.benchmark-panel {
+  padding: 1.75rem;
+}
+
+.benchmark-message {
+  padding: 3rem 1.5rem;
+  text-align: center;
+  color: #5c526d;
+}
+
+.benchmark-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+  font-size: 0.85rem;
+  color: #615875;
+}
+
+.benchmark-dot {
+  display: inline-block;
+  width: 11px;
+  height: 11px;
+  margin-right: 6px;
+  border-radius: 3px;
+}
+
+.company-dot,
+.company-fill {
+  background-color: #7653ad;
+}
+
+.group-dot,
+.group-fill {
+  background-color: #b9aacd;
+}
+
+.benchmark-ambit {
+  padding: 1.25rem 0;
+  border-top: 1px solid #eeebf2;
+}
+
+.benchmark-difference {
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.benchmark-bar-row {
+  display: grid;
+  grid-template-columns: 85px minmax(0, 1fr) 52px;
+  gap: 0.75rem;
+  align-items: center;
+  margin-bottom: 0.75rem;
+  font-size: 0.85rem;
+}
+
+.benchmark-bar-label {
+  color: #615875;
+}
+
+.benchmark-track {
+  height: 13px;
+  background: #f0edf5;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.benchmark-fill {
+  height: 100%;
+  border-radius: inherit;
+  max-width: 100%;
+}
+
+.benchmark-privacy-note {
+  font-size: 0.85rem;
+  color: #706781;
+}
+
+@media (max-width: 576px) {
+  .benchmark-title {
+    font-size: 1.5rem;
+  }
+
+  .benchmark-panel {
+    padding: 1.25rem;
+  }
+
+  .benchmark-bar-row {
+    grid-template-columns: 70px minmax(0, 1fr) 45px;
+    gap: 0.5rem;
+    font-size: 0.75rem;
+  }
+}

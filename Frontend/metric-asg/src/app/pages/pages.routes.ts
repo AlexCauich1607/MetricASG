@@ -92,7 +92,12 @@ export const pagesRoutes: Routes = [
           import('./user/history/history.component')
             .then(m => m.HistoryComponent)
       },
-
+      {
+        path: 'benchmark',
+        loadComponent: () =>
+          import('./user/benchmark/benchmark.component')
+            .then(m => m.BenchmarkComponent)
+      },
       {
         path: 'evaluations/:evaluationId/improvement-plan',
         loadComponent: () =>
