@@ -5,6 +5,18 @@ from app.core.config import settings
 from sqlalchemy import exists
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session
+from app.models.notification_event_preference_request import (
+    NotificationEventType,
+)
+from app.models.notification_model import (
+    Notification,
+    NotificationChannel,
+    NotificationStatus,
+)
+from app.services.notification_preference_service import (
+    NotificationPreferenceService,
+)
+from app.services.notification_service import NotificationService
 
 from app.models.evaluation_model import (
     Evaluation,
@@ -20,7 +32,6 @@ from app.models.reevaluation_reminder_model import (
     ReminderType,
 )
 from app.models.user_model import User
-
 
 class ReevaluationReminderService:
 
@@ -59,11 +70,7 @@ class ReevaluationReminderService:
         )
 
         users = (
-            self.db.query(User, NotificationPreference)
-            .outerjoin(
-                NotificationPreference,
-                NotificationPreference.user_id == User.id,
-            )
+            self.db.query(User)
             .filter(
                 User.active.is_(True),
                 User.next_evaluation.isnot(None),
@@ -72,36 +79,34 @@ class ReevaluationReminderService:
             .all()
         )
 
+        preference_service = NotificationPreferenceService(self.db)
+        notification_service = NotificationService(self.db)
+
         created = 0
 
         try:
-            for user, preferences in users:
+            for user in users:
                 target_date = user.next_evaluation.date()
-
                 reminder_type = reminder_dates.get(target_date)
 
                 if reminder_type is None:
                     continue
 
-                in_app_enabled = (
-                    preferences is None
-                    or preferences.in_app_enabled
-                )
+                for channel in ReminderChannel:
+                    notification_channel = NotificationChannel(
+                        channel.value
+                    )
 
-                email_enabled = (
-                    preferences is None
-                    or preferences.email_enabled
-                )
+                    if not preference_service.is_enabled(
+                        user_id=user.id,
+                        event_type=(
+                            NotificationEventType
+                            .REEVALUATION_REMINDER.value
+                        ),
+                        channel=notification_channel,
+                    ):
+                        continue
 
-                channels = []
-
-                if in_app_enabled:
-                    channels.append(ReminderChannel.IN_APP)
-
-                if email_enabled:
-                    channels.append(ReminderChannel.EMAIL)
-
-                for channel in channels:
                     statement = (
                         insert(ReevaluationReminder)
                         .values(
@@ -119,8 +124,26 @@ class ReevaluationReminderService:
                     )
 
                     result = self.db.execute(statement)
-
                     created += result.rowcount
+
+                    notification_service.create(
+                        user_id=user.id,
+                        event_type=(
+                            NotificationEventType.REEVALUATION_REMINDER
+                        ),
+                        channel=notification_channel,
+                        title="Recordatorio de reevaluación",
+                        message=(
+                            "Tu próxima reevaluación está programada "
+                            f"para el {target_date.isoformat()}."
+                        ),
+                        deduplication_key=(
+                            f"reevaluation:{user.id}:"
+                            f"{target_date.isoformat()}:"
+                            f"{reminder_type.value}"
+                        ),
+                        resource_type="reevaluation",
+                    )
 
             self.db.commit()
 
@@ -134,14 +157,6 @@ class ReevaluationReminderService:
     def cancel_obsolete_in_app(self) -> int:
         pending_reminders = (
             self.db.query(ReevaluationReminder)
-            .join(
-                User,
-                User.id == ReevaluationReminder.user_id,
-            )
-            .outerjoin(
-                NotificationPreference,
-                NotificationPreference.user_id == User.id,
-            )
             .filter(
                 ReevaluationReminder.channel
                 == ReminderChannel.IN_APP,
@@ -151,27 +166,66 @@ class ReevaluationReminderService:
             .all()
         )
 
+        preference_service = NotificationPreferenceService(self.db)
         cancelled = 0
 
         try:
             for reminder in pending_reminders:
                 user = reminder.user
-                preferences = user.notification_preference
 
                 is_valid = (
                     user.active
                     and user.next_evaluation is not None
                     and user.next_evaluation.date()
                     == reminder.target_date
-                    and (
-                        preferences is None
-                        or preferences.in_app_enabled
+                    and preference_service.is_enabled(
+                        user_id=user.id,
+                        event_type=(
+                            NotificationEventType
+                            .REEVALUATION_REMINDER.value
+                        ),
+                        channel=NotificationChannel.IN_APP,
                     )
                 )
 
-                if not is_valid:
-                    reminder.status = ReminderStatus.CANCELLED
-                    cancelled += 1
+                if is_valid:
+                    continue
+
+                reminder.status = ReminderStatus.CANCELLED
+                cancelled += 1
+
+                deduplication_key = (
+                    f"reevaluation:{user.id}:"
+                    f"{reminder.target_date.isoformat()}:"
+                    f"{reminder.reminder_type.value}"
+                )
+
+                (
+                    self.db.query(Notification)
+                    .filter(
+                        Notification.user_id == user.id,
+                        Notification.event_type
+                        == NotificationEventType
+                        .REEVALUATION_REMINDER.value,
+                        Notification.channel
+                        == NotificationChannel.IN_APP,
+                        Notification.deduplication_key
+                        == deduplication_key,
+                        Notification.status.in_(
+                            [
+                                NotificationStatus.PENDING,
+                                NotificationStatus.SENT,
+                            ]
+                        ),
+                    )
+                    .update(
+                        {
+                            Notification.status:
+                                NotificationStatus.CANCELLED,
+                        },
+                        synchronize_session=False,
+                    )
+                )
 
             self.db.commit()
 

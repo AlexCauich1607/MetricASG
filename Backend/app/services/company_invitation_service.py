@@ -26,6 +26,12 @@ from app.core.roles import CompanyRole
 from app.core.company_permissions import require_company_role
 from app.services.audit_service import AuditService
 
+from app.models.notification_event_preference_request import (
+    NotificationEventType,
+)
+from app.models.notification_model import NotificationChannel
+from app.services.notification_service import NotificationService
+
 class CompanyInvitationService:
     INVITATION_EXPIRATION_DAYS = 7
     RESEND_COOLDOWN_MINUTES = 5
@@ -165,7 +171,7 @@ class CompanyInvitationService:
     ) -> tuple[CompanyInvitation, str]:
         normalized_email = self._normalize_email(email)
 
-        self._validate_invitation(
+        recipient = self._validate_invitation(
             db=db,
             company_id=company_id,
             invited_by_user_id=invited_by_user_id,
@@ -208,6 +214,21 @@ class CompanyInvitationService:
                     "role": invitation.role.value,
                     "status": CompanyInvitationStatus.PENDING.value,
                 },
+            )
+
+            NotificationService(db).create(
+                user_id=recipient.id,
+                company_id=company_id,
+                event_type=NotificationEventType.COMPANY_INVITATION_CREATED.value,
+                channel=NotificationChannel.IN_APP,
+                title="Nueva invitación empresarial",
+                message=(
+                    "Has recibido una invitación para unirte "
+                    "a una empresa en MetricASG."
+                ),
+                deduplication_key=f"company_invitation:{invitation.id}:created",
+                resource_type="company_invitation",
+                resource_id=invitation.id,
             )
 
             db.commit()
@@ -310,7 +331,7 @@ class CompanyInvitationService:
                     detail="Invitation is no longer pending",
                 )
 
-            self._validate_invitation(
+            recipient = self._validate_invitation(
                 db=db,
                 company_id=invitation.company_id,
                 invited_by_user_id=requested_by_user_id,
@@ -361,6 +382,24 @@ class CompanyInvitationService:
                     "status": CompanyInvitationStatus.PENDING.value,
                     "role": invitation.role.value,
                 },
+            )
+
+            NotificationService(db).create(
+                user_id=recipient.id,
+                company_id=invitation.company_id,
+                event_type=NotificationEventType.COMPANY_INVITATION_RESENT.value,
+                channel=NotificationChannel.IN_APP,
+                title="Invitación empresarial reenviada",
+                message=(
+                    "Se ha reenviado una invitación para que "
+                    "te unas a una empresa en MetricASG."
+                ),
+                deduplication_key=(
+                    f"company_invitation:{invitation.id}:resent:"
+                    f"{now.isoformat()}"
+                ),
+                resource_type="company_invitation",
+                resource_id=invitation.id,
             )
 
             db.commit()

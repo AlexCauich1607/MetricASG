@@ -423,3 +423,277 @@ def test_reminder_generation_uses_local_date(
     assert utc_time.astimezone(
         ZoneInfo(timezone_name)
     ).date() == expected_date
+
+
+# HU-042: integración con el centro de notificaciones.
+
+from app.models.notification_model import (
+    Notification,
+    NotificationChannel,
+)
+from app.models.notification_event_preference_model import (
+    NotificationEventPreference,
+)
+
+
+@pytest.mark.parametrize(
+    "days_until",
+    [30, 7, 0],
+)
+def test_reevaluation_creates_center_notifications(
+    db_session,
+    reminder_data,
+    days_until,
+):
+    user = reminder_data["user"]
+
+    target_date = TODAY + timedelta(days=days_until)
+    user.next_evaluation = datetime.combine(
+        target_date,
+        datetime.min.time(),
+    )
+
+    db_session.flush()
+
+    created = ReevaluationReminderService(db_session).generate(
+        today=TODAY,
+    )
+
+    notifications = (
+        db_session.query(Notification)
+        .filter(
+            Notification.user_id == user.id,
+            Notification.event_type == "REEVALUATION_REMINDER",
+        )
+        .all()
+    )
+
+    assert created == 2
+    assert len(notifications) == 2
+
+    assert {item.channel for item in notifications} == {
+        NotificationChannel.IN_APP,
+        NotificationChannel.EMAIL,
+    }
+
+    assert all(
+        target_date.isoformat() in item.message
+        for item in notifications
+    )
+
+    assert all(
+        item.read_at is None
+        for item in notifications
+    )
+
+
+def test_reevaluation_notifications_are_idempotent(
+    db_session,
+    reminder_data,
+):
+    user = reminder_data["user"]
+    service = ReevaluationReminderService(db_session)
+
+    first_result = service.generate(today=TODAY)
+    second_result = service.generate(today=TODAY)
+
+    notifications = (
+        db_session.query(Notification)
+        .filter(
+            Notification.user_id == user.id,
+            Notification.event_type == "REEVALUATION_REMINDER",
+        )
+        .all()
+    )
+
+    reminders = (
+        db_session.query(ReevaluationReminder)
+        .filter(ReevaluationReminder.user_id == user.id)
+        .all()
+    )
+
+    assert first_result == 2
+    assert second_result == 0
+    assert len(reminders) == 2
+    assert len(notifications) == 2
+
+
+def test_reevaluation_respects_event_preferences(
+    db_session,
+    reminder_data,
+):
+    user = reminder_data["user"]
+
+    db_session.add(
+        NotificationEventPreference(
+            user_id=user.id,
+            event_type="REEVALUATION_REMINDER",
+            in_app_enabled=False,
+            email_enabled=True,
+        )
+    )
+    db_session.flush()
+
+    created = ReevaluationReminderService(db_session).generate(
+        today=TODAY,
+    )
+
+    reminders = (
+        db_session.query(ReevaluationReminder)
+        .filter(ReevaluationReminder.user_id == user.id)
+        .all()
+    )
+
+    notifications = (
+        db_session.query(Notification)
+        .filter(Notification.user_id == user.id)
+        .all()
+    )
+
+    assert created == 1
+    assert len(reminders) == 1
+    assert len(notifications) == 1
+
+    assert reminders[0].channel == ReminderChannel.EMAIL
+    assert notifications[0].channel == NotificationChannel.EMAIL
+
+
+def test_reevaluation_disables_both_channels_by_event(
+    db_session,
+    reminder_data,
+):
+    user = reminder_data["user"]
+
+    db_session.add(
+        NotificationEventPreference(
+            user_id=user.id,
+            event_type="REEVALUATION_REMINDER",
+            in_app_enabled=False,
+            email_enabled=False,
+        )
+    )
+    db_session.flush()
+
+    created = ReevaluationReminderService(db_session).generate(
+        today=TODAY,
+    )
+
+    assert created == 0
+
+    assert (
+        db_session.query(ReevaluationReminder)
+        .filter(ReevaluationReminder.user_id == user.id)
+        .count()
+    ) == 0
+
+    assert (
+        db_session.query(Notification)
+        .filter(Notification.user_id == user.id)
+        .count()
+    ) == 0
+
+
+@pytest.mark.parametrize(
+    "invalidating_change",
+    ["cycle_changed", "event_disabled"],
+)
+def test_cancels_center_notification_with_obsolete_reminder(
+    db_session,
+    reminder_data,
+    invalidating_change,
+):
+    from app.models.notification_model import NotificationStatus
+
+    user = reminder_data["user"]
+
+    service = ReevaluationReminderService(db_session)
+
+    assert service.generate(today=TODAY) == 2
+
+    reminder = (
+        db_session.query(ReevaluationReminder)
+        .filter(
+            ReevaluationReminder.user_id == user.id,
+            ReevaluationReminder.channel == ReminderChannel.IN_APP,
+        )
+        .one()
+    )
+
+    notification = (
+        db_session.query(Notification)
+        .filter(
+            Notification.user_id == user.id,
+            Notification.channel == NotificationChannel.IN_APP,
+            Notification.event_type == "REEVALUATION_REMINDER",
+        )
+        .one()
+    )
+
+    assert reminder.status == ReminderStatus.PENDING
+    assert notification.status == NotificationStatus.PENDING
+
+    if invalidating_change == "cycle_changed":
+        user.next_evaluation = datetime(2027, 6, 5)
+
+    else:
+        db_session.add(
+            NotificationEventPreference(
+                user_id=user.id,
+                event_type="REEVALUATION_REMINDER",
+                in_app_enabled=False,
+                email_enabled=True,
+            )
+        )
+
+    db_session.flush()
+
+    cancelled = service.cancel_obsolete_in_app()
+
+    assert cancelled == 1
+
+    db_session.refresh(reminder)
+    db_session.refresh(notification)
+
+    assert reminder.status == ReminderStatus.CANCELLED
+    assert notification.status == NotificationStatus.CANCELLED
+
+    assert notification.read_at is None
+
+
+def test_keeps_valid_center_notification(
+    db_session,
+    reminder_data,
+):
+    from app.models.notification_model import NotificationStatus
+
+    user = reminder_data["user"]
+
+    service = ReevaluationReminderService(db_session)
+
+    assert service.generate(today=TODAY) == 2
+
+    cancelled = service.cancel_obsolete_in_app()
+
+    assert cancelled == 0
+
+    reminder = (
+        db_session.query(ReevaluationReminder)
+        .filter(
+            ReevaluationReminder.user_id == user.id,
+            ReevaluationReminder.channel == ReminderChannel.IN_APP,
+        )
+        .one()
+    )
+
+    notification = (
+        db_session.query(Notification)
+        .filter(
+            Notification.user_id == user.id,
+            Notification.channel == NotificationChannel.IN_APP,
+            Notification.event_type == "REEVALUATION_REMINDER",
+        )
+        .one()
+    )
+
+    assert reminder.status == ReminderStatus.PENDING
+    assert notification.status == NotificationStatus.PENDING

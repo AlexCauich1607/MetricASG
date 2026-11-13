@@ -1450,3 +1450,286 @@ def test_resend_invitation_rejects_non_admin_roles(
 
     assert exc.value.status_code == 403
     assert exc.value.detail == "Insufficient company permissions"
+
+
+# HU-042: notificaciones de creación de invitaciones.
+
+from app.models.notification_model import (
+    Notification,
+    NotificationChannel,
+    NotificationStatus,
+)
+from app.models.notification_event_preference_model import (
+    NotificationEventPreference,
+)
+from app.models.notification_preference_model import (
+    NotificationPreference,
+)
+
+
+def test_create_invitation_generates_recipient_notification(
+    db_session,
+):
+    data = create_invitation_data(db_session)
+
+    invitation, token = CompanyInvitationService().create_invitation(
+        db=db_session,
+        company_id=data["company"].id,
+        invited_by_user_id=data["inviter"].id,
+        email=data["recipient"].email,
+    )
+
+    notifications = (
+        db_session.query(Notification)
+        .filter(
+            Notification.event_type == "COMPANY_INVITATION_CREATED",
+            Notification.resource_type == "company_invitation",
+            Notification.resource_id == invitation.id,
+        )
+        .all()
+    )
+
+    assert len(notifications) == 1
+
+    notification = notifications[0]
+
+    assert notification.user_id == data["recipient"].id
+    assert notification.user_id != data["inviter"].id
+    assert notification.company_id == data["company"].id
+    assert notification.channel == NotificationChannel.IN_APP
+    assert notification.status == NotificationStatus.PENDING
+    assert notification.deduplication_key == (
+        f"company_invitation:{invitation.id}:created"
+    )
+    assert notification.read_at is None
+
+    assert token not in notification.title
+    assert token not in notification.message
+    assert invitation.token_hash not in notification.title
+    assert invitation.token_hash not in notification.message
+
+
+@pytest.mark.parametrize(
+    "preference_scope",
+    ["global", "event"],
+)
+def test_create_invitation_respects_notification_preferences(
+    db_session,
+    preference_scope,
+):
+    data = create_invitation_data(db_session)
+
+    if preference_scope == "global":
+        preference = NotificationPreference(
+            user_id=data["recipient"].id,
+            in_app_enabled=False,
+            email_enabled=True,
+        )
+    else:
+        preference = NotificationEventPreference(
+            user_id=data["recipient"].id,
+            event_type="COMPANY_INVITATION_CREATED",
+            in_app_enabled=False,
+            email_enabled=True,
+        )
+
+    db_session.add(preference)
+    db_session.flush()
+
+    invitation, token = CompanyInvitationService().create_invitation(
+        db=db_session,
+        company_id=data["company"].id,
+        invited_by_user_id=data["inviter"].id,
+        email=data["recipient"].email,
+    )
+
+    assert invitation.id is not None
+    assert token
+    assert invitation.status == CompanyInvitationStatus.PENDING
+
+    notifications = (
+        db_session.query(Notification)
+        .filter(
+            Notification.user_id == data["recipient"].id,
+            Notification.event_type == "COMPANY_INVITATION_CREATED",
+        )
+        .all()
+    )
+
+    assert notifications == []
+
+    audit_events = (
+        db_session.query(AuditLog)
+        .filter(
+            AuditLog.action == "company_invitation.created",
+            AuditLog.resource_id == invitation.id,
+        )
+        .all()
+    )
+
+    assert len(audit_events) == 1
+
+
+# HU-042: notificaciones de reenvío de invitaciones.
+
+
+def test_resend_invitation_generates_recipient_notification(
+    db_session,
+):
+    data = create_invitation_data(db_session)
+    service = CompanyInvitationService()
+
+    invitation, _ = service.create_invitation(
+        db=db_session,
+        company_id=data["company"].id,
+        invited_by_user_id=data["inviter"].id,
+        email=data["recipient"].email,
+    )
+
+    with patch.object(
+        CompanyInvitationEmailService,
+        "ensure_available",
+    ), patch.object(
+        CompanyInvitationEmailService,
+        "send",
+    ) as mock_send:
+        service.resend_invitation(
+            db=db_session,
+            invitation_id=invitation.id,
+            requested_by_user_id=data["inviter"].id,
+        )
+
+    notifications = (
+        db_session.query(Notification)
+        .filter(
+            Notification.user_id == data["recipient"].id,
+            Notification.event_type == "COMPANY_INVITATION_RESENT",
+        )
+        .all()
+    )
+
+    assert len(notifications) == 1
+
+    notification = notifications[0]
+
+    assert notification.company_id == data["company"].id
+    assert notification.channel == NotificationChannel.IN_APP
+    assert notification.status == NotificationStatus.PENDING
+    assert notification.resource_type == "company_invitation"
+    assert notification.resource_id == invitation.id
+
+    assert notification.deduplication_key.startswith(
+        f"company_invitation:{invitation.id}:resent:"
+    )
+
+    token = mock_send.call_args.kwargs["token"]
+
+    assert token not in notification.message
+    assert invitation.token_hash not in notification.message
+
+    mock_send.assert_called_once()
+
+
+def test_resend_invitation_respects_event_preferences(
+    db_session,
+):
+    data = create_invitation_data(db_session)
+    service = CompanyInvitationService()
+
+    invitation, _ = service.create_invitation(
+        db=db_session,
+        company_id=data["company"].id,
+        invited_by_user_id=data["inviter"].id,
+        email=data["recipient"].email,
+    )
+
+    db_session.add(
+        NotificationEventPreference(
+            user_id=data["recipient"].id,
+            event_type="COMPANY_INVITATION_RESENT",
+            in_app_enabled=False,
+            email_enabled=False,
+        )
+    )
+    db_session.flush()
+
+    with patch.object(
+        CompanyInvitationEmailService,
+        "ensure_available",
+    ), patch.object(
+        CompanyInvitationEmailService,
+        "send",
+    ) as mock_send:
+        service.resend_invitation(
+            db=db_session,
+            invitation_id=invitation.id,
+            requested_by_user_id=data["inviter"].id,
+        )
+
+    assert (
+        db_session.query(Notification)
+        .filter(
+            Notification.user_id == data["recipient"].id,
+            Notification.event_type == "COMPANY_INVITATION_RESENT",
+        )
+        .count()
+    ) == 0
+
+    mock_send.assert_called_once()
+
+
+def test_multiple_resends_generate_distinct_notifications(
+    db_session,
+):
+    data = create_invitation_data(db_session)
+    service = CompanyInvitationService()
+
+    invitation, _ = service.create_invitation(
+        db=db_session,
+        company_id=data["company"].id,
+        invited_by_user_id=data["inviter"].id,
+        email=data["recipient"].email,
+    )
+
+    with patch.object(
+        CompanyInvitationEmailService,
+        "ensure_available",
+    ), patch.object(
+        CompanyInvitationEmailService,
+        "send",
+    ) as mock_send:
+
+        service.resend_invitation(
+            db=db_session,
+            invitation_id=invitation.id,
+            requested_by_user_id=data["inviter"].id,
+        )
+
+        invitation.last_resent_at = (
+            datetime.now(timezone.utc) - timedelta(minutes=6)
+        )
+        db_session.commit()
+
+        service.resend_invitation(
+            db=db_session,
+            invitation_id=invitation.id,
+            requested_by_user_id=data["inviter"].id,
+        )
+
+    notifications = (
+        db_session.query(Notification)
+        .filter(
+            Notification.user_id == data["recipient"].id,
+            Notification.event_type == "COMPANY_INVITATION_RESENT",
+        )
+        .all()
+    )
+
+    assert len(notifications) == 2
+
+    assert len({
+        notification.deduplication_key
+        for notification in notifications
+    }) == 2
+
+    assert mock_send.call_count == 2

@@ -6,12 +6,37 @@ from datetime import datetime, timedelta, time as datetime_time, timezone
 from zoneinfo import ZoneInfo
 
 from app.core.config import settings
-from app.commands.generate_reevaluation_reminders import main
-
+from app.commands.generate_reevaluation_reminders import (
+    main as generate_reevaluation_reminders,
+)
+from app.commands.generate_improvement_action_notifications import (
+    main as generate_improvement_action_notifications,
+)
 
 logging.basicConfig(level=logging.INFO)
 
 logger = logging.getLogger(__name__)
+
+def run_notification_jobs() -> None:
+    jobs = (
+        (
+            "Reevaluation reminders",
+            generate_reevaluation_reminders,
+        ),
+        (
+            "Improvement action notifications",
+            generate_improvement_action_notifications,
+        ),
+    )
+
+    for name, job in jobs:
+        try:
+            job()
+        except Exception:
+            logger.exception(
+                "%s processing failed",
+                name,
+            )
 
 def seconds_until_next_run(
     timezone_info: ZoneInfo,
@@ -51,17 +76,12 @@ def run_scheduler():
     timezone = ZoneInfo(settings.reminder_timezone)
 
     logger.info(
-        "Reevaluation reminder scheduler started. Timezone: %s",
+        "Notification scheduler started. Timezone: %s",
         timezone.key,
     )
 
     while True:
-        try:
-            main()
-        except Exception:
-            logger.exception(
-                "Reevaluation reminder generation failed"
-            )
+        run_notification_jobs()
 
         delay = seconds_until_next_run(timezone)
 

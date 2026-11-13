@@ -1,4 +1,3 @@
-
 import logging
 
 from datetime import datetime, timedelta
@@ -21,6 +20,19 @@ from app.services.reevaluation_email_service import (
     ReevaluationEmailService,
 )
 
+from app.models.notification_event_preference_request import (
+    NotificationEventType,
+)
+
+from app.services.notification_preference_service import (
+    NotificationPreferenceService,
+)
+
+from app.models.notification_model import (
+    Notification,
+    NotificationChannel,
+    NotificationStatus,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -122,6 +134,12 @@ class ReevaluationReminderDeliveryService:
                     today,
                 ):
                     reminder.status = ReminderStatus.CANCELLED
+
+                    self._sync_notification_status(
+                        reminder,
+                        NotificationStatus.CANCELLED,
+                    )
+
                     self.db.commit()
                     results["cancelled"] += 1
                     continue
@@ -139,6 +157,12 @@ class ReevaluationReminderDeliveryService:
                     )
 
                     reminder.status = ReminderStatus.FAILED
+
+                    self._sync_notification_status(
+                        reminder,
+                        NotificationStatus.FAILED,
+                    )
+
                     self.db.commit()
 
                     results["failed"] += 1
@@ -147,6 +171,12 @@ class ReevaluationReminderDeliveryService:
                 reminder.status = ReminderStatus.SENT
                 reminder.sent_at = datetime.now(
                     ZoneInfo("UTC")
+                )
+
+                self._sync_notification_status(
+                    reminder,
+                    NotificationStatus.SENT,
+                    sent_at=reminder.sent_at,
                 )
 
                 self.db.commit()
@@ -161,6 +191,40 @@ class ReevaluationReminderDeliveryService:
                 raise
 
         return results
+
+    def _sync_notification_status(
+        self,
+        reminder: ReevaluationReminder,
+        notification_status: NotificationStatus,
+        sent_at=None,
+    ) -> None:
+        deduplication_key = (
+            f"reevaluation:{reminder.user_id}:"
+            f"{reminder.target_date.isoformat()}:"
+            f"{reminder.reminder_type.value}"
+        )
+
+        updates = {
+            Notification.status: notification_status,
+        }
+
+        if sent_at is not None:
+            updates[Notification.sent_at] = sent_at
+
+        (
+            self.db.query(Notification)
+            .filter(
+                Notification.user_id == reminder.user_id,
+                Notification.event_type
+                == NotificationEventType.REEVALUATION_REMINDER.value,
+                Notification.channel == NotificationChannel.EMAIL,
+                Notification.deduplication_key == deduplication_key,
+            )
+            .update(
+                updates,
+                synchronize_session=False,
+            )
+        )
 
     def _is_eligible(
         self,
@@ -178,9 +242,12 @@ class ReevaluationReminderDeliveryService:
         if user.next_evaluation.date() != reminder.target_date:
             return False
 
-        if (
-            preferences is not None
-            and not preferences.email_enabled
+        preference_service = NotificationPreferenceService(self.db)
+
+        if not preference_service.is_enabled(
+            user_id=user.id,
+            event_type=NotificationEventType.REEVALUATION_REMINDER.value,
+            channel=NotificationChannel.EMAIL,
         ):
             return False
 
