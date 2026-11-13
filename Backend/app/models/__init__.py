@@ -22,3 +22,5 @@ from app.models.reevaluation_reminder_model import ReevaluationReminder
 from app.models.company_model import Company
 from app.models.company_membership_model import CompanyMembership
 from app.models.company_invitation_model import CompanyInvitation
+from app.models.notification_model import Notification
+from app.models.notification_event_preference_model import NotificationEventPreference

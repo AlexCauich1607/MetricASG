@@ -110,6 +110,20 @@ class User(Base):
         passive_deletes=True,
     )
 
+    notifications = relationship(
+        "Notification",
+        back_populates="user",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )
+
+    notification_event_preferences = relationship(
+        "NotificationEventPreference",
+        back_populates="user",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )
+
     @validates("role")
     def validate_role(self, key, value):
         if isinstance(value, UserRole):

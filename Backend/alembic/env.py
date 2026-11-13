@@ -28,6 +28,8 @@ import app.models.company_model
 import app.models.company_membership_model
 import app.models.audit_log_model
 from app.models.company_invitation_model import CompanyInvitation
+import app.models.notification_model
+import app.models.notification_event_preference_model
 
 config = context.config
 
