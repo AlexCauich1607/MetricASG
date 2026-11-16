@@ -75,6 +75,14 @@ export class ResultsComponent {
   private evidenceRequest?: Subscription;
   private evidenceDownloadRequest?: Subscription;
 
+
+  aiExplanation: string | null = null;
+  generatingAIExplanation = false;
+  aiExplanationError: string | null = null;
+
+  private aiExplanationRequest?: Subscription;
+
+
   constructor(
     private resultService: EvaluationService,
     private evidenceService: EvidenceService,
@@ -93,8 +101,13 @@ export class ResultsComponent {
         tap(() => {
           this.evidenceRequest?.unsubscribe();
           this.evidenceDownloadRequest?.unsubscribe();
+          this.aiExplanationRequest?.unsubscribe();
 
           this.clearResultsState();
+
+          this.aiExplanation = null;
+          this.generatingAIExplanation = false;
+          this.aiExplanationError = null;
 
           this.downloadingEvidenceId = null;
 
@@ -144,6 +157,52 @@ export class ResultsComponent {
     ]);
   }
 
+
+  generateAIExplanation(): void {
+    const evaluationId = this.results?.evaluation_id;
+
+    if (
+      evaluationId === undefined ||
+      !Number.isSafeInteger(evaluationId) ||
+      evaluationId <= 0 ||
+      this.generatingAIExplanation
+    ) {
+      return;
+    }
+
+    this.aiExplanationRequest?.unsubscribe();
+
+    this.aiExplanation = null;
+    this.aiExplanationError = null;
+    this.generatingAIExplanation = true;
+
+    this.aiExplanationRequest = this.resultService
+      .generateAIExplanation(evaluationId)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: response => {
+          if (
+            response.evaluation_id !== evaluationId ||
+            response.generated_by_ai !== true ||
+            !response.explanation.trim()
+          ) {
+            this.aiExplanationError =
+              'No se recibió una explicación válida.';
+          } else {
+            this.aiExplanation = response.explanation;
+          }
+
+          this.generatingAIExplanation = false;
+          this.cdr.markForCheck();
+        },
+        error: () => {
+          this.aiExplanationError =
+            'No fue posible generar la explicación. Inténtalo nuevamente.';
+          this.generatingAIExplanation = false;
+          this.cdr.markForCheck();
+        }
+      });
+  }
 
   loadEvidences(evaluationId: number): void {
     this.evidenceRequest?.unsubscribe();

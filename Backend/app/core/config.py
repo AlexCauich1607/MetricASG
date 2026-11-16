@@ -94,6 +94,36 @@ class Settings(BaseSettings):
         min_length=1,
         validation_alias="CORS_ORIGINS"
     )
+
+    # Configuración opcional del proveedor de IA.
+    ai_enabled: bool = Field(
+        default=False,
+        validation_alias="AI_ENABLED",
+    )
+
+    ai_provider: str = Field(
+        default="",
+        validation_alias="AI_PROVIDER",
+    )
+
+    ai_model: str = Field(
+        default="",
+        validation_alias="AI_MODEL",
+    )
+
+    ai_api_key: str = Field(
+        default="",
+        validation_alias="AI_API_KEY",
+        repr=False,
+    )
+
+    ai_timeout_seconds: int = Field(
+        default=30,
+        ge=1,
+        le=120,
+        validation_alias="AI_TIMEOUT_SECONDS",
+    )
+
     @field_validator("cors_origins")
     @classmethod
     def validate_cors_origins(cls, value: str) -> str:

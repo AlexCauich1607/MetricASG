@@ -87,11 +87,14 @@ describe('ResultsComponent', () => {
 
 
   beforeEach(async () => {
-
     evaluationServiceSpy = jasmine.createSpyObj(
       'EvaluationService',
-      ['getLastEvaluationResult']
+      [
+        'getLastEvaluationResult',
+        'generateAIExplanation'
+      ]
     );
+
     evidenceServiceSpy = jasmine.createSpyObj(
       'EvidenceService',
       ['getEvidences', 'downloadEvidence']
@@ -113,6 +116,15 @@ describe('ResultsComponent', () => {
     evaluationServiceSpy.getLastEvaluationResult.and.returnValue(
       of(mockResults)
     );
+
+    evaluationServiceSpy.generateAIExplanation.and.returnValue(
+      of({
+        evaluation_id: 1,
+        explanation: 'Explicación de prueba generada por IA.',
+        generated_by_ai: true
+      })
+    );
+
 
     selectedCompanyId = signal<number | null>(3);
 
@@ -966,6 +978,197 @@ describe('ResultsComponent', () => {
 
     expect(component.asgReport).toBeNull();
     expect(component.generatingAsgReport).toBeFalse();
+  });
+
+  it('should generate an AI explanation for the current evaluation', () => {
+    component.results = mockResults;
+
+    component.generateAIExplanation();
+
+    expect(
+      evaluationServiceSpy.generateAIExplanation
+    ).toHaveBeenCalledOnceWith(1);
+
+    expect(component.aiExplanation).toBe(
+      'Explicación de prueba generada por IA.'
+    );
+
+    expect(component.generatingAIExplanation).toBeFalse();
+    expect(component.aiExplanationError).toBeNull();
+  });
+
+  it('should handle AI explanation errors and allow retry', () => {
+    component.results = mockResults;
+
+    evaluationServiceSpy.generateAIExplanation.and.returnValue(
+      throwError(() => new Error('AI service unavailable'))
+    );
+
+    component.generateAIExplanation();
+
+    expect(component.aiExplanation).toBeNull();
+    expect(component.generatingAIExplanation).toBeFalse();
+    expect(component.aiExplanationError).toBe(
+      'No fue posible generar la explicación. Inténtalo nuevamente.'
+    );
+
+    evaluationServiceSpy.generateAIExplanation.and.returnValue(
+      of({
+        evaluation_id: 1,
+        explanation: 'Explicación generada correctamente.',
+        generated_by_ai: true
+      })
+    );
+
+    component.generateAIExplanation();
+
+    expect(
+      evaluationServiceSpy.generateAIExplanation
+    ).toHaveBeenCalledTimes(2);
+
+    expect(component.aiExplanation).toBe(
+      'Explicación generada correctamente.'
+    );
+    expect(component.aiExplanationError).toBeNull();
+    expect(component.generatingAIExplanation).toBeFalse();
+  });
+
+  it('should prevent duplicate AI explanation requests', () => {
+    component.results = mockResults;
+
+    const pendingResponse = new Subject<{
+      evaluation_id: number;
+      explanation: string;
+      generated_by_ai: boolean;
+    }>();
+
+    evaluationServiceSpy.generateAIExplanation.and.returnValue(
+      pendingResponse.asObservable()
+    );
+
+    component.generateAIExplanation();
+    component.generateAIExplanation();
+
+    expect(
+      evaluationServiceSpy.generateAIExplanation
+    ).toHaveBeenCalledTimes(1);
+
+    expect(component.generatingAIExplanation).toBeTrue();
+
+    pendingResponse.next({
+      evaluation_id: 1,
+      explanation: 'Explicación generada correctamente.',
+      generated_by_ai: true
+    });
+    pendingResponse.complete();
+
+    expect(component.generatingAIExplanation).toBeFalse();
+    expect(component.aiExplanation).toBe(
+      'Explicación generada correctamente.'
+    );
+  });
+
+  it('should cancel AI explanation when company changes', async () => {
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    component.results = mockResults;
+
+    const pendingResponse = new Subject<{
+      evaluation_id: number;
+      explanation: string;
+      generated_by_ai: boolean;
+    }>();
+
+    evaluationServiceSpy.generateAIExplanation.and.returnValue(
+      pendingResponse.asObservable()
+    );
+
+    component.generateAIExplanation();
+
+    expect(component.generatingAIExplanation).toBeTrue();
+    expect(pendingResponse.observed).toBeTrue();
+
+    selectedCompanyId.set(null);
+
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(pendingResponse.observed).toBeFalse();
+    expect(component.aiExplanation).toBeNull();
+    expect(component.aiExplanationError).toBeNull();
+    expect(component.generatingAIExplanation).toBeFalse();
+    expect(component.results).toBeNull();
+
+    pendingResponse.next({
+      evaluation_id: 1,
+      explanation: 'Explicación de la empresa anterior.',
+      generated_by_ai: true
+    });
+    pendingResponse.complete();
+
+    expect(component.aiExplanation).toBeNull();
+  });
+
+  it('should reject AI explanation for a different evaluation', () => {
+    component.results = mockResults;
+
+    evaluationServiceSpy.generateAIExplanation.and.returnValue(
+      of({
+        evaluation_id: 999,
+        explanation: 'Explicación de otra evaluación.',
+        generated_by_ai: true
+      })
+    );
+
+    component.generateAIExplanation();
+
+    expect(
+      evaluationServiceSpy.generateAIExplanation
+    ).toHaveBeenCalledOnceWith(1);
+
+    expect(component.aiExplanation).toBeNull();
+    expect(component.aiExplanationError).toBe(
+      'No se recibió una explicación válida.'
+    );
+    expect(component.generatingAIExplanation).toBeFalse();
+
+    expect(component.results?.global_score).toBe(8.5);
+  });
+
+  [
+    {
+      name: 'empty explanation',
+      explanation: '   ',
+      generated_by_ai: true
+    },
+    {
+      name: 'missing AI indicator',
+      explanation: 'Explicación de prueba.',
+      generated_by_ai: false
+    }
+  ].forEach(testCase => {
+    it(`should reject AI response with ${testCase.name}`, () => {
+      component.results = mockResults;
+
+      evaluationServiceSpy.generateAIExplanation.and.returnValue(
+        of({
+          evaluation_id: 1,
+          explanation: testCase.explanation,
+          generated_by_ai: testCase.generated_by_ai
+        })
+      );
+
+      component.generateAIExplanation();
+
+      expect(component.aiExplanation).toBeNull();
+      expect(component.aiExplanationError).toBe(
+        'No se recibió una explicación válida.'
+      );
+      expect(component.generatingAIExplanation).toBeFalse();
+
+      expect(component.results?.global_score).toBe(8.5);
+    });
   });
 
 });
