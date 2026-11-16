@@ -12,6 +12,7 @@ import { EvaluationDraftResponse } from '../models/evaluation_draft_response';
 import { EvaluationComparison } from '../models/evaluation_comparison';
 import { EvaluationDashboard } from '../models/evaluation_dashboard';
 import { CompanyContextService } from './company-context.service';
+import { AIExplanationResponse } from '../models/ai_explanation';
 
 @Injectable({
   providedIn: 'root'
@@ -111,6 +112,16 @@ export class EvaluationService extends BaseService<Evaluation> {
       `http://localhost:8000/api/${this.endpoint}/${evaluationId}/results`
     );
   }
+
+  generateAIExplanation(
+    evaluationId: number
+  ): Observable<AIExplanationResponse> {
+    return this.http.post<AIExplanationResponse>(
+      `http://localhost:8000/api/${this.endpoint}/${evaluationId}/ai-explanation`,
+      {}
+    );
+  }
+
   getEvaluationHistory(): Observable<EvaluationHistory> {
     const companyId = this.companyContext.selectedCompanyId();
 

@@ -60,6 +60,60 @@
     </div>
 
     @if (results) {
+    <section class="mt-5" data-html2canvas-ignore aria-labelledby="ai-explanation-title">
+      <h3 id="ai-explanation-title" class="text-my-purple fw-bold fs-5 mb-4">
+        <span class="bg-white py-2 px-3 rounded-5 shadow-sm border">
+          <i class="bi bi-stars me-2"></i>
+          Explicación generada por IA
+        </span>
+      </h3>
+
+      <div class="bg-white border rounded shadow-sm p-4">
+        <p class="text-muted mb-3">
+          Obtén una interpretación adicional de tus resultados ASG
+          utilizando inteligencia artificial.
+        </p>
+
+        <button type="button" class="btn btn-primary" [disabled]="generatingAIExplanation"
+          (click)="generateAIExplanation()">
+          @if (generatingAIExplanation) {
+          <span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>
+          Generando explicación...
+          } @else {
+          <i class="bi bi-stars me-2"></i>
+          {{ aiExplanation ? 'Generar nuevamente' : 'Generar explicación con IA' }}
+          }
+        </button>
+
+        @if (aiExplanationError) {
+        <div class="alert alert-danger mt-3 mb-0" role="alert">
+          {{ aiExplanationError }}
+        </div>
+        }
+
+        @if (aiExplanation) {
+        <div class="mt-4" aria-live="polite">
+          <h4 class="fs-6 fw-bold text-my-purple">
+            Interpretación de los resultados
+          </h4>
+
+          <div class="ai-explanation-content">
+            {{ aiExplanation }}
+          </div>
+
+          <p class="text-muted small mt-3 mb-0">
+            <i class="bi bi-info-circle me-1"></i>
+            Contenido generado por inteligencia artificial.
+            Puede contener imprecisiones y no modifica las
+            puntuaciones oficiales de MetricASG.
+          </p>
+        </div>
+        }
+      </div>
+    </section>
+    }
+
+    @if (results) {
     <div class="mt-5" data-html2canvas-ignore>
       <p class="text-my-purple fw-bold fs-5 mb-4">
         <span class="bg-white py-2 px-3 rounded-5 shadow-sm border">

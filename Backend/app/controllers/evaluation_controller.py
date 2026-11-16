@@ -1,4 +1,4 @@
-from fastapi import Depends
+from fastapi import Depends, HTTPException, status
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy.orm import Session
 from ..controllers.base_controller import BaseController
@@ -10,6 +10,12 @@ from ..services.token_service import get_current_user
 from app.services.evidence_storage_service import EvidenceStorageService
 from app.controllers.evidence_controller import get_evidence_storage_service
 
+from app.core.config import settings
+from app.services.ai_explanation_context_service import (
+    AIExplanationContextService,
+)
+from app.services.ai_explanation_service import AIExplanationService
+from app.services.llm_provider_factory import create_llm_provider
 
 class EvaluationResponseRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
@@ -98,6 +104,40 @@ class EvaluationsController(BaseController):
                 evaluation_id=evaluation_id,
                 user_id=current_user.id,
             )
+
+        @self.router.post("/{evaluation_id}/ai-explanation")
+        def generate_ai_explanation(
+            evaluation_id: int,
+            current_user: User = Depends(get_current_user),
+            db: Session = Depends(get_db),
+        ):
+            if not settings.ai_enabled:
+                raise HTTPException(
+                    status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                    detail="AI explanations are not available",
+                )
+
+            context = AIExplanationContextService(db).build_context(
+                evaluation_id=evaluation_id,
+                user_id=current_user.id,
+            )
+
+            try:
+                provider = create_llm_provider(settings)
+                explanation = AIExplanationService(
+                    provider
+                ).generate_explanation(context)
+            except (RuntimeError, ValueError):
+                raise HTTPException(
+                    status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                    detail="AI explanation generation is temporarily unavailable",
+                ) from None
+
+            return {
+                "evaluation_id": evaluation_id,
+                "explanation": explanation,
+                "generated_by_ai": True,
+            }
 
         @self.router.get("/history/me")
         def get_history(

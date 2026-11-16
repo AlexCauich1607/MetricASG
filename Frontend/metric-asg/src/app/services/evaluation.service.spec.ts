@@ -247,6 +247,33 @@ describe('EvaluationService', () => {
     request.flush(mockResponse);
   });
 
+
+  it('should generate an AI explanation for an evaluation', () => {
+    const evaluationId = 12;
+
+    const mockResponse = {
+      evaluation_id: evaluationId,
+      explanation: 'La evaluación presenta un nivel de madurez intermedio.',
+      generated_by_ai: true
+    };
+
+    service.generateAIExplanation(evaluationId).subscribe(response => {
+      expect(response).toEqual(mockResponse);
+      expect(response.evaluation_id).toBe(evaluationId);
+      expect(response.generated_by_ai).toBeTrue();
+    });
+
+    const request = httpTestingController.expectOne(
+      `http://localhost:8000/api/evaluations/${evaluationId}/ai-explanation`
+    );
+
+    expect(request.request.method).toBe('POST');
+    expect(request.request.body).toEqual({});
+
+    request.flush(mockResponse);
+  });
+
+
   it('should use the newly selected company when submitting', () => {
     const payload = {
       responses: [
