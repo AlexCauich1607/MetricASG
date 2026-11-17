@@ -30,6 +30,7 @@ import app.models.audit_log_model
 from app.models.company_invitation_model import CompanyInvitation
 import app.models.notification_model
 import app.models.notification_event_preference_model
+import app.models.ai_recommendation_model
 
 config = context.config
 

@@ -17,6 +17,34 @@ from app.services.ai_explanation_context_service import (
 from app.services.ai_explanation_service import AIExplanationService
 from app.services.llm_provider_factory import create_llm_provider
 
+from app.core.company_permissions import require_company_role
+from app.core.roles import CompanyRole
+
+from app.services.ai_recommendation_context_service import (
+    AIRecommendationContextService,
+)
+from app.services.ai_recommendation_service import (
+    AIRecommendationService,
+)
+from app.services.ai_recommendation_validation_service import (
+    AIRecommendationValidationService,
+)
+from app.services.ai_recommendation_persistence_service import (
+    AIRecommendationPersistenceService,
+)
+from app.services.improvement_action_service import (
+    ImprovementActionService,
+)
+from sqlalchemy import select
+
+from app.models.ai_recommendation_model import AIRecommendation
+from app.models.ai_recommendation_acceptance_request import (
+    AIRecommendationAcceptanceRequest,
+)
+from app.services.ai_recommendation_review_service import (
+    AIRecommendationReviewService,
+)
+
 class EvaluationResponseRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
     indicator_id: int
@@ -137,6 +165,184 @@ class EvaluationsController(BaseController):
                 "evaluation_id": evaluation_id,
                 "explanation": explanation,
                 "generated_by_ai": True,
+            }
+
+
+        @self.router.post("/{evaluation_id}/ai-recommendations")
+        def generate_ai_recommendations(
+            evaluation_id: int,
+            current_user: User = Depends(get_current_user),
+            db: Session = Depends(get_db),
+        ):
+            if not settings.ai_enabled:
+                raise HTTPException(
+                    status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                    detail="AI recommendations are not available",
+                )
+
+            # Validar la evaluación y los permisos antes de
+            # realizar una llamada al proveedor de IA.
+            action_service = ImprovementActionService(db)
+
+            evaluation = action_service.get_evaluation_or_error(
+                evaluation_id=evaluation_id,
+                user_id=current_user.id,
+            )
+
+            require_company_role(
+                db,
+                current_user,
+                evaluation.company_id,
+                CompanyRole.COMPANY_ADMIN,
+                CompanyRole.ASG_MANAGER,
+            )
+
+            action_service.validate_evaluation_completed(evaluation)
+
+            # Construir el contexto exclusivamente desde el backend.
+            context = AIRecommendationContextService(
+                db
+            ).build_context(
+                evaluation_id=evaluation_id,
+                user_id=current_user.id,
+            )
+
+            # Invocar el proveedor de IA.
+            try:
+                provider = create_llm_provider(settings)
+
+                raw_response = AIRecommendationService(
+                    provider
+                ).generate_recommendations(context)
+
+            except (RuntimeError, ValueError):
+                raise HTTPException(
+                    status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                    detail=(
+                        "AI recommendation generation "
+                        "is temporarily unavailable"
+                    ),
+                ) from None
+
+            # Validar el JSON y su correspondencia con
+            # las brechas registradas en el contexto.
+            validated_response = (
+                AIRecommendationValidationService().validate(
+                    raw_response=raw_response,
+                    context=context,
+                )
+            )
+
+            # Guardar las propuestas sin crear acciones de mejora.
+            saved = AIRecommendationPersistenceService(
+                db
+            ).save_recommendations(
+                evaluation_id=evaluation_id,
+                user_id=current_user.id,
+                context=context,
+                response=validated_response,
+            )
+
+            return {
+                "evaluation_id": evaluation_id,
+                "generated_by_ai": True,
+                "requires_human_approval": True,
+                "recommendations": [
+                    {
+                        "id": recommendation.id,
+                        "indicator_id": recommendation.indicator_id,
+                        "gap_description": (
+                            recommendation.gap_description
+                        ),
+                        "title": recommendation.title,
+                        "description": recommendation.description,
+                        "justification": recommendation.justification,
+                        "priority": recommendation.priority.value,
+                        "status": recommendation.status.value,
+                    }
+                    for recommendation in saved
+                ],
+            }
+
+
+        @self.router.post("/{evaluation_id}/ai-recommendations/review")
+        def review_ai_recommendation(
+            evaluation_id: int,
+            payload: AIRecommendationAcceptanceRequest,
+            current_user: User = Depends(get_current_user),
+            db: Session = Depends(get_db),
+        ):
+            recommendation = AIRecommendationReviewService(
+                db
+            ).review(
+                evaluation_id=evaluation_id,
+                user_id=current_user.id,
+                payload=payload,
+            )
+
+            return {
+                "evaluation_id": evaluation_id,
+                "recommendation": {
+                    "id": recommendation.id,
+                    "status": recommendation.status.value,
+                    "reviewed_by": recommendation.reviewed_by,
+                    "reviewed_at": recommendation.reviewed_at,
+                    "improvement_action_id": (
+                        recommendation.improvement_action_id
+                    ),
+                },
+            }
+
+
+        @self.router.get("/{evaluation_id}/ai-recommendations")
+        def list_ai_recommendations(
+            evaluation_id: int,
+            current_user: User = Depends(get_current_user),
+            db: Session = Depends(get_db),
+        ):
+            action_service = ImprovementActionService(db)
+
+            evaluation = action_service.get_evaluation_or_error(
+                evaluation_id=evaluation_id,
+                user_id=current_user.id,
+            )
+
+            require_company_role(
+                db,
+                current_user,
+                evaluation.company_id,
+                CompanyRole.COMPANY_ADMIN,
+                CompanyRole.ASG_MANAGER,
+            )
+
+            recommendations = db.execute(
+                select(AIRecommendation)
+                .where(
+                    AIRecommendation.evaluation_id == evaluation_id
+                )
+                .order_by(AIRecommendation.id.asc())
+            ).scalars().all()
+
+            return {
+                "evaluation_id": evaluation_id,
+                "recommendations": [
+                    {
+                        "id": recommendation.id,
+                        "indicator_id": recommendation.indicator_id,
+                        "gap_description": recommendation.gap_description,
+                        "title": recommendation.title,
+                        "description": recommendation.description,
+                        "justification": recommendation.justification,
+                        "priority": recommendation.priority.value,
+                        "status": recommendation.status.value,
+                        "reviewed_by": recommendation.reviewed_by,
+                        "reviewed_at": recommendation.reviewed_at,
+                        "improvement_action_id": (
+                            recommendation.improvement_action_id
+                        ),
+                    }
+                    for recommendation in recommendations
+                ],
             }
 
         @self.router.get("/history/me")

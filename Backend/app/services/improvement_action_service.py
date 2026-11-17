@@ -119,6 +119,8 @@ class ImprovementActionService:
         evaluation_id: int,
         user_id: int,
         payload: ImprovementActionCreate,
+        *,
+        commit: bool = True,
     ) -> ImprovementAction:
         try:
             evaluation = (
@@ -185,8 +187,9 @@ class ImprovementActionService:
                 },
             )
 
-            self.db.commit()
-            self.db.refresh(action)
+            if commit:
+                self.db.commit()
+                self.db.refresh(action)
 
             return action
 
