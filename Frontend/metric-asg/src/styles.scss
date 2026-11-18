@@ -1,7 +1,5 @@
-@use "styles/custom" as *;
-@use "bootstrap/scss/bootstrap" as *;
 @use "sass:color";
-
+@use "styles/tokens" as tokens;
 
 @font-face {
   font-family: 'CandaraBold';
@@ -14,10 +12,10 @@
 
 
 //$my-purple: #4527A0;
-$my-purple: rgb(0, 36, 93);
+$my-purple: tokens.$asg-brand-primary;
 //$my-green: #37AB48; #658D1B.
-$my-green: #5D9732;
-$my-gray: #595959;
+$my-green: tokens.$asg-brand-accent;
+$my-gray: tokens.$asg-text-muted;
 $sw-blue: #1565C0;
 $sw-humo: #E53E3E;
 
@@ -37,10 +35,10 @@ $sw-red-secondary: #E25336;
 
 :root {
     //--my-purple: #4527A0;
-    --my-purple: #00245D;
+    --my-purple: var(--asg-color-brand-primary);
     //--my-green: #37AB48;
-    --my-green: #5D9732;
-    --my-gray: #595959;
+    --my-green: var(--asg-color-brand-accent);
+    --my-gray: var(--asg-color-text-muted);
     --sw-blue: #1565C0;
     --sw-blue-light: #DCEAF7;
     --sw-purple-secondary: #B374E2;
@@ -514,11 +512,8 @@ body {
 }
 
 body {
-    font-family: "Aptos", "Segoe UI", system-ui, -apple-system, sans-serif;
+    font-family: var(--asg-font-family-base);
 }
-
-
-
 
 
 .icon-fs-1 {
