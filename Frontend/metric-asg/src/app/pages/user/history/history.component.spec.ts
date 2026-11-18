@@ -8,6 +8,10 @@ import { EvaluationHistory } from '../../../models/history_evaluations';
 import { Router } from '@angular/router';
 import { signal } from '@angular/core';
 import { CompanyContextService } from '../../../services/company-context.service';
+import {
+  AdvancedExportService,
+  ExportTable
+} from '../../../services/advanced-export.service';
 
 describe('HistoryComponent', () => {
   let component: HistoryComponent;
@@ -381,6 +385,214 @@ describe('HistoryComponent', () => {
 
     expect(historySpy).toHaveBeenCalledTimes(2);
     expect(dashboardSpy).toHaveBeenCalledTimes(2);
+  });
+
+  it('should disable export buttons when history is empty', () => {
+    fixture.detectChanges();
+
+    expect(component.canExportHistory).toBeFalse();
+
+    const buttons = Array.from(
+      fixture.nativeElement.querySelectorAll('button')
+    ) as HTMLButtonElement[];
+
+    const exportButtons = buttons.filter(button =>
+      button.textContent?.includes('Exportar')
+    );
+
+    expect(exportButtons.length).toBe(2);
+    expect(exportButtons.every(button => button.disabled)).toBeTrue();
+  });
+
+  it('should export the loaded history as CSV', () => {
+    const exportService = TestBed.inject(AdvancedExportService);
+
+    const table: ExportTable = {
+      headers: ['ID de evaluación', 'Puntuación global'],
+      rows: [[10, 8.5]]
+    };
+
+    const buildSpy = spyOn(
+      exportService,
+      'buildHistoryTable'
+    ).and.returnValue(table);
+
+    const downloadSpy = spyOn(
+      exportService,
+      'downloadTable'
+    );
+
+    const history: EvaluationHistory = {
+      history: [
+        {
+          evaluation_id: 10,
+          date: '2026-11-01',
+          global_score: 8.5,
+          ambits: []
+        }
+      ],
+      averages: {
+        global_score: 8.5,
+        ambits: []
+      }
+    };
+
+    component.historial = history;
+    fixture.detectChanges();
+
+    expect(component.canExportHistory).toBeTrue();
+
+    const buttons = Array.from(
+      fixture.nativeElement.querySelectorAll('button')
+    ) as HTMLButtonElement[];
+
+    const csvButton = buttons.find(button =>
+      button.textContent?.includes('Exportar CSV')
+    );
+
+    expect(csvButton).toBeDefined();
+    expect(csvButton?.disabled).toBeFalse();
+
+    csvButton?.click();
+
+    expect(buildSpy).toHaveBeenCalledOnceWith(history);
+    expect(downloadSpy).toHaveBeenCalledOnceWith(
+      table,
+      'csv',
+      'historial-asg-empresa-3'
+    );
+  });
+
+  it('should export the loaded history as XLSX', () => {
+    const exportService = TestBed.inject(AdvancedExportService);
+
+    const table: ExportTable = {
+      headers: ['ID de evaluación'],
+      rows: [[10]]
+    };
+
+    spyOn(
+      exportService,
+      'buildHistoryTable'
+    ).and.returnValue(table);
+
+    const downloadSpy = spyOn(
+      exportService,
+      'downloadTable'
+    );
+
+    component.historial = {
+      history: [
+        {
+          evaluation_id: 10,
+          date: '2026-11-01',
+          global_score: 8.5,
+          ambits: []
+        }
+      ],
+      averages: {
+        global_score: 8.5,
+        ambits: []
+      }
+    };
+
+    fixture.detectChanges();
+
+    const buttons = Array.from(
+      fixture.nativeElement.querySelectorAll('button')
+    ) as HTMLButtonElement[];
+
+    const excelButton = buttons.find(button =>
+      button.textContent?.includes('Exportar Excel')
+    );
+
+    expect(excelButton).toBeDefined();
+    expect(excelButton?.disabled).toBeFalse();
+
+    excelButton?.click();
+
+    expect(downloadSpy).toHaveBeenCalledOnceWith(
+      table,
+      'xlsx',
+      'historial-asg-empresa-3'
+    );
+  });
+
+  it('should prevent exporting history after switching companies', () => {
+    const exportService = TestBed.inject(AdvancedExportService);
+
+    const downloadSpy = spyOn(
+      exportService,
+      'downloadTable'
+    );
+
+    component.historial = {
+      history: [
+        {
+          evaluation_id: 10,
+          date: '2026-11-01',
+          global_score: 8.5,
+          ambits: []
+        }
+      ],
+      averages: {
+        global_score: 8.5,
+        ambits: []
+      }
+    };
+
+    expect(component.canExportHistory).toBeTrue();
+
+    selectedCompanyId.set(null);
+
+    fixture.detectChanges();
+    TestBed.flushEffects();
+    fixture.detectChanges();
+
+    expect(component.canExportHistory).toBeFalse();
+
+    component.exportHistory('csv');
+
+    expect(downloadSpy).not.toHaveBeenCalled();
+  });
+
+  it('should display an error when history export fails', () => {
+    const exportService = TestBed.inject(AdvancedExportService);
+
+    spyOn(
+      exportService,
+      'buildHistoryTable'
+    ).and.throwError('Error de exportación');
+
+    component.historial = {
+      history: [
+        {
+          evaluation_id: 10,
+          date: '2026-11-01',
+          global_score: 8.5,
+          ambits: []
+        }
+      ],
+      averages: {
+        global_score: 8.5,
+        ambits: []
+      }
+    };
+
+    component.exportHistory('csv');
+    fixture.detectChanges();
+
+    expect(component.exportError).toBe(
+      'No fue posible exportar el historial. Inténtalo nuevamente.'
+    );
+
+    const alert = fixture.nativeElement.querySelector(
+      '[role="alert"]'
+    ) as HTMLElement | null;
+
+    expect(alert?.textContent).toContain(
+      'No fue posible exportar el historial.'
+    );
   });
 
 });

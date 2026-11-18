@@ -12,6 +12,7 @@ import { DatePipe } from '@angular/common';
 import { Subscription } from 'rxjs';
 import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
 import { CompanyContextService } from '../../../services/company-context.service';
+import { AdvancedExportService } from '../../../services/advanced-export.service';
 
 @Component({
   selector: 'app-compare',
@@ -34,7 +35,8 @@ export class CompareComponent implements OnInit {
     private cdr: ChangeDetectorRef,
     private companyContext: CompanyContextService,
     private destroyRef: DestroyRef,
-    private injector: Injector
+    private injector: Injector,
+    private advancedExportService: AdvancedExportService
   ) { }
 
   ngOnInit(): void {
@@ -97,7 +99,7 @@ export class CompareComponent implements OnInit {
   private clearComparisonState(): void {
     // Cancelar una consulta pendiente.
     this.comparisonRequest?.unsubscribe();
-
+    this.exportError = null;
     // Eliminar los resultados anteriores.
     this.comparison = null;
     this.loading = false;
@@ -111,6 +113,7 @@ export class CompareComponent implements OnInit {
     this.loading = true;
     this.error = null;
     this.comparison = null;
+    this.exportError = null;
 
     this.comparisonRequest = this.evaluationService.getEvaluationComparison(
       evaluationId1,
@@ -145,4 +148,51 @@ export class CompareComponent implements OnInit {
       ambit => ambit.ambit_id === ambitId
     )?.score ?? null;
   }
+
+
+  exportError: string | null = null;
+
+  get canExportComparison(): boolean {
+    return (
+      this.comparison !== null &&
+      !this.loading &&
+      !this.comparisonInvalidated &&
+      this.initialCompanyId !== null &&
+      this.companyContext.selectedCompanyId() === this.initialCompanyId
+    );
+  }
+
+  exportComparison(format: 'csv' | 'xlsx'): void {
+    if (!this.canExportComparison || !this.comparison) {
+      return;
+    }
+
+    this.exportError = null;
+
+    try {
+      const table = this.advancedExportService.buildComparisonTable(
+        this.comparison
+      );
+
+      const [first, second] = this.comparison.evaluations;
+
+      if (!first || !second) {
+        throw new Error('La comparación está incompleta.');
+      }
+
+      this.advancedExportService.downloadTable(
+        table,
+        format,
+        `comparacion-asg-${first.evaluation_id}-${second.evaluation_id}`
+      );
+    } catch (error) {
+      console.error('Error al exportar la comparación ASG', error);
+
+      this.exportError =
+        'No fue posible exportar la comparación. Inténtalo nuevamente.';
+
+      this.cdr.detectChanges();
+    }
+  }
+
 }

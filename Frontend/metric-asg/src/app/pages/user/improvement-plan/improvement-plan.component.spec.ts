@@ -7,6 +7,11 @@ import { ImprovementPlanComponent } from './improvement-plan.component';
 import { ImprovementActionService } from '../../../services/improvement-action.service';
 import { ImprovementAction } from '../../../models/improvement_action';
 
+import {
+  AdvancedExportService,
+  ExportTable
+} from '../../../services/advanced-export.service';
+
 describe('ImprovementPlanComponent', () => {
   let component: ImprovementPlanComponent;
   let fixture: ComponentFixture<ImprovementPlanComponent>;
@@ -599,6 +604,257 @@ describe('ImprovementPlanComponent', () => {
     );
 
     expect(component.errorMessage).toBeNull();
+  });
+
+  it('should disable export buttons when there are no actions', () => {
+    routeParams.next(convertToParamMap({ evaluationId: '10' }));
+    fixture.detectChanges();
+
+    expect(component.canExportActions).toBeFalse();
+
+    const buttons = Array.from(
+      fixture.nativeElement.querySelectorAll('button')
+    ) as HTMLButtonElement[];
+
+    const exportButtons = buttons.filter(button =>
+      button.textContent?.includes('Exportar')
+    );
+
+    expect(exportButtons.length).toBe(2);
+    expect(exportButtons.every(button => button.disabled)).toBeTrue();
+  });
+
+  it('should export the loaded improvement actions as CSV', () => {
+    improvementActionService.getActions.and.returnValue(of([action]));
+
+    routeParams.next(convertToParamMap({ evaluationId: '10' }));
+    fixture.detectChanges();
+
+    const exportService = TestBed.inject(AdvancedExportService);
+
+    const table: ExportTable = {
+      headers: ['ID', 'Descripción'],
+      rows: [[5, action.description]]
+    };
+
+    const buildSpy = spyOn(
+      exportService,
+      'buildImprovementActionsTable'
+    ).and.returnValue(table);
+
+    const downloadSpy = spyOn(
+      exportService,
+      'downloadTable'
+    );
+
+    const initialRequests =
+      improvementActionService.getActions.calls.count();
+
+    const buttons = Array.from(
+      fixture.nativeElement.querySelectorAll('button')
+    ) as HTMLButtonElement[];
+
+    const csvButton = buttons.find(button =>
+      button.textContent?.includes('Exportar CSV')
+    );
+
+    expect(csvButton).toBeDefined();
+    expect(csvButton?.disabled).toBeFalse();
+
+    csvButton?.click();
+
+    expect(buildSpy).toHaveBeenCalledOnceWith([action]);
+
+    expect(downloadSpy).toHaveBeenCalledOnceWith(
+      table,
+      'csv',
+      'plan-mejora-evaluacion-10'
+    );
+
+    expect(
+      improvementActionService.getActions
+    ).toHaveBeenCalledTimes(initialRequests);
+  });
+
+  it('should export the loaded improvement actions as XLSX', () => {
+    improvementActionService.getActions.and.returnValue(of([action]));
+
+    routeParams.next(convertToParamMap({ evaluationId: '10' }));
+    fixture.detectChanges();
+
+    const exportService = TestBed.inject(AdvancedExportService);
+
+    const table: ExportTable = {
+      headers: ['ID'],
+      rows: [[5]]
+    };
+
+    const buildSpy = spyOn(
+      exportService,
+      'buildImprovementActionsTable'
+    ).and.returnValue(table);
+
+    const downloadSpy = spyOn(
+      exportService,
+      'downloadTable'
+    );
+
+    const buttons = Array.from(
+      fixture.nativeElement.querySelectorAll('button')
+    ) as HTMLButtonElement[];
+
+    const excelButton = buttons.find(button =>
+      button.textContent?.includes('Exportar Excel')
+    );
+
+    expect(excelButton).toBeDefined();
+    expect(excelButton?.disabled).toBeFalse();
+
+    excelButton?.click();
+
+    expect(buildSpy).toHaveBeenCalledOnceWith([action]);
+
+    expect(downloadSpy).toHaveBeenCalledOnceWith(
+      table,
+      'xlsx',
+      'plan-mejora-evaluacion-10'
+    );
+  });
+
+  it('should block exports while loading or modifying actions', () => {
+    improvementActionService.getActions.and.returnValue(of([action]));
+
+    routeParams.next(convertToParamMap({ evaluationId: '10' }));
+    fixture.detectChanges();
+
+    const exportService = TestBed.inject(AdvancedExportService);
+    const downloadSpy = spyOn(exportService, 'downloadTable');
+
+    expect(component.canExportActions).toBeTrue();
+
+    component.loading = true;
+    expect(component.canExportActions).toBeFalse();
+    component.exportActions('csv');
+
+    component.loading = false;
+    component.saving = true;
+    expect(component.canExportActions).toBeFalse();
+    component.exportActions('xlsx');
+
+    component.saving = false;
+    component.updating = true;
+    expect(component.canExportActions).toBeFalse();
+    component.exportActions('csv');
+
+    component.updating = false;
+    component.deletingActionId = 5;
+    expect(component.canExportActions).toBeFalse();
+    component.exportActions('xlsx');
+
+    component.deletingActionId = null;
+    component.toggleCreateForm();
+
+    expect(component.canExportActions).toBeFalse();
+    component.exportActions('csv');
+
+    component.toggleCreateForm();
+
+    expect(downloadSpy).not.toHaveBeenCalled();
+  });
+
+  it('should export updated actions after reloading the list', () => {
+    const updatedAction: ImprovementAction = {
+      ...action,
+      description: 'Instalar luminarias LED eficientes',
+      status: 'IN_PROGRESS'
+    };
+
+    improvementActionService.getActions.and.returnValues(
+      of([action]),
+      of([updatedAction])
+    );
+
+    routeParams.next(convertToParamMap({ evaluationId: '10' }));
+    fixture.detectChanges();
+
+    const exportService = TestBed.inject(AdvancedExportService);
+
+    const buildSpy = spyOn(
+      exportService,
+      'buildImprovementActionsTable'
+    ).and.callThrough();
+
+    spyOn(exportService, 'downloadTable');
+
+    component.loadActions();
+    component.exportActions('csv');
+
+    expect(component.actions).toEqual([updatedAction]);
+
+    expect(buildSpy).toHaveBeenCalledOnceWith([updatedAction]);
+
+    expect(
+      improvementActionService.getActions
+    ).toHaveBeenCalledTimes(2);
+  });
+
+  it('should block export when a different evaluation is loading', () => {
+    improvementActionService.getActions.and.returnValue(of([action]));
+
+    routeParams.next(convertToParamMap({ evaluationId: '10' }));
+    fixture.detectChanges();
+
+    const exportService = TestBed.inject(AdvancedExportService);
+    const downloadSpy = spyOn(exportService, 'downloadTable');
+
+    const pendingActions = new Subject<ImprovementAction[]>();
+
+    improvementActionService.getActions.and.returnValue(
+      pendingActions.asObservable()
+    );
+
+    routeParams.next(convertToParamMap({ evaluationId: '11' }));
+    fixture.detectChanges();
+
+    expect(component.evaluationId).toBe(11);
+    expect(component.loading).toBeTrue();
+    expect(component.canExportActions).toBeFalse();
+
+    component.exportActions('csv');
+
+    expect(downloadSpy).not.toHaveBeenCalled();
+  });
+
+  it('should display an error when improvement export fails', () => {
+    improvementActionService.getActions.and.returnValue(of([action]));
+
+    routeParams.next(convertToParamMap({ evaluationId: '10' }));
+    fixture.detectChanges();
+
+    const exportService = TestBed.inject(AdvancedExportService);
+
+    spyOn(
+      exportService,
+      'buildImprovementActionsTable'
+    ).and.throwError('Error de exportación');
+
+    spyOn(console, 'error');
+
+    component.exportActions('csv');
+    fixture.detectChanges();
+
+    expect(component.exportError).toBe(
+      'No fue posible exportar el plan de mejora. Inténtalo nuevamente.'
+    );
+
+    const alert = fixture.nativeElement.querySelector(
+      '[data-testid="improvement-export-error"]'
+    ) as HTMLElement | null;
+
+    expect(alert).not.toBeNull();
+    expect(alert?.textContent).toContain(
+      'No fue posible exportar el plan de mejora.'
+    );
   });
 
 });

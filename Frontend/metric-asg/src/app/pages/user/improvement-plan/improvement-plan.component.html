@@ -1,12 +1,35 @@
 <div class="sw-split-ly color-bg" [attr.inert]="activeModal !== null ? '' : null">
     <div>
-        <h4 class="text-my-purple fw-bold mb-4">
-            <span class="bg-white py-2 px-4 rounded-5 shadow-sm border">
-                <i class="bi bi-clipboard-check me-2"></i>
-                Plan de mejora
-            </span>
-        </h4>
 
+        <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
+            <h4 class="text-my-purple fw-bold mb-0">
+                <span class="bg-white py-2 px-4 rounded-5 shadow-sm border">
+                    <i class="bi bi-clipboard-check me-2"></i>
+                    Plan de mejora
+                </span>
+            </h4>
+
+            <div class="d-flex flex-wrap gap-2">
+                <button type="button" class="btn btn-outline-primary" [disabled]="!canExportActions"
+                    (click)="exportActions('csv')">
+                    <i class="bi bi-filetype-csv me-2"></i>
+                    Exportar CSV
+                </button>
+
+                <button type="button" class="btn btn-primary" [disabled]="!canExportActions"
+                    (click)="exportActions('xlsx')">
+                    <i class="bi bi-file-earmark-excel me-2"></i>
+                    Exportar Excel
+                </button>
+            </div>
+        </div>
+
+        @if (exportError) {
+        <div class="alert alert-danger" role="alert" data-testid="improvement-export-error">
+            <i class="bi bi-exclamation-triangle me-2"></i>
+            {{ exportError }}
+        </div>
+        }
 
         <div class="bg-white rounded border shadow-sm p-4 mb-4">
             <div class="d-flex flex-wrap align-items-center
