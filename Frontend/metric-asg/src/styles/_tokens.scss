@@ -1,0 +1,75 @@
+/*
+ * MetricASG — Design Tokens
+ * HU-046: Sistema de diseño y tokens visuales
+ *
+ * Tokens semánticos para la modernización incremental.
+ * Los estilos heredados se mantienen por compatibilidad.
+ */
+
+// Colores institucionales para consumo en tiempo de compilación.
+$asg-brand-primary: #00245d;
+$asg-brand-accent: #5d9732;
+$asg-text-muted: #595959;
+
+:root {
+    // Identidad institucional
+    --asg-color-brand-primary: #00245d;
+    --asg-color-brand-accent: #5d9732;
+
+    // Acciones y superficies con texto blanco
+    --asg-color-action-success: #467326;
+
+    // Texto
+    --asg-color-text-primary: #13243d;
+    --asg-color-text-muted: #595959;
+    --asg-color-text-inverse: #ffffff;
+
+    // Superficies
+    --asg-color-surface-default: #ffffff;
+    --asg-color-surface-muted: #f4f7f3;
+    --asg-color-surface-blue: #e0ecf7;
+
+    // Tipografía
+    --asg-font-family-base: "Aptos", "Segoe UI", system-ui, -apple-system, sans-serif;
+
+    --asg-font-size-xs: 0.75rem;
+    --asg-font-size-sm: 0.875rem;
+    --asg-font-size-md: 1rem;
+    --asg-font-size-lg: 1.125rem;
+    --asg-font-size-xl: 1.5rem;
+    --asg-font-size-2xl: 2rem;
+
+    --asg-font-weight-regular: 400;
+    --asg-font-weight-medium: 500;
+    --asg-font-weight-semibold: 600;
+    --asg-font-weight-bold: 700;
+
+    // Espaciado: escala base de 4 px
+    --asg-space-1: 0.25rem;
+    --asg-space-2: 0.5rem;
+    --asg-space-3: 0.75rem;
+    --asg-space-4: 1rem;
+    --asg-space-6: 1.5rem;
+    --asg-space-8: 2rem;
+    --asg-space-12: 3rem;
+    --asg-space-16: 4rem;
+
+    // Bordes
+    --asg-radius-sm: 0.5rem;
+    --asg-radius-card: 0.75rem;
+    --asg-radius-dialog: 1rem;
+    --asg-radius-pill: 9999px;
+
+    // Sombras
+    --asg-shadow-sm: 0 2px 6px rgb(0 0 0 / 6%);
+    --asg-shadow-md: 0 4px 16px rgb(0 0 0 / 8%);
+
+    // Contenedores
+    --asg-container-max-width: 1280px;
+    --asg-container-padding-mobile: 1rem;
+
+    // Accesibilidad
+    --asg-focus-color: #1565c0;
+    --asg-focus-width: 2px;
+    --asg-focus-offset: 2px;
+}
