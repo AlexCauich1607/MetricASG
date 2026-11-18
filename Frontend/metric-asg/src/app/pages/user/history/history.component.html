@@ -1,7 +1,34 @@
 <div class="sw-split-ly color-bg">
   <div>
-    <h4 class="text-my-purple fw-bold mb-4"><span class="bg-white py-2 px-4 rounded-5 shadow-sm border"><i
-          class="bi bi-hourglass-split"></i> Historial</span></h4>
+
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
+      <h4 class="text-my-purple fw-bold mb-0">
+        <span class="bg-white py-2 px-4 rounded-5 shadow-sm border">
+          <i class="bi bi-hourglass-split"></i>
+          Historial
+        </span>
+      </h4>
+
+      <div class="d-flex flex-wrap gap-2">
+        <button type="button" class="btn btn-outline-primary" [disabled]="!canExportHistory"
+          (click)="exportHistory('csv')">
+          <i class="bi bi-filetype-csv me-2"></i>
+          Exportar CSV
+        </button>
+
+        <button type="button" class="btn btn-primary" [disabled]="!canExportHistory" (click)="exportHistory('xlsx')">
+          <i class="bi bi-file-earmark-excel me-2"></i>
+          Exportar Excel
+        </button>
+      </div>
+    </div>
+
+    @if (exportError) {
+    <div class="alert alert-danger" role="alert">
+      {{ exportError }}
+    </div>
+    }
+
 
     <div class="bg-white rounded border shadow-sm p-4 mt-4 mb-4">
       <h5 class="text-my-purple fw-bold mb-3">

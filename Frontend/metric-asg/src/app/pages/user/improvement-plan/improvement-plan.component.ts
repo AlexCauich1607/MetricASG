@@ -20,6 +20,7 @@ import {
 } from '../../../models/improvement_action';
 import { DOCUMENT, DatePipe, DecimalPipe, NgClass } from '@angular/common';
 import { ImprovementProgress } from '../../../models/improvement_progress';
+import { AdvancedExportService } from '../../../services/advanced-export.service';
 
 @Component({
   selector: 'app-improvement-plan',
@@ -60,6 +61,47 @@ export class ImprovementPlanComponent implements OnInit, OnDestroy {
   progress: ImprovementProgress | null = null;
   loadingProgress = false;
   progressError: string | null = null;
+
+  exportError: string | null = null;
+
+  get canExportActions(): boolean {
+    return (
+      this.evaluationId !== null &&
+      this.actions.length > 0 &&
+      !this.loading &&
+      !this.saving &&
+      !this.updating &&
+      this.deletingActionId === null &&
+      this.activeModal === null &&
+      this.errorMessage === null
+    );
+  }
+
+  exportActions(format: 'csv' | 'xlsx'): void {
+    if (!this.canExportActions || this.evaluationId === null) {
+      return;
+    }
+
+    this.exportError = null;
+
+    try {
+      const table =
+        this.advancedExportService.buildImprovementActionsTable(
+          this.actions
+        );
+
+      this.advancedExportService.downloadTable(
+        table,
+        format,
+        `plan-mejora-evaluacion-${this.evaluationId}`
+      );
+    } catch (error) {
+      console.error('Error al exportar el plan de mejora', error);
+
+      this.exportError =
+        'No fue posible exportar el plan de mejora. Inténtalo nuevamente.';
+    }
+  }
 
   private lockBodyScroll(): void {
     if (this.previousBodyOverflow !== null) {
@@ -103,7 +145,8 @@ export class ImprovementPlanComponent implements OnInit, OnDestroy {
 
   constructor(
     private route: ActivatedRoute,
-    private improvementActionService: ImprovementActionService
+    private improvementActionService: ImprovementActionService,
+    private advancedExportService: AdvancedExportService
   ) { }
 
   @HostListener('document:keydown.escape')
@@ -121,6 +164,7 @@ export class ImprovementPlanComponent implements OnInit, OnDestroy {
       const evaluationId = Number(rawId);
 
       this.evaluationId = null;
+      this.exportError = null;
       this.actions = [];
       this.errorMessage = null;
       this.progress = null;
@@ -175,7 +219,7 @@ export class ImprovementPlanComponent implements OnInit, OnDestroy {
 
     this.loading = true;
     this.errorMessage = null;
-
+    this.exportError = null;
     this.improvementActionService.getActions(
       this.evaluationId
     ).subscribe({

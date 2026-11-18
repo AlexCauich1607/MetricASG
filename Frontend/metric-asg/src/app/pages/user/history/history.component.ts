@@ -20,6 +20,7 @@ import {
   HistoricalDashboardChart
 } from '../../../models/evaluation_dashboard_chart';
 import { HistoricalTrendChartComponent } from '../../../shared/historical-trend-chart/historical-trend-chart.component';
+import { AdvancedExportService } from '../../../services/advanced-export.service';
 
 @Component({
   selector: 'app-history',
@@ -53,12 +54,54 @@ export class HistoryComponent {
     chart: HistoricalDashboardChart;
   }[] = [];
 
+  exportError: string | null = null;
+
+  get canExportHistory(): boolean {
+    return (
+      this.companyContext.selectedCompanyId() !== null &&
+      this.historial !== null &&
+      this.historial.history.length > 0
+    );
+  }
+
+  exportHistory(format: 'csv' | 'xlsx'): void {
+    if (!this.canExportHistory || !this.historial) {
+      return;
+    }
+
+    this.exportError = null;
+
+    try {
+      const table = this.advancedExportService.buildHistoryTable(
+        this.historial
+      );
+
+      const companyId = this.companyContext.selectedCompanyId();
+
+      if (companyId === null) {
+        return;
+      }
+
+      this.advancedExportService.downloadTable(
+        table,
+        format,
+        `historial-asg-empresa-${companyId}`
+      );
+    } catch (error) {
+      console.error('Error al exportar el historial ASG', error);
+
+      this.exportError =
+        'No fue posible exportar el historial. Inténtalo nuevamente.';
+    }
+  }
+
 
   constructor(
     private historyService: EvaluationService,
     private router: Router,
     private companyContext: CompanyContextService,
-    private destroyRef: DestroyRef
+    private destroyRef: DestroyRef,
+    private advancedExportService: AdvancedExportService
   ) {
     toObservable(this.companyContext.selectedCompanyId)
       .pipe(takeUntilDestroyed(this.destroyRef))
@@ -88,6 +131,7 @@ export class HistoryComponent {
   private clearHistoryState(): void {
     // Historial de evaluaciones
     this.historial = null;
+    this.exportError = null;
 
     // Evaluaciones seleccionadas
     this.evaluationId1 = null;

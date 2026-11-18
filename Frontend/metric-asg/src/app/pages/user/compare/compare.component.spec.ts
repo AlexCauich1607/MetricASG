@@ -7,6 +7,10 @@ import { CompanyContextService } from '../../../services/company-context.service
 import { CompareComponent } from './compare.component';
 import { EvaluationService } from '../../../services/evaluation.service';
 import { EvaluationComparison } from '../../../models/evaluation_comparison';
+import {
+  AdvancedExportService,
+  ExportTable
+} from '../../../services/advanced-export.service';
 
 describe('CompareComponent', () => {
   let component: CompareComponent;
@@ -294,6 +298,251 @@ describe('CompareComponent', () => {
     expect(
       evaluationService.getEvaluationComparison
     ).toHaveBeenCalledOnceWith(12, 15);
+  });
+
+  it('should disable export buttons when comparison is unavailable', async () => {
+    await createComponent('12', '12');
+
+    expect(component.canExportComparison).toBeFalse();
+
+    const buttons = Array.from(
+      fixture.nativeElement.querySelectorAll('button')
+    ) as HTMLButtonElement[];
+
+    const exportButtons = buttons.filter(button =>
+      button.textContent?.includes('Exportar')
+    );
+
+    expect(exportButtons.length).toBe(2);
+    expect(exportButtons.every(button => button.disabled)).toBeTrue();
+  });
+
+  it('should prevent exporting while comparison is loading', async () => {
+    const pending = new Subject<EvaluationComparison>();
+
+    await createComponent('12', '15', pending.asObservable());
+
+    const exportService = TestBed.inject(AdvancedExportService);
+    const downloadSpy = spyOn(exportService, 'downloadTable');
+
+    expect(component.loading).toBeTrue();
+    expect(component.canExportComparison).toBeFalse();
+
+    component.exportComparison('csv');
+
+    expect(downloadSpy).not.toHaveBeenCalled();
+
+    const buttons = Array.from(
+      fixture.nativeElement.querySelectorAll('button')
+    ) as HTMLButtonElement[];
+
+    const exportButtons = buttons.filter(button =>
+      button.textContent?.includes('Exportar')
+    );
+
+    expect(exportButtons.every(button => button.disabled)).toBeTrue();
+  });
+
+  it('should export the loaded comparison as CSV', async () => {
+    await createComponent();
+
+    const exportService = TestBed.inject(AdvancedExportService);
+
+    const table: ExportTable = {
+      headers: ['Evaluación', 'Puntuación global'],
+      rows: [[12, 7.5], [15, 8.5]]
+    };
+
+    const buildSpy = spyOn(
+      exportService,
+      'buildComparisonTable'
+    ).and.returnValue(table);
+
+    const downloadSpy = spyOn(
+      exportService,
+      'downloadTable'
+    );
+
+    const initialRequests =
+      evaluationService.getEvaluationComparison.calls.count();
+
+    fixture.detectChanges();
+
+    const buttons = Array.from(
+      fixture.nativeElement.querySelectorAll('button')
+    ) as HTMLButtonElement[];
+
+    const csvButton = buttons.find(button =>
+      button.textContent?.includes('Exportar CSV')
+    );
+
+    expect(csvButton).toBeDefined();
+    expect(csvButton?.disabled).toBeFalse();
+
+    csvButton?.click();
+
+    expect(buildSpy).toHaveBeenCalledOnceWith(mockComparison);
+
+    expect(downloadSpy).toHaveBeenCalledOnceWith(
+      table,
+      'csv',
+      'comparacion-asg-12-15'
+    );
+
+    expect(
+      evaluationService.getEvaluationComparison
+    ).toHaveBeenCalledTimes(initialRequests);
+  });
+
+  it('should export the loaded comparison as XLSX', async () => {
+    await createComponent();
+
+    const exportService = TestBed.inject(AdvancedExportService);
+
+    const table: ExportTable = {
+      headers: ['Evaluación'],
+      rows: [[12], [15]]
+    };
+
+    spyOn(
+      exportService,
+      'buildComparisonTable'
+    ).and.returnValue(table);
+
+    const downloadSpy = spyOn(
+      exportService,
+      'downloadTable'
+    );
+
+    fixture.detectChanges();
+
+    const buttons = Array.from(
+      fixture.nativeElement.querySelectorAll('button')
+    ) as HTMLButtonElement[];
+
+    const excelButton = buttons.find(button =>
+      button.textContent?.includes('Exportar Excel')
+    );
+
+    expect(excelButton).toBeDefined();
+    expect(excelButton?.disabled).toBeFalse();
+
+    excelButton?.click();
+
+    expect(downloadSpy).toHaveBeenCalledOnceWith(
+      table,
+      'xlsx',
+      'comparacion-asg-12-15'
+    );
+  });
+
+  it('should export incompatible methodologies without differences', async () => {
+    const incompatibleComparison: EvaluationComparison = {
+      ...mockComparison,
+      comparable: false,
+      warning: 'Las metodologías no son comparables.',
+      differences: null
+    };
+
+    await createComponent(
+      '12',
+      '15',
+      of(incompatibleComparison)
+    );
+
+    const exportService = TestBed.inject(AdvancedExportService);
+
+    const buildSpy = spyOn(
+      exportService,
+      'buildComparisonTable'
+    ).and.callThrough();
+
+    const downloadSpy = spyOn(
+      exportService,
+      'downloadTable'
+    );
+
+    expect(component.canExportComparison).toBeTrue();
+
+    component.exportComparison('csv');
+
+    expect(buildSpy).toHaveBeenCalledOnceWith(
+      incompatibleComparison
+    );
+
+    expect(downloadSpy).toHaveBeenCalledTimes(1);
+
+    const exportedTable = downloadSpy.calls.mostRecent()
+      .args[0] as ExportTable;
+
+    expect(exportedTable.rows.length).toBe(2);
+
+    expect(
+      exportedTable.rows.some(row =>
+        row.includes('Las metodologías no son comparables.')
+      )
+    ).toBeTrue();
+
+    expect(
+      exportedTable.rows.some(row => row.includes(1))
+    ).toBeTrue();
+  });
+
+  it('should prevent exporting after switching companies', async () => {
+    await createComponent();
+
+    const exportService = TestBed.inject(AdvancedExportService);
+    const downloadSpy = spyOn(exportService, 'downloadTable');
+
+    expect(component.canExportComparison).toBeTrue();
+
+    selectedCompanyId.set(7);
+
+    fixture.detectChanges();
+    TestBed.flushEffects();
+    fixture.detectChanges();
+
+    expect(component.canExportComparison).toBeFalse();
+
+    component.exportComparison('xlsx');
+
+    expect(downloadSpy).not.toHaveBeenCalled();
+
+    selectedCompanyId.set(3);
+
+    fixture.detectChanges();
+    TestBed.flushEffects();
+    fixture.detectChanges();
+
+    expect(component.canExportComparison).toBeFalse();
+  });
+
+  it('should display an error when comparison export fails', async () => {
+    await createComponent();
+
+    const exportService = TestBed.inject(AdvancedExportService);
+
+    spyOn(
+      exportService,
+      'buildComparisonTable'
+    ).and.throwError('Error de exportación');
+
+    spyOn(console, 'error');
+
+    component.exportComparison('csv');
+    fixture.detectChanges();
+
+    expect(component.exportError).toBe(
+      'No fue posible exportar la comparación. Inténtalo nuevamente.'
+    );
+
+    const alert = fixture.nativeElement.querySelector(
+      '[data-testid="comparison-export-error"]'
+    ) as HTMLElement | null;
+
+    expect(alert?.textContent).toContain(
+      'No fue posible exportar la comparación.'
+    );
   });
 
 });
