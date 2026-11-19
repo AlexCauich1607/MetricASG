@@ -399,5 +399,66 @@ describe('UserNavbarComponent', () => {
       expect(membersLink).toBeNull();
     }
   });
+  describe('HU-050 T02 - Accesibilidad del menú móvil', () => {
+    it('should expose accessible attributes on the navbar toggler', () => {
+      fixture.detectChanges();
 
+      const toggler: HTMLButtonElement =
+        fixture.nativeElement.querySelector('.navbar-toggler');
+
+      const menu: HTMLElement =
+        fixture.nativeElement.querySelector('#mainNavbar');
+
+      expect(toggler).not.toBeNull();
+      expect(menu).not.toBeNull();
+
+      expect(toggler.getAttribute('aria-controls'))
+        .toBe('mainNavbar');
+
+      expect(toggler.getAttribute('aria-expanded'))
+        .toBe('false');
+
+      expect(toggler.getAttribute('aria-label'))
+        .toBe('Abrir o cerrar menú de navegación');
+    });
+
+    it('should close an open menu on Escape and restore focus', () => {
+      fixture.detectChanges();
+
+      const toggler: HTMLButtonElement =
+        fixture.nativeElement.querySelector('.navbar-toggler');
+
+      const menu: HTMLElement =
+        fixture.nativeElement.querySelector('#mainNavbar');
+
+      // Simular el estado abierto sin depender de Bootstrap global.
+      menu.classList.add('show');
+      toggler.setAttribute('aria-expanded', 'true');
+
+      const clickSpy = spyOn(toggler, 'click').and.callFake(() => {
+        menu.classList.remove('show');
+        toggler.setAttribute('aria-expanded', 'false');
+      });
+
+      component.onEscape();
+
+      expect(clickSpy).toHaveBeenCalledTimes(1);
+      expect(menu.classList.contains('show')).toBeFalse();
+      expect(toggler.getAttribute('aria-expanded')).toBe('false');
+      expect(document.activeElement).toBe(toggler);
+    });
+
+    it('should not toggle the menu on Escape when it is closed', () => {
+      fixture.detectChanges();
+
+      const toggler: HTMLButtonElement =
+        fixture.nativeElement.querySelector('.navbar-toggler');
+
+      const clickSpy = spyOn(toggler, 'click');
+
+      component.onEscape();
+
+      expect(clickSpy).not.toHaveBeenCalled();
+    });
+  });
 });

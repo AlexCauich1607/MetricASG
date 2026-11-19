@@ -1,15 +1,21 @@
-html, body {
+html,
+body {
   height: 100%;
   margin: 0;
 }
 
-app-root, .app-layout {
+app-root,
+.app-layout {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
 }
 
+.app-layout {
+  --user-navbar-height: 0px;
+}
+
 .app-content {
   flex: 1;
-  
+  padding-top: var(--user-navbar-height);
 }
