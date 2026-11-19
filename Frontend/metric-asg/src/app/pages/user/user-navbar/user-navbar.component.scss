@@ -120,3 +120,30 @@
     width: min(350px, calc(100vw - 24px));
   }
 }
+
+/* HU-050 T01: contexto empresarial responsive */
+
+.company-context {
+  min-width: 0;
+}
+
+.company-context .form-select {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  font-size: var(--asg-font-size-sm);
+}
+
+@media (max-width: 1199.98px) {
+  .company-context {
+    width: min(100%, 22rem);
+    margin-block: var(--asg-space-2);
+  }
+}
+
+@media (min-width: 1200px) {
+  .company-context {
+    width: 10.625rem;
+    flex: 0 0 10.625rem;
+  }
+}

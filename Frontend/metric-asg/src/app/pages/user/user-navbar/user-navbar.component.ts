@@ -24,6 +24,12 @@ import {
   ReminderType
 } from '../../../models/notification';
 
+import {
+  ElementRef,
+  HostListener,
+  ViewChild
+} from '@angular/core';
+
 
 @Component({
   selector: 'app-user-navbar',
@@ -175,5 +181,26 @@ export class UserNavbarComponent implements OnInit {
 
   get companySelectionLocked(): boolean {
     return this.router.url.split('?')[0].split('#')[0] === '/user/evaluation';
+  }
+  @ViewChild('navbarToggler')
+  private navbarToggler?: ElementRef<HTMLButtonElement>;
+
+  @ViewChild('navbarCollapse')
+  private navbarCollapse?: ElementRef<HTMLElement>;
+
+  @HostListener('document:keydown.escape')
+  onEscape(): void {
+    const menu = this.navbarCollapse?.nativeElement;
+    const toggler = this.navbarToggler?.nativeElement;
+
+    if (!menu || !toggler || !menu.classList.contains('show')) {
+      return;
+    }
+
+    // Bootstrap gestiona el cierre y actualiza aria-expanded.
+    toggler.click();
+
+    // Devolver el foco al botón hamburguesa.
+    toggler.focus();
   }
 }

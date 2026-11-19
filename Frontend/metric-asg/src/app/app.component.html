@@ -2,7 +2,7 @@
   <app-navbar></app-navbar>
 }
 
-<router-outlet></router-outlet>
+<router-outlet [class.public-navbar-offset]="showNavbar"></router-outlet>
 
 @if (showNavbar) {
   <app-footer></app-footer>

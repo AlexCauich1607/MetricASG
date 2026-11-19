@@ -1,15 +1,15 @@
-<nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm fixed-top py-3">
+<nav class="navbar navbar-expand-xl navbar-light bg-white shadow-sm fixed-top py-3">
   <div class="container">
     <a class="navbar-brand d-flex align-items-center" href="/home">
       <img src="assets/logo.png" alt="MetricASG" height="28" class="me-2">
       <span class="text-my-purple mb-1 font-logo">MetricASG</span>
     </a>
-
-    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNavbar">
-      <span class="navbar-toggler-icon"></span>
+    <button #navbarToggler class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNavbar"
+      aria-controls="mainNavbar" aria-expanded="false" aria-label="Abrir o cerrar menú de navegación">
+      <span class="navbar-toggler-icon" aria-hidden="true"></span>
     </button>
 
-    <div id="mainNavbar" class="collapse navbar-collapse justify-content-end">
+    <div #navbarCollapse id="mainNavbar" class="collapse navbar-collapse justify-content-end">
       <ul class="navbar-nav fw-bold align-items-center">
 
         @if (companyContext.loading()) {
@@ -25,7 +25,7 @@
           </span>
         </li>
         } @else if (companyContext.memberships().length > 0) {
-        <li class="nav-item mx-2">
+        <li class="nav-item mx-2 company-context">
           <label for="selected-company" class="visually-hidden">
             Empresa seleccionada
           </label>
@@ -177,7 +177,8 @@
         </li>
 
         <li class="nav-item dropdown mx-2">
-          <a class="nav-link  d-flex align-items-center m-0 p-0" role="button" data-bs-toggle="dropdown">
+          <button type="button" class="nav-link d-flex align-items-center m-0 p-0 border-0 bg-transparent"
+            data-bs-toggle="dropdown" aria-expanded="false" aria-label="Abrir menú de perfil">
 
 
             @if (!photo || photo.length <= 0) { <div class="bg-my-purple sw-all-center sw-circle"
@@ -188,7 +189,7 @@
     <img class="sw-circle sw-all-center" style="height: 40px;width: 40px;" [src]="getImage()" alt="Foto de usuario" />
     }
 
-    </a>
+    </button>
     <ul class="dropdown-menu dropdown-menu-end">
       <li>
         <button class="dropdown-item text-my-purple fw-bold sw-fs-7" (click)="openConfiguration()">

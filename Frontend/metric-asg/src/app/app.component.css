@@ -1,6 +1,9 @@
 router-outlet {
-  display: block;     
-  padding-top: 70px;  
+  display: block;
+}
+
+router-outlet.public-navbar-offset {
+  padding-top: 70px;
 }
 
 router-outlet + * {
