@@ -12,6 +12,7 @@ import { BarChartComponent } from '../../../shared/bar-chart/bar-chart.component
 import { toObservable, takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { EMPTY, switchMap, tap, catchError } from 'rxjs';
 import { CompanyContextService } from '../../../services/company-context.service';
+import { UiStateComponent } from '../../../shared/ui-state/ui-state.component';
 
 Chart.register(...registerables);
 
@@ -21,7 +22,8 @@ Chart.register(...registerables);
   standalone: true,
   imports: [
     AmbitCardComponent,
-    BarChartComponent
+    BarChartComponent,
+    UiStateComponent
   ],
   templateUrl: './user-home.component.html',
   changeDetection: ChangeDetectionStrategy.Eager,
@@ -45,6 +47,7 @@ export class UserHomeComponent {
   user: User | null = null;
 
   loadingChart = false;
+  resultsStatus: 'loading' | 'error' | 'empty' | 'success' = 'loading';
 
   constructor(
     private resultService: EvaluationService,
@@ -55,30 +58,53 @@ export class UserHomeComponent {
     private companyContext: CompanyContextService,
     private destroyRef: DestroyRef
   ) {
+
     toObservable(this.companyContext.selectedCompanyId)
       .pipe(
         tap(() => {
           this.clearResultsState();
+          this.resultsStatus = 'loading';
         }),
         switchMap(companyId => {
           if (companyId === null) {
+            this.resultsStatus = 'empty';
             return EMPTY;
           }
 
           return this.resultService.getLastEvaluationResult().pipe(
+
             catchError(error => {
-              console.error('Error al cargar resultados:', error);
+              const noEvaluations =
+                error?.status === 404 &&
+                error?.error?.detail === 'No evaluations found';
+
+              if (noEvaluations) {
+                this.resultsStatus = 'empty';
+              } else {
+                console.error('Error al cargar resultados:', error);
+                this.resultsStatus = 'error';
+              }
+
               return EMPTY;
             })
+
           );
         }),
         takeUntilDestroyed(this.destroyRef)
       )
       .subscribe(data => {
         this.results = data;
+
+        if (!data) {
+          this.resultsStatus = 'empty';
+          return;
+        }
+
+        this.resultsStatus = 'success';
         this.getPeriodo(data.date);
         this.cargarGrafica();
       });
+
   }
 
   private clearResultsState(): void {

@@ -2,7 +2,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { signal } from '@angular/core';
 import { provideRouter } from '@angular/router';
-import { of, Subject } from 'rxjs';
+import { of, Subject, throwError } from 'rxjs';
 
 import { UserHomeComponent } from './user-home.component';
 import { EvaluationService } from '../../../services/evaluation.service';
@@ -105,23 +105,25 @@ describe('UserHomeComponent', () => {
     expect(component.results).toBeNull();
   });
 
-  it('should reload results and chart data when switching companies', async () => {
+
+
+  it('should reload results and chart data when switching companies', () => {
     evaluationService.getLastEvaluationResult.and.returnValues(
       of(companyAResults),
       of(companyBResults)
     );
 
     selectedCompanyId.set(3);
+    TestBed.tick();
     fixture.detectChanges();
-    await fixture.whenStable();
 
     expect(component.results).toEqual(companyAResults);
     expect(component.ambits).toEqual(['Ambiental']);
     expect(component.scores).toEqual([8.5]);
 
     selectedCompanyId.set(7);
+    TestBed.tick();
     fixture.detectChanges();
-    await fixture.whenStable();
 
     expect(component.results).toEqual(companyBResults);
     expect(component.ambits).toEqual(['Social']);
@@ -132,7 +134,9 @@ describe('UserHomeComponent', () => {
     ).toHaveBeenCalledTimes(2);
   });
 
-  it('should clear previous results while loading another company', async () => {
+
+
+  it('should clear previous results while loading another company', () => {
     const pendingResults = new Subject<ResultEvaluation>();
 
     evaluationService.getLastEvaluationResult.and.returnValues(
@@ -141,22 +145,111 @@ describe('UserHomeComponent', () => {
     );
 
     selectedCompanyId.set(3);
+    TestBed.tick();
     fixture.detectChanges();
-    await fixture.whenStable();
 
     expect(component.results).toEqual(companyAResults);
 
     selectedCompanyId.set(7);
+    TestBed.tick();
     fixture.detectChanges();
-    await fixture.whenStable();
 
     expect(component.results).toBeNull();
     expect(component.ambits).toEqual([]);
     expect(component.scores).toEqual([]);
     expect(component.loadingChart).toBeFalse();
+    expect(component.resultsStatus).toBe('loading');
 
     pendingResults.next(companyBResults);
+    fixture.detectChanges();
 
     expect(component.results).toEqual(companyBResults);
+    expect(component.resultsStatus).toBe('success');
+
+    pendingResults.complete();
   });
+
+
+  it('should show loading while results are pending', async () => {
+    const pendingResults = new Subject<ResultEvaluation>();
+
+    evaluationService.getLastEvaluationResult.and.returnValue(
+      pendingResults.asObservable()
+    );
+
+    selectedCompanyId.set(3);
+    TestBed.tick();
+    fixture.detectChanges();
+
+    expect(component.resultsStatus).toBe('loading');
+    expect(component.results).toBeNull();
+
+    const state = fixture.nativeElement.querySelector(
+      '.asg-state--loading'
+    );
+
+    expect(state).not.toBeNull();
+
+    pendingResults.complete();
+  });
+
+  it('should show empty when no completed evaluations exist', async () => {
+    evaluationService.getLastEvaluationResult.and.returnValue(
+      throwError(() => ({
+        status: 404,
+        error: { detail: 'No evaluations found' }
+      }))
+    );
+
+    selectedCompanyId.set(3);
+    TestBed.tick();
+    fixture.detectChanges();
+
+    expect(component.resultsStatus).toBe('empty');
+    expect(component.results).toBeNull();
+
+    expect(
+      fixture.nativeElement.querySelector('.asg-state--empty')
+    ).not.toBeNull();
+  });
+
+  it('should show error for service failures', async () => {
+    evaluationService.getLastEvaluationResult.and.returnValue(
+      throwError(() => ({
+        status: 500,
+        error: { detail: 'Internal Server Error' }
+      }))
+    );
+
+    spyOn(console, 'error');
+
+    selectedCompanyId.set(3);
+    TestBed.tick();
+    fixture.detectChanges();
+
+    expect(component.resultsStatus).toBe('error');
+    expect(component.results).toBeNull();
+
+    expect(
+      fixture.nativeElement.querySelector('.asg-state--error')
+    ).not.toBeNull();
+  });
+
+  it('should not treat unrelated 404 errors as empty', async () => {
+    evaluationService.getLastEvaluationResult.and.returnValue(
+      throwError(() => ({
+        status: 404,
+        error: { detail: 'Company not found' }
+      }))
+    );
+
+    spyOn(console, 'error');
+
+    selectedCompanyId.set(3);
+    TestBed.tick();
+    fixture.detectChanges();
+
+    expect(component.resultsStatus).toBe('error');
+  });
+
 });
