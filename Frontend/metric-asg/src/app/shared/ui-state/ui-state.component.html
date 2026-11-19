@@ -1,0 +1,31 @@
+
+<div
+  class="asg-state"
+  [ngClass]="'asg-state--' + type"
+  [attr.role]="type === 'error' ? 'alert' : 'status'"
+  [attr.aria-busy]="type === 'loading' ? 'true' : null">
+
+  @switch (type) {
+    @case ('loading') {
+      <span class="asg-state__spinner" aria-hidden="true"></span>
+    }
+    @case ('error') {
+      <i class="bi bi-exclamation-circle"
+         aria-hidden="true"></i>
+    }
+    @case ('empty') {
+      <i class="bi bi-inbox" aria-hidden="true"></i>
+    }
+    @case ('success') {
+      <i class="bi bi-check-circle" aria-hidden="true"></i>
+    }
+  }
+
+  @if (title) {
+    <p class="asg-state__title">{{ title }}</p>
+  }
+
+  @if (message) {
+    <p class="asg-state__message">{{ message }}</p>
+  }
+</div>

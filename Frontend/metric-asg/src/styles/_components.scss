@@ -1,0 +1,310 @@
+/*
+ * MetricASG — Componentes visuales compartidos
+ * HU-047: Componentes visuales reutilizables
+ *
+ * Estilos semánticos basados en los tokens HU-046.
+ * Las clases heredadas permanecen disponibles.
+ */
+
+/* =========================================
+   BOTONES
+   ========================================= */
+
+.asg-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--asg-space-2);
+  min-height: 44px;
+  padding: var(--asg-space-2) var(--asg-space-4);
+
+  border: 1px solid transparent;
+  border-radius: var(--asg-radius-sm);
+
+  font-family: inherit;
+  font-size: var(--asg-font-size-md);
+  font-weight: var(--asg-font-weight-semibold);
+  line-height: 1.5;
+  text-align: center;
+  text-decoration: none;
+
+  cursor: pointer;
+  transition: background-color 0.2s ease,
+    border-color 0.2s ease,
+    color 0.2s ease;
+
+  &:focus-visible {
+    outline: var(--asg-focus-width) solid var(--asg-focus-color);
+    outline-offset: var(--asg-focus-offset);
+  }
+
+  &:disabled,
+  &[aria-disabled="true"] {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+}
+
+.asg-btn--primary {
+  background-color: var(--asg-color-brand-primary);
+  color: var(--asg-color-text-inverse);
+
+  &:hover:not(:disabled):not([aria-disabled="true"]) {
+    background-color: #003580;
+    color: var(--asg-color-text-inverse);
+  }
+}
+
+.asg-btn--secondary {
+  background-color: var(--asg-color-surface-default);
+  color: var(--asg-color-brand-primary);
+  border-color: var(--asg-color-brand-primary);
+
+  &:hover:not(:disabled):not([aria-disabled="true"]) {
+    background-color: var(--asg-color-surface-blue);
+  }
+}
+
+.asg-btn--danger {
+  background-color: #b42318;
+  color: #ffffff;
+
+  &:hover:not(:disabled):not([aria-disabled="true"]) {
+    background-color: #912018;
+    color: #ffffff;
+  }
+}
+
+/* =========================================
+   FORMULARIOS
+   ========================================= */
+
+.asg-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--asg-space-2);
+  min-width: 0;
+}
+
+.asg-field__label {
+  color: var(--asg-color-text-primary);
+  font-size: var(--asg-font-size-sm);
+  font-weight: var(--asg-font-weight-semibold);
+}
+
+.asg-field__control {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
+
+  padding: var(--asg-space-3);
+  border: 1px solid #8695a8;
+  border-radius: var(--asg-radius-sm);
+
+  background-color: var(--asg-color-surface-default);
+  color: var(--asg-color-text-primary);
+  font-family: inherit;
+  font-size: var(--asg-font-size-md);
+
+  &:focus-visible {
+    outline: var(--asg-focus-width) solid var(--asg-focus-color);
+    outline-offset: var(--asg-focus-offset);
+  }
+
+  &:disabled {
+    opacity: 0.65;
+    cursor: not-allowed;
+  }
+
+  &[aria-invalid="true"] {
+    border-color: #b42318;
+  }
+}
+
+.asg-field__error {
+  color: #b42318;
+  font-size: var(--asg-font-size-sm);
+  line-height: 1.4;
+}
+
+/* =========================================
+   TARJETAS
+   ========================================= */
+
+.asg-card {
+  min-width: 0;
+  padding: var(--asg-space-6);
+
+  background-color: var(--asg-color-surface-default);
+  border: 1px solid #d9e1e8;
+  border-radius: var(--asg-radius-card);
+  box-shadow: var(--asg-shadow-sm);
+}
+
+.asg-card__title {
+  margin: 0 0 var(--asg-space-2);
+
+  color: var(--asg-color-text-primary);
+  font-size: var(--asg-font-size-lg);
+  font-weight: var(--asg-font-weight-semibold);
+}
+
+/* =========================================
+   ENCABEZADOS
+   ========================================= */
+
+.asg-section-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--asg-space-4);
+
+  margin-bottom: var(--asg-space-6);
+}
+
+.asg-section-header__title {
+  margin: 0;
+  color: var(--asg-color-text-primary);
+  font-size: var(--asg-font-size-xl);
+  font-weight: var(--asg-font-weight-bold);
+}
+
+/* =========================================
+   ESTADOS DE INTERFAZ
+   ========================================= */
+
+.asg-state {
+  padding: var(--asg-space-6);
+  border: 1px solid #d9e1e8;
+  border-radius: var(--asg-radius-card);
+
+  background-color: var(--asg-color-surface-muted);
+  color: var(--asg-color-text-primary);
+}
+
+.asg-state--success {
+  border-left: 4px solid var(--asg-color-action-success);
+}
+
+.asg-state--error {
+  border-left: 4px solid #b42318;
+}
+
+.asg-state--loading,
+.asg-state--empty {
+  text-align: center;
+}
+
+/* =========================================
+   RESPONSIVE
+   ========================================= */
+
+@media (max-width: 575.98px) {
+  .asg-card {
+    padding: var(--asg-space-4);
+  }
+
+  .asg-section-header {
+    align-items: stretch;
+  }
+
+  .asg-section-header__title {
+    font-size: var(--asg-font-size-lg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .asg-btn {
+    transition: none;
+  }
+}
+
+
+
+
+/* =========================================
+   FORMULARIOS — ETIQUETAS VISIBLES
+   HU-047
+   ========================================= */
+
+.floating-input {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--asg-space-2);
+  margin-top: var(--asg-space-6);
+
+  input,
+  select {
+    order: 2;
+    display: block;
+    width: 100%;
+    min-width: 0;
+    min-height: 48px;
+    padding: 0.75rem 1rem;
+
+    border: 1px solid #8695a8;
+    border-radius: var(--asg-radius-sm);
+    background-color: var(--asg-color-surface-muted);
+
+    color: var(--asg-color-text-primary);
+    font-family: inherit;
+    font-size: var(--asg-font-size-md);
+
+    &:focus,
+    &:focus-visible {
+      border-color: var(--asg-color-brand-primary) !important;
+      outline: none !important;
+      box-shadow: none !important;
+    }
+
+    &:disabled {
+      opacity: 0.65;
+      cursor: not-allowed;
+    }
+  }
+
+  label {
+    order: 1;
+    position: static;
+
+    display: block;
+    padding: 0;
+    margin: 0;
+
+    transform: none;
+    background: transparent;
+
+    color: var(--asg-color-text-primary);
+    font-size: var(--asg-font-size-sm);
+    font-weight: var(--asg-font-weight-regular);
+    line-height: 1.5;
+
+    pointer-events: auto;
+  }
+
+  input::placeholder {
+    opacity: 1;
+  }
+
+  input:focus+label,
+  input:not(:placeholder-shown)+label,
+  select+label {
+    position: static;
+    transform: none;
+    font-size: var(--asg-font-size-sm);
+    color: var(--asg-color-text-primary);
+  }
+
+}
+
+/* Mantener el botón dentro del campo de contraseña */
+.floating-input.password-field {
+  .toggle-password {
+    top: auto;
+    bottom: 2px;
+    transform: none;
+  }
+}

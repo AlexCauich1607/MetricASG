@@ -15,71 +15,71 @@
     </div>
     <div [formGroup]="form">
       <div class="floating-input mt-5">
-        <input type="email" class="color-input-bg" id="email" placeholder="usuario@empresa.com"
-          formControlName="email" required>
-          <label for="email"><i class="bi bi-envelope-fill me-1"></i> Correo electrónico</label>
+        <input type="email" class="color-input-bg" id="email" placeholder="usuario@empresa.com" formControlName="email"
+          required>
+        <label for="email"><i class="bi bi-envelope-fill me-1"></i> Correo electrónico</label>
+      </div>
+      @if (getValue('email')!.invalid && (getValue('email')!.dirty || getValue('email')!.touched)) {
+      <div>
+        @if (getValue('email')!.errors!['required']) {
+        <div>
+          <p class="sw-text-error mb-0 pb-0">
+            *Este campo no puede estar vacio
+          </p>
         </div>
-        @if (getValue('email')!.invalid && (getValue('email')!.dirty || getValue('email')!.touched)) {
-          <div>
-            @if (getValue('email')!.errors!['required']) {
-              <div>
-                <p class="sw-text-error mb-0 pb-0">
-                  *Este campo no puede estar vacio
-                </p>
-              </div>
-            }
-            @if (!getValue('email')!.errors!['required']) {
-              <div>
-                <p class="sw-text-error mb-0 pb-0">
-                  *Correo no valido
-                </p>
-              </div>
-            }
-          </div>
         }
-
-
-        <div class="floating-input password-field mt-5">
-          <input class="color-input-bg" [type]="showPassword ? 'text' : 'password'" id="password" placeholder=" "
-            (input)="onInput($event)" formControlName="password" />
-
-            <label for="password"><i class="bi bi-lock-fill me-1"></i> Contraseña</label>
-
-            <button type="button" class="toggle-password" (click)="togglePassword()"
-              [attr.aria-label]="showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'">
-              <span class="material-icons">
-                {{ showPassword ? 'visibility_off' : 'visibility' }}
-              </span>
-            </button>
-          </div>
-          @if (getValue('password')!.invalid && (getValue('password')!.dirty || getValue('password')!.touched)) {
-            <div
-              >
-              <p class="sw-text-error mb-0 pb-0">
-                *El contraseña debe tener minimo 8 caracteres
-              </p>
-            </div>
-          }
-
-          <div class="d-grid mt-5 mb-3">
-            <button class="btn py-2 btn-my-purple btn-lg rounded-pill" (click)="login()">
-              <i class="bi bi-box-arrow-in-right me-1"></i> Iniciar sesión
-            </button>
-          </div>
+        @if (!getValue('email')!.errors!['required']) {
+        <div>
+          <p class="sw-text-error mb-0 pb-0">
+            *Correo no valido
+          </p>
         </div>
+        }
+      </div>
+      }
 
 
-        <div class="text-center my-3 text-muted">
-          — o —
-        </div>
+      <div class="floating-input password-field mt-5">
+        <input class="color-input-bg" [type]="showPassword ? 'text' : 'password'" id="password" placeholder=" "
+          (input)="onInput($event)" formControlName="password" />
 
+        <label for="password"><i class="bi bi-lock-fill me-1"></i> Contraseña</label>
 
-        <div class="text-center">
-          <span class="text-muted">¿No tienes cuenta?</span>
-          <a href="/sing-up" class="text-my-purple fw-semibold text-decoration-none">
-            Regístrate
-          </a>
-        </div>
+        <button type="button" class="toggle-password" (click)="togglePassword()"
+          [attr.aria-label]="showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'">
+          <span class="material-icons">
+            {{ showPassword ? 'visibility_off' : 'visibility' }}
+          </span>
+        </button>
+      </div>
+      @if (getValue('password')!.invalid && (getValue('password')!.dirty || getValue('password')!.touched)) {
+      <div>
+        <p class="sw-text-error mb-0 pb-0">
+          *El contraseña debe tener minimo 8 caracteres
+        </p>
+      </div>
+      }
 
+      <div class="d-grid mt-5 mb-3">
+        <button type="button" class="asg-btn asg-btn--primary w-100" (click)="login()">
+          <i class="bi bi-box-arrow-in-right" aria-hidden="true"></i>
+          Iniciar sesión
+        </button>
       </div>
     </div>
+
+
+    <div class="text-center my-3 text-muted">
+      — o —
+    </div>
+
+
+    <div class="text-center">
+      <span class="text-muted">¿No tienes cuenta?</span>
+      <a href="/sing-up" class="text-my-purple fw-semibold text-decoration-none">
+        Regístrate
+      </a>
+    </div>
+
+  </div>
+</div>

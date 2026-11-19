@@ -4,7 +4,7 @@ import { FooterComponent } from './footer/footer.component';
 import { NavbarComponent } from './navbar/navbar.component';
 import { AppComponent } from '../app.component';
 import { FeedbackComponent } from './feedback/feedback.component';
-
+import { UiStateComponent } from './ui-state/ui-state.component';
 import { BarChartComponent } from './bar-chart/bar-chart.component';
 import { PdfReportTemplateComponent } from './pdf-template/pdf-template.component';
 import { ProfilePhotoComponent } from './profile-photo/profile-photo.component';
@@ -22,6 +22,7 @@ import { AmbitCardComponent } from './ambit-card/ambit-card.component';
     NavbarComponent,
     PdfReportTemplateComponent,
     ProfilePhotoComponent,
+    UiStateComponent
   ],
   exports: [
     FooterComponent,
@@ -30,7 +31,8 @@ import { AmbitCardComponent } from './ambit-card/ambit-card.component';
     BarChartComponent,
     PdfReportTemplateComponent,
     ProfilePhotoComponent,
-    AmbitCardComponent
+    AmbitCardComponent,
+    UiStateComponent
   ]
 
 })
