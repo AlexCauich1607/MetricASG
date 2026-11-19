@@ -6,7 +6,10 @@
     "start": "ng serve",
     "build": "ng build",
     "watch": "ng build --watch --configuration development",
-    "test": "ng test"
+    "test": "ng test",
+    "test:e2e": "playwright test",
+    "test:e2e:responsive": "playwright test e2e/responsive.spec.ts",
+    "test:e2e:a11y": "playwright test e2e/accessibility.spec.ts e2e/registration-accessibility.spec.ts"
   },
   "private": true,
   "dependencies": {
@@ -34,6 +37,7 @@
     "@angular/build": "^22.2.3",
     "@angular/cli": "^22.2.3",
     "@angular/compiler-cli": "^22.2.3",
+    "@playwright/test": "^1.65.1",
     "@types/jasmine": "~5.1.0",
     "istanbul-lib-instrument": "^6.0.3",
     "jasmine-core": "~5.5.0",
