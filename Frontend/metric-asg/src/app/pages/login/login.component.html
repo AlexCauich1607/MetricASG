@@ -15,22 +15,34 @@
     </div>
     <div [formGroup]="form">
       <div class="floating-input mt-5">
+
         <input type="email" class="color-input-bg" id="email" placeholder="usuario@empresa.com" formControlName="email"
-          required>
+          [attr.aria-invalid]="
+    getValue('email')!.invalid &&
+    (getValue('email')!.dirty || getValue('email')!.touched)
+      ? 'true'
+      : null
+  " [attr.aria-describedby]="
+    getValue('email')!.invalid &&
+    (getValue('email')!.dirty || getValue('email')!.touched)
+      ? 'email-error'
+      : null
+  " required />
+
         <label for="email"><i class="bi bi-envelope-fill me-1"></i> Correo electrónico</label>
       </div>
       @if (getValue('email')!.invalid && (getValue('email')!.dirty || getValue('email')!.touched)) {
       <div>
         @if (getValue('email')!.errors!['required']) {
         <div>
-          <p class="sw-text-error mb-0 pb-0">
+          <p id="email-error" class="sw-text-error mb-0 pb-0">
             *Este campo no puede estar vacio
           </p>
         </div>
         }
         @if (!getValue('email')!.errors!['required']) {
         <div>
-          <p class="sw-text-error mb-0 pb-0">
+          <p id="email-error" class="sw-text-error mb-0 pb-0">
             *Correo no valido
           </p>
         </div>
@@ -41,7 +53,17 @@
 
       <div class="floating-input password-field mt-5">
         <input class="color-input-bg" [type]="showPassword ? 'text' : 'password'" id="password" placeholder=" "
-          (input)="onInput($event)" formControlName="password" />
+          (input)="onInput($event)" formControlName="password" [attr.aria-invalid]="
+  getValue('password')!.invalid &&
+  (getValue('password')!.dirty || getValue('password')!.touched)
+    ? 'true'
+    : null
+" [attr.aria-describedby]="
+  getValue('password')!.invalid &&
+  (getValue('password')!.dirty || getValue('password')!.touched)
+    ? 'password-error'
+    : null
+" />
 
         <label for="password"><i class="bi bi-lock-fill me-1"></i> Contraseña</label>
 
@@ -54,8 +76,8 @@
       </div>
       @if (getValue('password')!.invalid && (getValue('password')!.dirty || getValue('password')!.touched)) {
       <div>
-        <p class="sw-text-error mb-0 pb-0">
-          *El contraseña debe tener minimo 8 caracteres
+        <p id="password-error" class="sw-text-error mb-0 pb-0">
+          *La contraseña debe tener mínimo 8 caracteres.
         </p>
       </div>
       }

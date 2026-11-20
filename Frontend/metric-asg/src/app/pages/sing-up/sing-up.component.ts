@@ -121,8 +121,8 @@ export class SingUpComponent {
     return id;
   }
 
-  isTouched(ix: number){
-    this.touched[ix]=true;
+  isTouched(ix: number) {
+    this.touched[ix] = true;
   }
 
   getSizeId(name: string): number {
@@ -144,22 +144,24 @@ export class SingUpComponent {
   }
 
   validatePassword(): boolean {
-    if (this.getValue("password")?.value.length <= 0) {
-      this.r_password = "";
+    const password = this.getValue('password')?.value ?? '';
+
+    if (password.length === 0) {
+      return this.r_password === '';
     }
-    console.log(this.getValue("password")?.value + " " + this.r_password);
-    return this.getValue("password")?.value == this.r_password;
+
+    return password === this.r_password;
   }
 
   register(): void {
-    if(!this.validatePassword()){
+    if (!this.validatePassword()) {
       return;
     }
-    if(!this.validatePhone()){
+    if (!this.validatePhone()) {
       return
     }
-    if(this.form.invalid || this.sizeSeleccionado==null || this.sectorSeleccionado==null){
-      alert("Hay campos incompletos"); 
+    if (this.form.invalid || this.sizeSeleccionado == null || this.sectorSeleccionado == null) {
+      alert("Hay campos incompletos");
       return;
     }
     let request: UserRegister = {
@@ -167,8 +169,8 @@ export class SingUpComponent {
       lastname: this.getValue("lastname")?.value,
       position: this.getValue("position")?.value,
       company_name: this.getValue("company_name")?.value,
-      company_sector_id: this.sectorSeleccionado?.id??0,
-      company_size_id: this.sizeSeleccionado?.id??0,
+      company_sector_id: this.sectorSeleccionado?.id ?? 0,
+      company_size_id: this.sizeSeleccionado?.id ?? 0,
       email: this.getValue("email")?.value,
       phone: this.getValue("phone")?.value,
       password: this.getValue("password")?.value
