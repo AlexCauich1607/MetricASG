@@ -272,7 +272,48 @@ class AuthService:
             raise
 
     def create_user(self, data: dict, db: Session):
-        return self._create_company_account(data, db)
+        if db.query(User).filter(User.email == data["email"]).first():
+            raise HTTPException(400, "Email already registered")
+
+        user_data = {
+            "name": data["name"],
+            "lastname": data["lastname"],
+            "position": data["position"],
+            "email": data["email"],
+            "phone": data["phone"],
+            "password": self.hash_password(data["password"]),
+            "company_name": None,
+            "company_sector_id": None,
+            "company_size_id": None,
+            "role": UserRole.USER.value,
+            "next_evaluation": datetime.now(),
+        }
+
+        try:
+            user = User(**user_data)
+
+            db.add(user)
+            db.flush()
+
+            AuditService.record(
+                db=db,
+                action="user.created",
+                resource_type="user",
+                resource_id=user.id,
+                actor_id=user.id,
+                context={
+                    "registration_type": "personal_account",
+                },
+            )
+
+            db.commit()
+            db.refresh(user)
+
+            return user
+
+        except Exception:
+            db.rollback()
+            raise
 
     def create_company(self, data: dict, db: Session):
         return self._create_company_account(data, db)

@@ -29,11 +29,7 @@ class RegisterRequest(BaseModel):
     name: str
     lastname: str
     position: str
-    
-    company_name: str
-    company_sector_id: Optional[int] = None
-    company_size_id: Optional[int] = None
-    
+
     email: str
     phone: str
     password: str
