@@ -1,30 +1,25 @@
+/* HU-053: los estilos de los campos de autenticación
+   se reutilizan desde styles/_components.scss. */
 
-.password-field {
-  position: relative;
+/* Fondo local conservado para compatibilidad visual. */
+.color-input-bg {
+  background-color: #ecefe6;
 }
 
-.password-field input {
-  padding-right: 3rem; 
+/* HU-053: espaciado equilibrado para Login móvil */
+@media (max-width: 575.98px) {
+  .floating-input.mt-5 {
+    margin-top: 2rem !important;
+  }
+
+  .d-grid.mt-5 {
+    margin-top: 2.5rem !important;
+  }
+
+  /* Margen lateral para el formulario móvil */
+  .split-margin {
+    padding-inline: 1rem;
+    padding-top: 1.5rem;
+    padding-bottom: 1.5rem;
+  }
 }
-
-.toggle-password {
-  position: absolute;
-  right: 0.75rem;
-  top: 55%;
-  transform: translateY(-50%);
-  background: none;
-  border: none;
-  cursor: pointer;
-  font-size: 1rem;
-  color: #64748b; 
-}
-
-.toggle-password:hover {
-  color: #334155;
-}
-
-
-.color-input-bg{
-    background-color: #ecefe6;
-}
-

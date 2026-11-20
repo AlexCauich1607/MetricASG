@@ -8,7 +8,7 @@
         </div>
       </div>
       <div class="col-12 col-lg-6 my-5">
-        <div class="color-bg rounded-5 p-5">
+        <div class="color-bg rounded-5 p-3 p-md-5">
           <div class="d-flex align-items-center justify-content-between">
             <p class="fw-bold text-my-purple fs-5">Crear Cuenta</p>
             <div class="">
@@ -30,38 +30,69 @@
                     </p>
                     <div class="floating-input mb-1">
                       <input type="text" class="color-input-bg" id="name" placeholder="Ingrese su nombre"
-                        formControlName="name" required>
+                        formControlName="name" [attr.aria-invalid]="
+  getValue('name')!.invalid &&
+  (getValue('name')!.dirty || getValue('name')!.touched)
+    ? 'true'
+    : null
+" [attr.aria-describedby]="
+  getValue('name')!.invalid &&
+  (getValue('name')!.dirty || getValue('name')!.touched)
+    ? 'name-error'
+    : null
+" required>
                       <label for="name"><i class="bi bi-person-fill"></i> Nombre</label>
                     </div>
                     @if (getValue('name')!.invalid && (getValue('name')!.dirty || getValue('name')!.touched)) {
                     <div>
-                      <p class="sw-text-error mb-0 pb-0">*Este campo debe tener minimo 3
+                      <p id="name-error" class="sw-text-error mb-0 pb-0">*Este campo debe tener minimo 3
                         caracteres</p>
                     </div>
                     }
 
                     <div class="floating-input mb-1 ">
                       <input type="text" class="color-input-bg" id="lastname" placeholder="Ingrese su Apellido"
-                        formControlName="lastname" required>
+                        formControlName="lastname" [attr.aria-invalid]="
+  getValue('lastname')!.invalid &&
+  (getValue('lastname')!.dirty || getValue('lastname')!.touched)
+    ? 'true'
+    : null
+" [attr.aria-describedby]="
+  getValue('lastname')!.invalid &&
+  (getValue('lastname')!.dirty || getValue('lastname')!.touched)
+    ? 'lastname-error'
+    : null
+" required>
                       <label for="lastname"><i class="bi bi-person-fill"></i> Apellido</label>
                     </div>
                     @if (getValue('lastname')!.invalid && (getValue('lastname')!.dirty ||
                     getValue('lastname')!.touched)) {
                     <div>
-                      <p class="sw-text-error mb-0 pb-0">*Este campo debe tener minimo 3
+                      <p id="lastname-error" class="sw-text-error mb-0 pb-0">*Este campo debe tener minimo 3
                         caracteres</p>
                     </div>
                     }
                     <div class="floating-input mb-1">
                       <input type="text" class="color-input-bg" id="position"
-                        placeholder="Ingrese su puesto dentro de la empresa" formControlName="position" required>
+                        placeholder="Ingrese su puesto dentro de la empresa" formControlName="position"
+                        [attr.aria-invalid]="
+  getValue('position')!.invalid &&
+  (getValue('position')!.dirty || getValue('position')!.touched)
+    ? 'true'
+    : null
+" [attr.aria-describedby]="
+  getValue('position')!.invalid &&
+  (getValue('position')!.dirty || getValue('position')!.touched)
+    ? 'position-error'
+    : null
+" required>
                       <label for="position"><i class="bi bi-briefcase-fill"></i> Puesto</label>
 
                     </div>
                     @if (getValue('position')!.invalid && (getValue('position')!.dirty ||
                     getValue('position')!.touched)) {
                     <div>
-                      <p class="sw-text-error mb-0 pb-0">*Este campo debe tener minimo 3
+                      <p id="position-error" class="sw-text-error mb-0 pb-0">*Este campo debe tener minimo 3
                         caracteres</p>
                     </div>
                     }
@@ -86,25 +117,37 @@
                     </p>
                     <div class="floating-input mb-1 ">
                       <input type="text" class="color-input-bg" id="company_name"
-                        placeholder="Ingrese el nombre de la empresa" formControlName="company_name" required>
-
+                        placeholder="Ingrese el nombre de la empresa" formControlName="company_name"
+                        [attr.aria-invalid]="
+    getValue('company_name')!.invalid &&
+    (getValue('company_name')!.dirty || getValue('company_name')!.touched)
+      ? 'true'
+      : null
+  " [attr.aria-describedby]="
+    getValue('company_name')!.invalid &&
+    (getValue('company_name')!.dirty || getValue('company_name')!.touched)
+      ? 'company-name-error'
+      : null
+  " required>
                       <label for="company_name"><i class="bi bi-building-fill"></i> Nombre de la
                         empresa</label>
-
-
 
                     </div>
                     @if (getValue('company_name')!.invalid && (getValue('company_name')!.dirty ||
                     getValue('company_name')!.touched)) {
                     <div>
-                      <p class="sw-text-error mb-0 pb-0">*Este campo debe tener minimo 3
+                      <p id="company-name-error" class="sw-text-error mb-0 pb-0">*Este campo debe tener minimo 3
                         caracteres</p>
                     </div>
                     }
                     <div class="floating-input mb-1">
                       <select id="sector" class="color-input-bg" [(ngModel)]="sectorSeleccionado"
-                        [ngModelOptions]="{standalone: true}">
+                        [ngModelOptions]="{standalone: true}"
+                        [attr.aria-invalid]="sectorSeleccionado === null ? 'true' : null"
+                        [attr.aria-describedby]="sectorSeleccionado === null ? 'sector-error' : null">
+
                         <option [ngValue]="null">Seleccione un sector</option>
+
                         @for (sector of sectores; track sector) {
                         <option [ngValue]="sector">
                           {{ sector.name }}
@@ -112,18 +155,26 @@
                         }
                       </select>
 
-                      <label for="sector"><i class="bi bi-gear-fill"></i> Sector</label>
-
-                      @if (sectorSeleccionado==null) {
-                      <div>
-                        <p class="sw-text-error mb-0 pb-0">*Este campo no puede estar vacio</p>
-                      </div>
-                      }
+                      <label for="sector">
+                        <i class="bi bi-gear-fill"></i> Sector
+                      </label>
                     </div>
+
+                    @if (sectorSeleccionado === null) {
+                    <div>
+                      <p id="sector-error" class="sw-text-error mb-0 pb-0">
+                        *Este campo no puede estar vacío.
+                      </p>
+                    </div>
+                    }
                     <div class="floating-input mb-1">
                       <select id="size" class="color-input-bg" [(ngModel)]="sizeSeleccionado"
-                        [ngModelOptions]="{standalone: true}">
+                        [ngModelOptions]="{standalone: true}"
+                        [attr.aria-invalid]="sizeSeleccionado === null ? 'true' : null"
+                        [attr.aria-describedby]="sizeSeleccionado === null ? 'size-error' : null">
+
                         <option [ngValue]="null">Seleccione un Tamaño</option>
+
                         @for (size of sizes; track size) {
                         <option [ngValue]="size">
                           {{ size.name }}
@@ -131,14 +182,18 @@
                         }
                       </select>
 
-                      <label for="size"><i class="bi bi-people-fill"></i> Tamaño</label>
-
-                      @if (sizeSeleccionado==null) {
-                      <div>
-                        <p class="sw-text-error mb-0 pb-0">*Este campo no puede estar vacio</p>
-                      </div>
-                      }
+                      <label for="size">
+                        <i class="bi bi-people-fill"></i> Tamaño
+                      </label>
                     </div>
+
+                    @if (sizeSeleccionado === null) {
+                    <div>
+                      <p id="size-error" class="sw-text-error mb-0 pb-0">
+                        *Este campo no puede estar vacío.
+                      </p>
+                    </div>
+                    }
 
                     <div class="d-flex justify-content-between mt-4">
                       <button mat-button matStepperPrevious><i class="bi bi-chevron-left"></i> Volver</button>
@@ -162,7 +217,17 @@
                     </p>
                     <div class="floating-input mb-1 ">
                       <input type="email" class="color-input-bg" id="email" placeholder="usuario@empresa.com"
-                        formControlName="email" required>
+                        formControlName="email" [attr.aria-invalid]="
+    getValue('email')!.invalid &&
+    (getValue('email')!.dirty || getValue('email')!.touched)
+      ? 'true'
+      : null
+  " [attr.aria-describedby]="
+    getValue('email')!.invalid &&
+    (getValue('email')!.dirty || getValue('email')!.touched)
+      ? 'register-email-error'
+      : null
+  " required>
                       <label for="email"><i class="bi bi-envelope-fill me-1"></i> Correo
                         electrónico</label>
                     </div>
@@ -170,12 +235,13 @@
                     <div>
                       @if (getValue('email')?.errors?.['required']) {
                       <div>
-                        <p class="sw-text-error mb-0 pb-0">*Este campo no puede estar vacio</p>
+                        <p id="register-email-error" class="sw-text-error mb-0 pb-0">*Este campo no puede estar vacio
+                        </p>
                       </div>
                       }
                       @if (!getValue('email')?.errors?.['required']) {
                       <div>
-                        <p class="sw-text-error mb-0 pb-0">*No es un correo valido</p>
+                        <p id="register-email-error" class="sw-text-error mb-0 pb-0">*No es un correo valido</p>
                       </div>
                       }
                     </div>
@@ -183,24 +249,47 @@
 
                     <div class="floating-input mb-1 ">
                       <input type="tel" class="color-input-bg" id="phone" placeholder="+5212345678910"
-                        formControlName="phone" required>
+                        formControlName="phone" [attr.aria-invalid]="
+    (getValue('phone')!.invalid &&
+      (getValue('phone')!.dirty || getValue('phone')!.touched)) ||
+    (getValue('phone')!.value?.length > 0 && !validatePhone())
+      ? 'true'
+      : null
+  " [attr.aria-describedby]="
+    getValue('phone')!.value?.length > 0 && !validatePhone()
+      ? 'phone-format-error'
+      : getValue('phone')!.invalid &&
+        (getValue('phone')!.dirty || getValue('phone')!.touched)
+        ? 'phone-required-error'
+        : null
+  " required>
                       <label for="phone"><i class="bi bi-telephone-fill me-1"></i>
                         Telefono</label>
                     </div>
                     @if (getValue('phone')!.invalid && (getValue('phone')!.dirty || getValue('phone')!.touched)) {
                     <div>
-                      <p class="sw-text-error mb-0 pb-0">*Este campo no puede estar vacio</p>
+                      <p id="phone-required-error" class="sw-text-error mb-0 pb-0">*Este campo no puede estar vacio</p>
                     </div>
                     }
                     @if (getValue('phone')!.value.length > 0 && !validatePhone()) {
                     <div>
-                      <p class="sw-text-error mb-0 pb-0">*Telefono no valido</p>
+                      <p id="phone-format-error" class="sw-text-error mb-0 pb-0">*Telefono no valido</p>
                     </div>
                     }
 
                     <div class="floating-input password-field mb-1">
                       <input class="color-input-bg" [type]="showPassword ? 'text' : 'password'" id="password"
-                        placeholder=" " (input)="onInput($event)" formControlName="password" />
+                        placeholder=" " (input)="onInput($event)" formControlName="password" [attr.aria-invalid]="
+    getValue('password')!.invalid &&
+    (getValue('password')!.dirty || getValue('password')!.touched)
+      ? 'true'
+      : null
+  " [attr.aria-describedby]="
+    getValue('password')!.invalid &&
+    (getValue('password')!.dirty || getValue('password')!.touched)
+      ? 'register-password-error'
+      : null
+  " />
 
                       <label for="password"><i class="bi bi-lock-fill me-1"></i>
                         Contraseña</label>
@@ -215,7 +304,7 @@
                     @if (getValue('password')!.invalid && (getValue('password')!.dirty ||
                     getValue('password')!.touched)) {
                     <div>
-                      <p class="sw-text-error mb-0 pb-0">*Este campo debe tener minimo 8
+                      <p id="register-password-error" class="sw-text-error mb-0 pb-0">*Este campo debe tener minimo 8
                         caracteres</p>
                     </div>
                     }
@@ -224,7 +313,9 @@
                       <div class="floating-input password-field">
                         <input class="color-input-bg" [type]="showPassword ? 'text' : 'password'" id="r_password"
                           placeholder=" " (input)="onInput($event)" [(ngModel)]="r_password"
-                          [ngModelOptions]="{standalone: true}" />
+                          [ngModelOptions]="{standalone: true}"
+                          [attr.aria-invalid]="!validatePassword() ? 'true' : null"
+                          [attr.aria-describedby]="!validatePassword() ? 'confirm-password-error' : null" />
                         <label for="r_password"><i class="bi bi-lock-fill me-1"></i> Repetir
                           Contraseña</label>
                         <button type="button" class="toggle-password" (click)="togglePassword()"
@@ -236,7 +327,7 @@
                       </div>
                       @if (!validatePassword()) {
                       <div>
-                        <p class="sw-text-error mb-0 pb-0">*Las contraseñas no coinciden</p>
+                        <p id="confirm-password-error" class="sw-text-error mb-0 pb-0">*Las contraseñas no coinciden</p>
                       </div>
                       }
                     </div>

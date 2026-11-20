@@ -253,11 +253,14 @@
     font-family: inherit;
     font-size: var(--asg-font-size-md);
 
-    &:focus,
+    &:focus {
+      border-color: var(--asg-color-brand-primary);
+    }
+
     &:focus-visible {
-      border-color: var(--asg-color-brand-primary) !important;
-      outline: none !important;
-      box-shadow: none !important;
+      border-color: var(--asg-color-brand-primary);
+      outline: 2px solid var(--asg-color-brand-primary);
+      outline-offset: 2px;
     }
 
     &:disabled {
@@ -300,11 +303,48 @@
 
 }
 
-/* Mantener el botón dentro del campo de contraseña */
+
+/* =========================================
+   AUTENTICACIÓN — CAMPOS DE CONTRASEÑA
+   HU-053
+   ========================================= */
+
 .floating-input.password-field {
+  position: relative;
+
+  input {
+    padding-right: 3rem;
+  }
+
   .toggle-password {
+    position: absolute;
+    right: 0.75rem;
     top: auto;
     bottom: 2px;
     transform: none;
+
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    min-width: 40px;
+    min-height: 44px;
+
+    padding: 0;
+    background: transparent;
+    border: none;
+    border-radius: var(--asg-radius-sm);
+
+    color: var(--asg-color-text-muted);
+    cursor: pointer;
+
+    &:hover {
+      color: var(--asg-color-brand-primary);
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--asg-color-brand-primary);
+      outline-offset: 2px;
+    }
   }
 }
