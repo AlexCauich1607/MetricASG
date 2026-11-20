@@ -1,37 +1,57 @@
-.admin-sidebar {
-  width: 260px;
-  min-height: 100vh;
-  border-right: solid 1px rgb(195, 195, 195);
-}
-
-.nav-link {
-  border-radius: .5rem;
-  //color: rgb(78, 70, 229);
-  color: #000080;
-}
-
-.nav-link.active {
-  //background: rgb(78, 70, 229);
-  background: #000080;
-  color: white;
-  font-weight: bold;
-}
-
-
-.nav-link:hover {
-  //background: rgba(78, 70, 229, 0.591);
-  background: #6767d4;
-  color: white;
+:host {
+  --admin-sidebar-width: 250px;
 }
 
 .admin-sidebar {
-  width: 250px;
-  min-height: 100vh;
+  width: var(--admin-sidebar-width);
+  height: 100vh;
+  height: 100dvh;
   position: fixed;
   top: 0;
   left: 0;
-  transition: transform 0.3s ease;
   z-index: 1040;
+
+  display: flex;
+  flex-direction: column;
+
+  overflow-y: auto;
+  border-right: 1px solid var(--border-color, #e5e7eb);
+  background-color: #fff;
+
+  transition: transform 0.3s ease;
+}
+
+.nav-link {
+  border-radius: 0.5rem;
+  color: #000080;
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease;
+}
+
+.nav-link.active {
+  background-color: #000080;
+  color: #fff;
+  font-weight: 600;
+}
+
+.nav-link:hover {
+  background-color: #6767d4;
+  color: #fff;
+}
+
+.sidebar-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1030;
+  background: rgba(0, 0, 0, 0.4);
+}
+
+.sw-end {
+  display: flex;
+  flex: 1;
+  justify-content: center;
+  align-items: flex-end;
 }
 
 @media (max-width: 767px) {
@@ -44,18 +64,39 @@
   }
 }
 
-
-.sidebar-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.4);
-  z-index: 1030;
+@media (prefers-reduced-motion: reduce) {
+  .admin-sidebar,
+  .nav-link {
+    transition: none;
+  }
 }
 
-.sw-end {
-     flex: 1;    
-     justify-content: center;
-     align-items: end;
-     display: flex;
+.admin-sidebar-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 
+  width: 44px;
+  height: 44px;
+
+  border-radius: 0.75rem;
+  color: #000080;
+  background-color: #f3f5f9;
+
+  transition: background-color 0.2s ease;
+}
+
+.admin-sidebar-close:hover {
+  background-color: #e5e9f2;
+}
+
+.admin-sidebar-close:focus-visible {
+  outline: 3px solid #6767d4;
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .admin-sidebar-close {
+    transition: none;
+  }
 }
