@@ -1,7 +1,140 @@
-footer a:hover {
-  color: #762cbb !important;
+
+/* =========================================
+   HU-052 | T04 — Footer MetricASG
+   ========================================= */
+
+:host {
+  display: block;
 }
 
-.footer-font{
-  font-size: 0.85rem !important;
+.asg-footer {
+  padding: 3.5rem 0 1.5rem;
+  background: var(--asg-color-surface-blue);
+  color: var(--asg-color-text-primary);
+}
+
+.asg-footer__main {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+  gap: clamp(2rem, 5vw, 5rem);
+}
+
+.asg-footer__brand {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
+  color: var(--asg-color-brand-primary);
+  font-size: 1.45rem;
+  font-weight: 700;
+}
+
+.asg-footer__brand img {
+  width: 36px;
+  height: 36px;
+  object-fit: contain;
+}
+
+.asg-footer__description {
+  max-width: 34rem;
+  line-height: 1.7;
+}
+
+.asg-footer__support {
+  max-width: 34rem;
+  margin-top: 1.25rem;
+  font-size: 0.875rem;
+  line-height: 1.65;
+  color: var(--asg-color-text-muted);
+}
+
+.asg-footer__contact h2 {
+  margin-bottom: 1.5rem;
+  font-size: 1.15rem;
+  font-weight: 700;
+}
+
+.asg-footer__contact ul {
+  display: grid;
+  gap: 1.25rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.asg-footer__contact li {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.asg-footer__contact .material-icons {
+  flex-shrink: 0;
+  color: var(--asg-color-brand-accent);
+}
+
+.asg-footer__contact a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.asg-footer__contact a:hover {
+  text-decoration: underline;
+}
+
+.asg-footer__contact a:focus-visible {
+  outline: var(--asg-focus-width) solid var(--asg-focus-color);
+  outline-offset: var(--asg-focus-offset);
+}
+
+.asg-footer__bottom {
+  margin-top: 3rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid rgba(0, 36, 93, 0.15);
+}
+
+.asg-footer__bottom p {
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--asg-color-text-muted);
+}
+
+/* Variante pública */
+
+:host(.public-footer-host) .asg-footer {
+  background: var(--asg-color-brand-primary);
+  color: var(--asg-color-text-inverse);
+}
+
+:host(.public-footer-host) .asg-footer__brand,
+:host(.public-footer-host) .asg-footer__support,
+:host(.public-footer-host) .asg-footer__bottom p {
+  color: var(--asg-color-text-inverse);
+}
+
+:host(.public-footer-host) .asg-footer__contact .material-icons {
+  color: #b7df91;
+}
+
+:host(.public-footer-host) .asg-footer__bottom {
+  border-top-color: rgba(255, 255, 255, 0.2);
+}
+
+/* Responsive */
+
+@media (max-width: 767.98px) {
+  .asg-footer {
+    padding: 3rem 0 1.5rem;
+  }
+
+  .asg-footer__main {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 2rem;
+  }
+
+  .asg-footer__bottom {
+    margin-top: 2rem;
+  }
 }
