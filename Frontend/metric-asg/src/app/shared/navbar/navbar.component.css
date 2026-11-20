@@ -1,17 +1,99 @@
-.navbar-brand span {
-  font-size: 1.3rem;
+
+/* =========================================
+   HU-052 | T03 — Navbar público
+   ========================================= */
+
+.public-navbar {
+  min-height: 76px;
+  padding: 0.75rem 0;
+  background: var(--asg-color-surface-default);
+  border-bottom: 1px solid #e3e9e4;
+  box-shadow: var(--asg-shadow-sm);
 }
 
-.nav-link {
-  font-size: 1rem;
-  color: #333 !important;
+.public-navbar__container {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  min-width: 0;
 }
 
-.nav-link:hover {
-  color: #4a1fff !important;
+.public-navbar__brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.65rem;
+  min-width: 0;
+  color: var(--asg-color-brand-primary);
+  font-size: 1.4rem;
+  font-weight: 700;
+  text-decoration: none;
 }
 
-.btn-primary {
-  background: #4a1fff !important;
-  border-color: #4a1fff !important;
+.public-navbar__brand:hover {
+  color: var(--asg-color-brand-primary);
+}
+
+.public-navbar__logo {
+  display: block;
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  object-fit: contain;
+}
+
+.public-navbar__login {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: 44px;
+  padding: 0.65rem 1.4rem;
+  background: var(--asg-color-brand-primary);
+  border-radius: var(--asg-radius-pill);
+  color: var(--asg-color-text-inverse);
+  font-size: 0.95rem;
+  font-weight: 700;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: background-color 0.2s ease;
+}
+
+.public-navbar__login:hover {
+  background: #003b80;
+  color: var(--asg-color-text-inverse);
+}
+
+.public-navbar__brand:focus-visible,
+.public-navbar__login:focus-visible {
+  outline: var(--asg-focus-width) solid var(--asg-focus-color);
+  outline-offset: var(--asg-focus-offset);
+}
+
+@media (max-width: 575.98px) {
+  .public-navbar {
+    min-height: 68px;
+    padding: 0.5rem 0;
+  }
+
+  .public-navbar__brand {
+    gap: 0.4rem;
+    font-size: 1.15rem;
+  }
+
+  .public-navbar__logo {
+    width: 30px;
+    height: 30px;
+  }
+
+  .public-navbar__login {
+    padding: 0.6rem 1rem;
+    font-size: 0.875rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .public-navbar__login {
+    transition: none;
+  }
 }

@@ -1,62 +1,75 @@
-<footer class="sw-bg-blue-light text-my-purple pt-5 pb-4">
-  <div class="container footer-font">
-    <div class="row">
 
-      <div class="col-md-4  pe-5">
-        <div class="d-flex align-items-center  mb-3">
-          <img src="assets/logo.png" alt="MetricASG" height="30" class="me-2">
-          <span class="font-logo fs-5 text-my-purple">MetricASG</span>
-          <!--
-          <div class="sw-all-center">
-            <img src="assets/logo.png" alt="MetricASG" height="30" width="30" class="me-2">
-            <span class="font-logo text-white">concamin</span>
-          </div>-->
+<footer class="asg-footer">
+  <div class="container asg-footer__container">
+
+    <div class="asg-footer__main">
+
+      <!-- Identidad y descripción -->
+      <div class="asg-footer__about">
+
+        <div class="asg-footer__brand">
+          <img
+            src="assets/logo.png"
+            alt=""
+            width="36"
+            height="36"
+          >
+
+          <span class="font-logo">MetricASG</span>
         </div>
-        <p class="text-muted text-justify">
-          Este programa es apoyado con recursos públicos a través de la Secretaría de Ciencia, Humanidades, Tecnología e
-          Innovación
+
+        <p class="asg-footer__description">
+          Plataforma para evaluar el desempeño Ambiental,
+          Social y de Gobernanza de tu empresa, identificar
+          oportunidades de mejora y dar seguimiento a su evolución.
         </p>
-      </div>
-
-
-      <div class="col-lg-3 col-md-1 mb-4">
 
       </div>
 
+      <!-- Información de contacto -->
+      <div class="asg-footer__contact">
 
-      <div class="col-md-4 col-lg-3 mb-4">
-        <h6 class="fw-semibold">Contáctanos</h6>
-        <ul class="list-unstyled">
-          <li><span class="text-muted"><i class="material-icons footer-font">location_on</i> Calkini, Campeche,
-              Mx.</span></li>
-          <li><span class="text-muted"><i class="material-icons footer-font">email</i>
-              antomic.solutions&#64;gmail.com</span></li>
-          <li><span class="text-muted"> <i class="material-icons footer-font">phone</i> +529961074104</span></li>
+        <h2>Contáctanos</h2>
+
+        <ul>
+          <li>
+            <span class="material-icons" aria-hidden="true">
+              location_on
+            </span>
+
+            <span>Calkiní, Campeche, México</span>
+          </li>
+
+          <li>
+            <span class="material-icons" aria-hidden="true">
+              email
+            </span>
+
+            <a href="mailto:antomic.solutions@gmail.com">
+              antomic.solutions&#64;gmail.com
+            </a>
+          </li>
+
+          <li>
+            <span class="material-icons" aria-hidden="true">
+              phone
+            </span>
+
+            <a href="tel:+529961074104">
+              +52 996 107 4104
+            </a>
+          </li>
         </ul>
+
       </div>
-
-
-      <div class="col-lg-2  col-md-3 mb-4">
-        <h6 class="fw-semibold">Legal</h6>
-        <ul class="list-unstyled">
-          <li><a href="#" class="text-muted text-decoration-none">Aviso de privacidad</a></li>
-          <li><a href="#" class="text-muted text-decoration-none">Términos y condiciones</a></li>
-        </ul>
-      </div>
-
     </div>
 
-    <hr class="border-secondary">
-
-    <div class="d-flex flex-column flex-md-row justify-content-between align-items-center">
-      <span class="text-muted">
-        © 2025 Antomic Solutions. Todos los derechos reservados.
-      </span>
-      <div class="text-muted fs-5">
-        <a href="#" class="text-muted"><i class="fa-brands fa-facebook"></i></a>
-        <a href="#" class="text-muted"><i class="fa-brands fa-instagram"></i></a>
-        <a href="#" class="text-muted"><i class="fa-brands fa-github"></i></a>
-      </div>
+    <div class="asg-footer__bottom">
+      <p>
+        © {{ currentYear }} Antomic Solutions.
+        Todos los derechos reservados.
+      </p>
     </div>
+
   </div>
 </footer>
