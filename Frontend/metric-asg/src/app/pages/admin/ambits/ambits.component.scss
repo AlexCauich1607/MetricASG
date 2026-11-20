@@ -1,3 +1,7 @@
+@use '../styles/admin-page' as admin;
+
+@include admin.admin-page-layout;
+
 .ambits-container {
  display: flex;
   flex-wrap: nowrap;
@@ -79,4 +83,45 @@
     top: 0px;
     position: sticky;
     z-index: 10;
+}
+
+// HU-051 - Ajustes responsive de Ámbitos
+
+.admin-page {
+  min-width: 0;
+}
+
+.admin-page-body {
+  min-width: 0;
+}
+
+.ambits-container {
+  min-width: 0;
+  max-width: 100%;
+  overscroll-behavior-x: contain;
+}
+
+@media (max-width: 767px) {
+  .admin-page-header {
+    flex-wrap: wrap;
+  }
+
+  .admin-page-body > .sw-row:first-child {
+    flex-wrap: wrap;
+    gap: 1rem;
+  }
+
+  .admin-page-body > .sw-row:first-child > .ambits-container {
+    flex: 1 1 100%;
+    width: 100%;
+  }
+
+  .admin-page-body > .sw-row:first-child > .ambit-card {
+    margin-left: 0 !important;
+    margin-top: 0 !important;
+  }
+
+  .admin-page-body .row > * {
+    min-width: 0;
+  }
 }

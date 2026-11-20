@@ -1,20 +1,30 @@
+:host {
+  display: block;
+  --admin-sidebar-width: 250px;
+}
+
 .admin-layout {
   position: relative;
-  margin-top: -70px;
+  display: flex;
+  min-height: 100vh;
+  min-height: 100dvh;
+  width: 100%;
 }
-
 
 .admin-content {
-  flex: 1;
-  margin-left: 250px;
-  min-width: 0; /* 🔑 importantísimo */
-}
-@media (max-width: 767px) {
-  .admin-content {
-    margin-left: 0;
-  }
-  .admin-layout{
-    flex-direction: column;
-  }
+  flex: 1 1 auto;
+  min-width: 0;
+  width: auto;
+  margin-left: var(--admin-sidebar-width);
 }
 
+@media (max-width: 767px) {
+  .admin-layout {
+    flex-direction: column;
+  }
+
+  .admin-content {
+    width: 100%;
+    margin-left: 0;
+  }
+}

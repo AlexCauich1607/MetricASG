@@ -1,3 +1,7 @@
+@use '../styles/admin-page' as admin;
+
+@include admin.admin-page-layout;
+
 .ambits-container {
   display: flex;
   flex-wrap: nowrap;
@@ -118,4 +122,142 @@
     top: 0px;
     position: sticky;
     z-index: 10;
+}
+
+// HU-051 - Responsive de Niveles de Madurez
+
+.admin-page {
+  min-width: 0;
+}
+
+.admin-page-body {
+  min-width: 0;
+}
+
+@media (max-width: 991px) {
+  .admin-page-body > .row > [class*="col-"] {
+    min-width: 0;
+  }
+
+  .ambits-container-column {
+    flex-direction: row;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding-bottom: 0.75rem;
+  }
+
+  .ambits-container-column .ambit-card {
+    flex: 0 0 140px;
+    min-width: 140px;
+  }
+
+  .admin-page-body .sw-v-100 {
+    height: auto;
+    max-height: none;
+  }
+
+  .admin-page-body [formGroup] .sw-row {
+    flex-wrap: wrap;
+    gap: 1rem !important;
+  }
+
+  .admin-page-body [formGroup] .sw-h-50,
+  .admin-page-body [formGroup] .sw-h-20,
+  .admin-page-body [formGroup] .sw-h-100 {
+    flex: 1 1 100%;
+    width: 100%;
+    min-width: 0;
+  }
+
+  .admin-page-body [formGroup] .sw-input-color {
+    width: 44px;
+    flex: 0 0 44px;
+  }
+}
+
+@media (max-width: 767px) {
+  .admin-page-header {
+    flex-wrap: wrap;
+  }
+
+  .admin-page-title {
+    font-size: 1.25rem !important;
+  }
+
+  .admin-page-body .card-body {
+    min-width: 0;
+  }
+
+  .admin-page-body input[type="text"],
+  .admin-page-body input[type="number"] {
+    max-width: 100%;
+  }
+}
+
+// HU-051 - Ajustes finales del formulario móvil
+
+@media (max-width: 767px) {
+  .admin-page-body [formGroup] .sw-row {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 1rem !important;
+  }
+
+  .admin-page-body [formGroup] .sw-h-100,
+  .admin-page-body [formGroup] .sw-h-50,
+  .admin-page-body [formGroup] .sw-h-20 {
+    width: 100% !important;
+    min-width: 0;
+    flex: 0 1 auto;
+  }
+
+  .admin-page-body [formGroup] input[type="text"],
+  .admin-page-body [formGroup] input[type="number"] {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .admin-page-body [formGroup] input[type="color"] {
+    width: 44px !important;
+    height: 40px;
+  }
+
+  .admin-page-body .sw-btn-red-secondary,
+  .admin-page-body button[type="submit"] {
+    width: 100% !important;
+    min-width: 0;
+    white-space: nowrap;
+  }
+
+  .admin-page-body .card-body > .d-flex.align-items-center.justify-content-between {
+    flex-wrap: wrap;
+    gap: 0.75rem;
+  }
+}
+
+@media (max-width: 767px) {
+  .maturity-edit-form .sw-row {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 1rem !important;
+  }
+
+  .maturity-edit-form .sw-h-100,
+  .maturity-edit-form .sw-h-50,
+  .maturity-edit-form .sw-h-20 {
+    width: 100% !important;
+    min-width: 0;
+    flex: 0 1 auto;
+  }
+
+  .maturity-edit-form input[type="text"],
+  .maturity-edit-form input[type="number"] {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .maturity-edit-form input[type="color"] {
+    width: 44px !important;
+    height: 40px;
+  }
 }

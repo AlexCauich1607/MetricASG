@@ -1,12 +1,12 @@
-<div class="container-fluid">
-  <div class="d-flex align-items-center color-bg justify-content-between py-2 px-5 pt-5 pb-3 sw-sticky">
-    <h4 class="text-my-purple fw-bold fs-4"><span class="bg-white py-2 px-4 rounded-5 shadow-sm border"><i
+<div class="container-fluid admin-page">
+  <div class="d-flex align-items-center color-bg justify-content-between sw-sticky admin-page-header">
+    <h4 class="text-my-purple fw-bold fs-4 admin-page-title"><span class="bg-white py-2 px-4 rounded-5 shadow-sm border"><i
     class="bi bi-bar-chart-fill"></i> Niveles de Madurez</span></h4>
     <app-profile-photo></app-profile-photo>
   </div>
-  <div class="px-5 pb-5">
+  <div class="admin-page-body">
     <div class="row g-3 sw-scroll-v mb-3 mt-1 align-items-stretch">
-      <div class="col-2">
+      <div class="col-12 col-lg-2">
         <button class="btn btn-my-purple sw-cursor-pointer sw-btn-lg sw-fs-7 mb-3" (click)="openCreateModal()">
           + Añadir
         </button>
@@ -24,7 +24,7 @@
         </div>
       </div>
 
-      <div class="col-10">
+      <div class="col-12 col-lg-10">
         <div class="card sw-card sw-bg-blue-light m-0 p-0 shadow-sm h-100">
           <div class="card-body p-0 d-flex flex-column">
 
@@ -36,7 +36,7 @@
               </div>
 
             </div>
-            <div [formGroup]="form">
+            <div [formGroup]="form" class="maturity-edit-form">
               <div class="text-muted  sw-v-100 d-flex px-4 p-3 flex-column align-items-stretch">
                 <div class="sw-row gap-4">
                   <div class="sw-h-100">

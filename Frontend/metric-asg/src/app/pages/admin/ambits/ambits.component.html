@@ -1,12 +1,11 @@
-<div class="container-fluid">
-
-
-  <div class="d-flex align-items-center color-bg justify-content-between py-2 px-5 pt-5 pb-4 sw-sticky">
-    <h4 class="text-my-purple fw-bold  fs-4"><span class="bg-white py-2 px-4 rounded-5 shadow-sm border"><i
+<div class="container-fluid admin-page">
+  <div class="d-flex align-items-center color-bg justify-content-between sw-sticky admin-page-header">
+    <h4 class="text-my-purple fw-bold fs-4 admin-page-title">
+      <span class="bg-white py-2 px-4 rounded-5 shadow-sm border"><i
     class="bi bi-diagram-3-fill me-1"></i> Ámbitos</span></h4>
     <app-profile-photo></app-profile-photo>
   </div>
-  <div class="mx-5 mb-5">
+  <div class="admin-page-body">
     <div class="sw-row">
       <div class="ambits-container border-1 sw-bg-blue-light px-3 pt-2 rounded-4">
         @for (ambit of ambitos; track ambit) {
