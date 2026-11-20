@@ -23,7 +23,7 @@ class User(Base):
     position =  Column(String(150), nullable = True)
     
     #Información de la Empresa
-    company_name = Column(String(150), nullable= False)
+    company_name = Column(String(150), nullable= True)
     company_sector_id =  Column(
         Integer,
         ForeignKey("company_sectors.id", ondelete="SET NULL"),
