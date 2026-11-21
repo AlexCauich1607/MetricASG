@@ -4,7 +4,7 @@ export interface User {
   lastname: string | null;
   position: string | null; 
 
-  company_name: string;
+  company_name: string | null;
   company_sector_id: number | null;
   company_size_id: number | null;
 

@@ -36,7 +36,76 @@ describe('AuthService', () => {
   it('should be created', () => {
     expect(service).toBeTruthy();
   });
+  it('should register a personal account without company data', () => {
+    const personalData = {
+      name: 'Alex',
+      lastname: 'Cauich',
+      position: 'Developer',
+      email: 'personal@test.com',
+      phone: '9999999999',
+      password: 'Password123!'
+    };
 
+    service.createUser(personalData).subscribe(response => {
+      expect(response.id).toBe(10);
+      expect(response.company_name).toBeNull();
+    });
+
+    const request = httpTestingController.expectOne(
+      `${apiUrl}register`
+    );
+
+    expect(request.request.method).toBe('POST');
+    expect(request.request.body).toEqual(personalData);
+
+    expect(request.request.body.company_name).toBeUndefined();
+    expect(request.request.body.company_sector_id).toBeUndefined();
+    expect(request.request.body.company_size_id).toBeUndefined();
+
+    request.flush({
+      id: 10,
+      ...personalData,
+      company_name: null,
+      company_sector_id: null,
+      company_size_id: null,
+      role: 'USER',
+      active: true
+    });
+  });
+
+  it('should propagate personal registration errors', () => {
+    const personalData = {
+      name: 'Alex',
+      lastname: 'Cauich',
+      position: 'Developer',
+      email: 'existing@test.com',
+      phone: '9999999999',
+      password: 'Password123!'
+    };
+
+    let errorStatus: number | undefined;
+
+    service.createUser(personalData).subscribe({
+      next: () => fail('Expected registration to fail'),
+      error: error => {
+        errorStatus = error.status;
+      }
+    });
+
+    const request = httpTestingController.expectOne(
+      `${apiUrl}register`
+    );
+
+    request.flush(
+      { detail: 'Email already registered' },
+      {
+        status: 409,
+        statusText: 'Conflict'
+      }
+    );
+
+    expect(errorStatus).toBe(409);
+  });
   it('should login successfully and store session data', () => {
     const loginData = {
       email: 'user@test.com',
@@ -217,5 +286,51 @@ describe('AuthService', () => {
     );
 
     expect(errorResponse.status).toBe(500);
+  });
+  it('should login a personal user without a company', () => {
+    const loginData = {
+      email: 'personal@test.com',
+      password: 'Password123!'
+    };
+
+    const authResponse = {
+      access_token: 'personal-access-token',
+      token_type: 'bearer',
+      user: {
+        id: 15,
+        name: 'Personal',
+        company_name: null,
+        profile_photo: null,
+        role: 'USER',
+        email: 'personal@test.com',
+        last_login: '2026-11-21T10:00:00'
+      }
+    };
+
+    service.login(loginData).subscribe(response => {
+      expect(response).toEqual(authResponse);
+    });
+
+    const request = httpTestingController.expectOne(
+      `${apiUrl}login`
+    );
+
+    expect(request.request.method).toBe('POST');
+    expect(request.request.body).toEqual(loginData);
+    expect(request.request.withCredentials).toBeTrue();
+
+    request.flush(authResponse);
+
+    expect(JSON.parse(sessionStorage.getItem('user')!))
+      .toBe('Personal');
+
+    expect(JSON.parse(sessionStorage.getItem('token')!))
+      .toBe('personal-access-token');
+
+    expect(JSON.parse(sessionStorage.getItem('company')!))
+      .toBe('');
+
+    expect(JSON.parse(sessionStorage.getItem('id')!))
+      .toBe(15);
   });
 });

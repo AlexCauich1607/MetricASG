@@ -1,13 +1,12 @@
 export interface AuthUserResponse {
     id: number,
     name: string,
-    company_name: string,
-    profile_photo: string,
+    company_name: string | null,
+    profile_photo: string | null,
     role: string,
     email: string,
     last_login: string
 }
-
 
 export interface RefreshToken{
     token: string,
@@ -35,6 +34,15 @@ export interface UserRegister {
     email: string,
     phone: string,
     password: string,
+}
+
+export interface PersonalUserRegister {
+    name: string;
+    lastname: string;
+    position: string;
+    email: string;
+    phone: string;
+    password: string;
 }
 
 export interface UserLogin {

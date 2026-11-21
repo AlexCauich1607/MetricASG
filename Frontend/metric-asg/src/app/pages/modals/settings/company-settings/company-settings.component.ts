@@ -67,9 +67,9 @@ export class CompanySettingsComponent {
       }
     })
   }
-  update() {
-    if (this.user!.company_name!.length < 3) {
-      return
+  update(): void {
+    if (!this.user?.company_name || this.user.company_name.length < 3) {
+      return;
     }
 
     const payload = {

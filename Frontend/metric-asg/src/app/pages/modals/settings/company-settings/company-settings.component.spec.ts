@@ -1,6 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideHttpClient, withXhr } from '@angular/common/http';
-
+import { UserService } from '../../../../services/user.service';
 import { CompanySettingsComponent } from './company-settings.component';
 
 describe('CompanySettingsComponent', () => {
@@ -45,5 +45,40 @@ describe('CompanySettingsComponent', () => {
 
   it('should create', () => {
     expect(component).toBeTruthy();
+  });
+  it('should display an informative message for users without a company', () => {
+    component.user = {
+      ...component.user!,
+      company_name: null,
+      company_sector_id: null,
+      company_size_id: null
+    };
+
+    fixture.detectChanges();
+
+    const element: HTMLElement = fixture.nativeElement;
+
+    expect(element.textContent)
+      .toContain('No hay información empresarial asociada a tu perfil');
+
+    expect(element.querySelector('button.btn-my-purple'))
+      .toBeNull();
+  });
+
+  it('should not update company information when user has no company', () => {
+    const userService = TestBed.inject(UserService);
+    const updateSpy = spyOn(userService, 'updateMe');
+
+    component.user = {
+      ...component.user!,
+      company_name: null,
+      company_sector_id: null,
+      company_size_id: null
+    };
+
+    fixture.detectChanges();
+
+    expect(() => component.update()).not.toThrow();
+    expect(updateSpy).not.toHaveBeenCalled();
   });
 });
