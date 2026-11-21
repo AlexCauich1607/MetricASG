@@ -15,6 +15,10 @@ from app.database.database import get_db
     "method, endpoint",
     [
         (
+            "POST",
+            "/api/companies",
+        ),
+        (
             "GET",
             "/api/companies/10/members",
         ),
@@ -274,6 +278,50 @@ def test_list_company_members_http_preserves_service_errors(
             mock_list.call_args.kwargs["current_user_id"]
             == authenticated_user.id
         )
+
+    finally:
+        app.dependency_overrides.pop(
+            get_current_user,
+            None,
+        )
+
+@pytest.mark.parametrize(
+    "payload",
+    [
+        {"name": ""},
+        {"name": "A" * 151},
+        {"name": "Empresa", "sector_id": 0},
+        {"name": "Empresa", "size_id": -1},
+        {"sector_id": 1},
+    ],
+)
+def test_create_company_rejects_invalid_payload(
+    client,
+    payload,
+):
+    authenticated_user = User(
+        id=10010,
+        email="validation-user@example.com",
+        active=True,
+    )
+
+    app.dependency_overrides[get_current_user] = (
+        lambda: authenticated_user
+    )
+
+    try:
+        with patch.object(
+            CompanyMembershipService,
+            "create_company",
+        ) as mock_create:
+
+            response = client.post(
+                "/api/companies",
+                json=payload,
+            )
+
+        assert response.status_code == 422
+        mock_create.assert_not_called()
 
     finally:
         app.dependency_overrides.pop(

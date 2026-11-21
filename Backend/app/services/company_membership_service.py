@@ -15,8 +15,87 @@ from ..models.user_model import User
 from app.core.company_permissions import require_company_role
 from app.core.roles import CompanyRole
 from app.services.audit_service import AuditService
+from app.models.company_sector_model import CompanySector
+from app.models.company_sizes_model import CompanySize
 
 class CompanyMembershipService:
+
+    def create_company(
+        self,
+        db: Session,
+        current_user_id: int,
+        name: str,
+        sector_id: int | None = None,
+        size_id: int | None = None,
+    ) -> Company:
+        try:
+            current_user = db.get(User, current_user_id)
+
+            if current_user is None or not current_user.active:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Active user account required",
+                )
+
+            if sector_id is not None:
+                sector = db.get(CompanySector, sector_id)
+
+                if sector is None:
+                    raise HTTPException(
+                        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                        detail="Company sector not found",
+                    )
+
+            if size_id is not None:
+                company_size = db.get(CompanySize, size_id)
+
+                if company_size is None:
+                    raise HTTPException(
+                        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                        detail="Company size not found",
+                    )
+
+            company = Company(
+                name=name,
+                sector_id=sector_id,
+                size_id=size_id,
+                active=True,
+            )
+
+            db.add(company)
+            db.flush()
+
+            membership = CompanyMembership(
+                user_id=current_user.id,
+                company_id=company.id,
+                role=CompanyRole.COMPANY_ADMIN,
+                status=CompanyMembershipStatus.ACTIVE,
+            )
+
+            db.add(membership)
+            db.flush()
+
+            AuditService.record(
+                db=db,
+                action="company.created",
+                resource_type="company",
+                resource_id=company.id,
+                actor_id=current_user.id,
+                company_id=company.id,
+                context={
+                    "creator_membership_id": membership.id,
+                    "creator_role": CompanyRole.COMPANY_ADMIN.value,
+                },
+            )
+
+            db.commit()
+            db.refresh(company)
+
+            return company
+
+        except Exception:
+            db.rollback()
+            raise
 
     def list_user_memberships(
         self,
