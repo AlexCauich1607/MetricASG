@@ -1,10 +1,10 @@
-
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
-
 import {
     CompanyMember,
+    CompanyCreateRequest,
+    CompanyCreateResponse,
     UserCompanyMembership
 } from '../models/company_membership';
 
@@ -22,6 +22,14 @@ export class CompanyMembershipService {
         );
     }
 
+    createCompany(
+        data: CompanyCreateRequest
+    ): Observable<CompanyCreateResponse> {
+        return this.http.post<CompanyCreateResponse>(
+            this.apiUrl,
+            data
+        );
+    }
 
     getMembers(companyId: number): Observable<CompanyMember[]> {
         return this.http.get<CompanyMember[]>(

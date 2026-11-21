@@ -9,6 +9,9 @@ import { NotificationService } from '../../../services/notification.service';
 import { ReevaluationNotification } from '../../../models/notification';
 import { CompanyContextService } from '../../../services/company-context.service';
 
+import { MatDialog } from '@angular/material/dialog';
+import { CreateCompanyComponent } from '../../modals/create-company/create-company.component';
+
 import { signal, computed } from '@angular/core';
 import {
   CompanyRole,
@@ -20,6 +23,8 @@ describe('UserNavbarComponent', () => {
   let fixture: ComponentFixture<UserNavbarComponent>;
   let notificationService: jasmine.SpyObj<NotificationService>;
   let companyContext: jasmine.SpyObj<CompanyContextService>;
+  let dialog: jasmine.SpyObj<MatDialog>;
+  let dialogClosed$: Subject<any>;
 
   const mockNotifications: ReevaluationNotification[] = [
     {
@@ -84,6 +89,17 @@ describe('UserNavbarComponent', () => {
         selectedCompanyId.set(companyId);
       }
     });
+    dialogClosed$ = new Subject<any>();
+
+    dialog = jasmine.createSpyObj<MatDialog>(
+      'MatDialog',
+      ['open']
+    );
+
+    dialog.open.and.returnValue({
+      afterClosed: () => dialogClosed$.asObservable()
+    } as any);
+
     await TestBed.configureTestingModule({
       imports: [UserNavbarComponent],
       providers: [
@@ -96,6 +112,10 @@ describe('UserNavbarComponent', () => {
         {
           provide: CompanyContextService,
           useValue: companyContext
+        },
+        {
+          provide: MatDialog,
+          useValue: dialog
         }
       ]
     }).compileComponents();
@@ -399,6 +419,7 @@ describe('UserNavbarComponent', () => {
       expect(membersLink).toBeNull();
     }
   });
+
   describe('HU-050 T02 - Accesibilidad del menú móvil', () => {
     it('should expose accessible attributes on the navbar toggler', () => {
       fixture.detectChanges();
@@ -461,4 +482,95 @@ describe('UserNavbarComponent', () => {
       expect(clickSpy).not.toHaveBeenCalled();
     });
   });
+
+  describe('HU-054 T06 - Creación empresarial', () => {
+
+    it('should display the create company button without memberships', () => {
+      fixture.detectChanges();
+
+      const button: HTMLButtonElement | null =
+        fixture.nativeElement.querySelector(
+          'button[aria-label="Crear una nueva empresa"]'
+        );
+
+      expect(companyContext.memberships()).toEqual([]);
+      expect(button).not.toBeNull();
+      expect(button?.disabled).toBeFalse();
+    });
+
+    it('should open the company creation dialog', () => {
+      fixture.detectChanges();
+
+      const button: HTMLButtonElement =
+        fixture.nativeElement.querySelector(
+          'button[aria-label="Crear una nueva empresa"]'
+        );
+
+      button.click();
+
+      expect(dialog.open).toHaveBeenCalledOnceWith(
+        CreateCompanyComponent,
+        jasmine.objectContaining({
+          width: '520px',
+          disableClose: true
+        })
+      );
+    });
+
+    it('should refresh memberships and select the created company', () => {
+      fixture.detectChanges();
+
+      component.openCreateCompany();
+
+      dialogClosed$.next({
+        id: 25,
+        name: 'Empresa Nueva',
+        sector_id: null,
+        size_id: null,
+        active: true
+      });
+
+      dialogClosed$.complete();
+
+      expect(companyContext.loadMemberships)
+        .toHaveBeenCalledWith(25);
+    });
+
+    it('should not refresh memberships when creation is cancelled', () => {
+      fixture.detectChanges();
+
+      companyContext.loadMemberships.calls.reset();
+
+      component.openCreateCompany();
+
+      dialogClosed$.next(null);
+      dialogClosed$.complete();
+
+      expect(companyContext.loadMemberships)
+        .not.toHaveBeenCalled();
+    });
+
+    it('should prevent opening the dialog during an evaluation', () => {
+      const router = TestBed.inject(Router);
+
+      spyOnProperty(router, 'url', 'get').and.returnValue(
+        '/user/evaluation'
+      );
+
+      fixture.detectChanges();
+
+      const button: HTMLButtonElement =
+        fixture.nativeElement.querySelector(
+          'button[aria-label="Crear una nueva empresa"]'
+        );
+
+      expect(button.disabled).toBeTrue();
+
+      component.openCreateCompany();
+
+      expect(dialog.open).not.toHaveBeenCalled();
+    });
+
+  });
+
 });

@@ -30,3 +30,16 @@ export interface UserCompanyMembership {
   role: CompanyRole;
   joined_at: string;
 }
+export interface CompanyCreateRequest {
+  name: string;
+  sector_id?: number | null;
+  size_id?: number | null;
+}
+
+export interface CompanyCreateResponse {
+  id: number;
+  name: string;
+  sector_id: number | null;
+  size_id: number | null;
+  active: boolean;
+}

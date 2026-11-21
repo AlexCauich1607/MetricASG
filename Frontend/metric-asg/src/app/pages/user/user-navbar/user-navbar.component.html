@@ -55,7 +55,13 @@
         </li>
         }
 
-
+        <li class="nav-item mx-2">
+          <button type="button" class="nav-link fw-bold border-0 bg-transparent" (click)="openCreateCompany()"
+            [disabled]="companySelectionLocked" aria-label="Crear una nueva empresa">
+            <i class="bi bi-building-add me-1" aria-hidden="true"></i>
+            Crear empresa
+          </button>
+        </li>
         @if (!first) {
         <li class="nav-item mx-2">
           <a class="nav-link fw-bold" routerLink="/user/home" routerLinkActive="active">

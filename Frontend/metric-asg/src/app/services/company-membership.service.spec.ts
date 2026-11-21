@@ -1,4 +1,3 @@
-
 import { TestBed } from '@angular/core/testing';
 import {
     HttpTestingController,
@@ -11,6 +10,8 @@ import {
     CompanyMember,
     CompanyMembershipStatus,
     CompanyRole,
+    CompanyCreateRequest,
+    CompanyCreateResponse,
     UserCompanyMembership
 } from '../models/company_membership';
 
@@ -110,5 +111,103 @@ describe('CompanyMembershipService', () => {
 
         request.flush(memberships);
     });
+    it('should create a company with sector and size', () => {
+        const payload: CompanyCreateRequest = {
+            name: 'Empresa ASG',
+            sector_id: 2,
+            size_id: 3
+        };
 
+        const createdCompany: CompanyCreateResponse = {
+            id: 15,
+            name: 'Empresa ASG',
+            sector_id: 2,
+            size_id: 3,
+            active: true
+        };
+
+        service.createCompany(payload).subscribe(response => {
+            expect(response).toEqual(createdCompany);
+        });
+
+        const request = httpMock.expectOne(
+            'http://localhost:8000/api/companies'
+        );
+
+        expect(request.request.method).toBe('POST');
+        expect(request.request.body).toEqual(payload);
+
+        request.flush(createdCompany, {
+            status: 201,
+            statusText: 'Created'
+        });
+    });
+
+    it('should create a company using only its name', () => {
+        const payload: CompanyCreateRequest = {
+            name: 'Empresa Personal'
+        };
+
+        const createdCompany: CompanyCreateResponse = {
+            id: 16,
+            name: 'Empresa Personal',
+            sector_id: null,
+            size_id: null,
+            active: true
+        };
+
+        service.createCompany(payload).subscribe(response => {
+            expect(response).toEqual(createdCompany);
+        });
+
+        const request = httpMock.expectOne(
+            'http://localhost:8000/api/companies'
+        );
+
+        expect(request.request.method).toBe('POST');
+        expect(request.request.body).toEqual({
+            name: 'Empresa Personal'
+        });
+
+        expect(request.request.body.sector_id).toBeUndefined();
+        expect(request.request.body.size_id).toBeUndefined();
+
+        request.flush(createdCompany, {
+            status: 201,
+            statusText: 'Created'
+        });
+    });
+
+    it('should propagate company creation errors', () => {
+        const payload: CompanyCreateRequest = {
+            name: 'Empresa Inválida',
+            sector_id: 999999
+        };
+
+        let errorStatus: number | undefined;
+
+        service.createCompany(payload).subscribe({
+            next: () => fail('Expected company creation to fail'),
+            error: error => {
+                errorStatus = error.status;
+            }
+        });
+
+        const request = httpMock.expectOne(
+            'http://localhost:8000/api/companies'
+        );
+
+        expect(request.request.method).toBe('POST');
+        expect(request.request.body).toEqual(payload);
+
+        request.flush(
+            { detail: 'Invalid sector' },
+            {
+                status: 422,
+                statusText: 'Unprocessable Entity'
+            }
+        );
+
+        expect(errorStatus).toBe(422);
+    });
 });

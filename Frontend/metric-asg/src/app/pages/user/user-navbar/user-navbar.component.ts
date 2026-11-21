@@ -24,6 +24,9 @@ import {
   ReminderType
 } from '../../../models/notification';
 
+import { CreateCompanyComponent } from '../../modals/create-company/create-company.component';
+import { CompanyCreateResponse } from '../../../models/company_membership';
+
 import {
   ElementRef,
   HostListener,
@@ -202,5 +205,29 @@ export class UserNavbarComponent implements OnInit {
 
     // Devolver el foco al botón hamburguesa.
     toggler.focus();
+  }
+  openCreateCompany(): void {
+    if (this.companySelectionLocked) {
+      return;
+    }
+
+    const dialogRef = this.dialog.open(
+      CreateCompanyComponent,
+      {
+        width: '520px',
+        maxWidth: '95vw',
+        disableClose: true
+      }
+    );
+
+    dialogRef.afterClosed().subscribe(
+      (company: CompanyCreateResponse | null | undefined) => {
+        if (!company) {
+          return;
+        }
+
+        this.companyContext.loadMemberships(company.id);
+      }
+    );
   }
 }

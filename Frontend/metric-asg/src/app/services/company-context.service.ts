@@ -29,9 +29,9 @@ export class CompanyContextService {
 
   constructor(
     private membershipService: CompanyMembershipService
-  ) {}
+  ) { }
 
-  loadMemberships(): void {
+  loadMemberships(preferredCompanyId?: number): void {
     this.loading.set(true);
     this.error.set(false);
 
@@ -40,6 +40,15 @@ export class CompanyContextService {
       .subscribe({
         next: memberships => {
           this.memberships.set(memberships);
+
+          const preferredMembership = memberships.find(
+            membership => membership.company_id === preferredCompanyId
+          );
+
+          if (preferredMembership) {
+            this.selectedCompanyId.set(preferredMembership.company_id);
+            return;
+          }
 
           const selectedId = this.selectedCompanyId();
 
