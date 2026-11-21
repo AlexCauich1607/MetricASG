@@ -11,7 +11,7 @@ class UserResponse(BaseModel):
     position: Optional[str] = None
 
     # Información de la empresa
-    company_name: str
+    company_name: Optional[str] = None
     company_sector_id: Optional[int] = None
     company_size_id: Optional[int] = None
 

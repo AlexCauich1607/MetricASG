@@ -55,6 +55,12 @@ def get_current_user(
             detail="User not found"
         )
 
+    if not user.active:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="The account is not active",
+        )
+
     return user
 
 

@@ -125,6 +125,14 @@ class AuthService:
         if refresh_session.expires_at <= datetime.utcnow():
             raise HTTPException(401, "Refresh session expired")
 
+        user = db.get(User, refresh_session.user_id)
+
+        if user is None or not user.active:
+            raise HTTPException(
+                status_code=401,
+                detail="The account is not active",
+            )
+
         refresh_session.revoked_at = datetime.utcnow()
 
         new_access = self.create_token({
