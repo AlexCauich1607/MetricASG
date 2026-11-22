@@ -46,7 +46,7 @@ import { CompanyContextService } from '../../../services/company-context.service
 })
 export class ResultsComponent {
   id_user: number = SessionService.getSessionItem('id') ?? 0;
-  name = SessionService.getSessionItem('company');
+  name = '';
   mesActual = '';
   anioActual = '';
   mesAnterior = '';

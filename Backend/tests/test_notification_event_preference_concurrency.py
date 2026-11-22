@@ -31,7 +31,6 @@ def test_concurrent_event_preference_upsert(
     try:
         user = User(
             name="Concurrent Preference Test",
-            company_name="Test Company",
             email=f"concurrent-preference-{unique_id}@test.local",
             password="test-password-hash",
         )

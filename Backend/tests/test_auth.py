@@ -26,7 +26,6 @@ def create_test_user(db_session, email=TEST_EMAIL):
         name="Auth",
         lastname="Test",
         position="Tester",
-        company_name="Auth Test Company",
         email=email,
         phone="9999999999",
         password=auth_service.hash_password(TEST_PASSWORD),
@@ -446,9 +445,6 @@ def test_register_creates_personal_account_without_company(
     )
 
     assert user.role == UserRole.USER.value
-    assert user.company_name is None
-    assert user.company_sector_id is None
-    assert user.company_size_id is None
 
     assert AuthService().verify_password(
         TEST_PASSWORD,
@@ -533,71 +529,18 @@ def test_register_personal_rejects_duplicate_email(
         == 0
     )
 
-def test_register_company_creates_active_membership(client, db_session):
-    email = "register-organization@test.local"
-
+def test_legacy_company_registration_endpoint_is_removed(client):
     response = client.post(
         "/api/auth/register-company",
         json={
-            "company_name": "Organization Registration Test",
-            "email": email,
+            "company_name": "Legacy Company",
+            "email": "legacy-company@test.local",
             "phone": "9999999998",
             "password": TEST_PASSWORD,
         },
     )
 
-    assert response.status_code == 200
-
-    user = (
-        db_session.query(User)
-        .filter(User.email == email)
-        .one()
-    )
-
-    company = (
-        db_session.query(Company)
-        .filter(Company.name == "Organization Registration Test")
-        .one()
-    )
-
-    membership = (
-        db_session.query(CompanyMembership)
-        .filter(
-            CompanyMembership.user_id == user.id,
-            CompanyMembership.company_id == company.id,
-        )
-        .one()
-    )
-
-    assert user.name is None
-    assert user.lastname is None
-    assert user.position is None
-    assert user.role == UserRole.USER.value
-    assert company.active is True
-    assert membership.status == CompanyMembershipStatus.ACTIVE
-    assert membership.role == CompanyRole.COMPANY_ADMIN
-    assert user.company_name == company.name
-
-    audit_events = (
-        db_session.query(AuditLog)
-        .filter(
-            AuditLog.action == "user.created",
-            AuditLog.resource_type == "user",
-            AuditLog.resource_id == user.id,
-        )
-        .all()
-    )
-
-    assert len(audit_events) == 1
-
-    audit_event = audit_events[0]
-
-    assert audit_event.actor_id == user.id
-    assert audit_event.company_id == company.id
-    assert audit_event.context == {
-        "registration_type": "company_account",
-    }
-    assert audit_event.created_at is not None
+    assert response.status_code == 404
 
 def test_register_personal_rolls_back_on_commit_failure(
     db_session,
@@ -875,56 +818,6 @@ def test_change_password_user_not_found(db_session):
 
     assert audit_events == []
 
-
-def test_register_company_rolls_back_on_audit_failure(db_session):
-    from uuid import uuid4
-
-    unique_id = uuid4().hex
-    email = f"registration-audit-rollback-{unique_id}@test.local"
-    company_name = f"Audit Rollback Company {unique_id}"
-
-    with patch(
-        "app.services.auth_service.AuditService.record",
-        side_effect=RuntimeError("Audit recording failed"),
-    ):
-        with pytest.raises(
-            RuntimeError,
-            match="Audit recording failed",
-        ):
-            AuthService().create_company(
-                data={
-                    "company_name": company_name,
-                    "email": email,
-                    "phone": "9999999998",
-                    "password": TEST_PASSWORD,
-                },
-                db=db_session,
-            )
-
-    db_session.expire_all()
-
-    assert (
-        db_session.query(User)
-        .filter(User.email == email)
-        .first()
-    ) is None
-
-    assert (
-        db_session.query(Company)
-        .filter(Company.name == company_name)
-        .first()
-    ) is None
-
-    assert (
-        db_session.query(AuditLog)
-        .filter(
-            AuditLog.action == "user.created",
-            AuditLog.context["registration_type"].as_string()
-            == "company_account",
-        )
-        .count()
-    ) == 0
-
 def test_create_admin_http_records_audit(client, db_session):
     from uuid import uuid4
 
@@ -935,7 +828,6 @@ def test_create_admin_http_records_audit(client, db_session):
     creator = User(
         name="Creator Admin",
         email=f"creator-admin-{unique_id}@test.local",
-        company_name="Test Company",
         password=AuthService().hash_password(TEST_PASSWORD),
         role=UserRole.ADMIN,
         active=True,
@@ -968,7 +860,6 @@ def test_create_admin_http_records_audit(client, db_session):
     )
 
     assert created_admin.role == UserRole.ADMIN.value
-    assert created_admin.company_name == "Created Admin"
 
     assert AuthService().verify_password(
         TEST_PASSWORD,
@@ -1005,7 +896,6 @@ def test_create_admin_rolls_back_on_audit_failure(db_session):
     creator = User(
         name="Creator Admin",
         email=f"creator-rollback-{unique_id}@test.local",
-        company_name="Test Company",
         password=AuthService().hash_password(TEST_PASSWORD),
         role=UserRole.ADMIN,
         active=True,

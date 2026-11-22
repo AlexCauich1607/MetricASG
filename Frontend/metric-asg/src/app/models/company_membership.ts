@@ -44,13 +44,14 @@ export interface CompanyCreateResponse {
   active: boolean;
 }
 
-
 export interface CompanyDetailResponse {
   id: number;
   name: string;
   sector_id: number | null;
   size_id: number | null;
   active: boolean;
+  biannual_evaluation: boolean;
+  next_evaluation: string | null;
 }
 
 export interface CompanyUpdateRequest {

@@ -20,7 +20,6 @@ EVENT_TYPE = "IMPROVEMENT_ACTION_DUE"
 def preference_user(db_session):
     user = User(
         name="Preference Test",
-        company_name="Test Company",
         email="event-preference-test@example.com",
         password="test-password-hash",
     )

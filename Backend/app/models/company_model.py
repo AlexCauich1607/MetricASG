@@ -52,6 +52,22 @@ class Company(Base):
         server_default=func.now(),
     )
 
+    # Estado de evaluación ASG de la empresa.
+    # True indica que ya completó al menos una evaluación.
+    biannual_evaluation = Column(
+        Boolean,
+        nullable=False,
+        default=False,
+        server_default="false",
+    )
+
+    # Fecha en la que corresponde la siguiente evaluación semestral.
+    # NULL cuando la empresa todavía no ha completado ninguna.
+    next_evaluation = Column(
+        DateTime,
+        nullable=True,
+    )
+
     memberships = relationship(
         "CompanyMembership",
         back_populates="company",

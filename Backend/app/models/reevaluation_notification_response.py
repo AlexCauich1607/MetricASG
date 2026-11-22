@@ -11,14 +11,15 @@ class ReminderTypeResponse(str, Enum):
     DUE = "DUE"
 
 
+
 class ReevaluationNotificationResponse(BaseModel):
     id: int
+    company_id: int
     target_date: date
     reminder_type: ReminderTypeResponse
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
-
 
 class NotificationPreferenceResponse(BaseModel):
     in_app_enabled: bool

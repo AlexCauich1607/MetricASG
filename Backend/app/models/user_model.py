@@ -21,20 +21,7 @@ class User(Base):
     name = Column(String(150), nullable= True)
     lastname = Column(String(150), nullable = True)
     position =  Column(String(150), nullable = True)
-    
-    #Información de la Empresa
-    company_name = Column(String(150), nullable= True)
-    company_sector_id =  Column(
-        Integer,
-        ForeignKey("company_sectors.id", ondelete="SET NULL"),
-        nullable=True
-    )
-    company_size_id =  Column(
-        Integer,
-        ForeignKey("company_sizes.id", ondelete="SET NULL"),
-        nullable=True
-    )
-    
+
     #Información de contacto
     email = Column(String(150), unique=True, nullable=False)
     phone = Column(String(150), unique=False, nullable=True)
@@ -51,8 +38,6 @@ class User(Base):
     )
     joined = Column(DateTime, server_default=func.now())
     last_login = Column(DateTime)
-    biannual_evaluation = Column(Boolean, default=False)
-    next_evaluation = Column(DateTime)
     active = Column(Boolean, default=True)
     
     
@@ -64,19 +49,6 @@ class User(Base):
         passive_deletes=True,
     )
 
-    sector = relationship(
-        "CompanySector",
-        back_populates="users",
-        passive_deletes=True
-    )
-
-    size = relationship(
-        "CompanySize",
-        back_populates="users",
-        passive_deletes=True
-    )
-    
-    
     
     relations = relationship(
     "CompanyRelationship",

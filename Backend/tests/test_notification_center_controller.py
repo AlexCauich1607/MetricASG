@@ -24,7 +24,6 @@ def center_users(db_session):
     for number in (1, 2):
         user = User(
             name=f"Notification Center User {number}",
-            company_name="Test Company",
             email=f"notification-center-{number}-{unique_id}@test.local",
             password="test-password-hash",
         )

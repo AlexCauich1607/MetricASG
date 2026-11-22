@@ -172,7 +172,6 @@ def concurrent_invitation_data(independent_db_connections):
     inviter = User(
         name="Inviter",
         lastname="Test",
-        company_name=company.name,
         email=f"inviter-{unique_id}@test.local",
         password="test-password",
         role=UserRole.USER,
@@ -182,7 +181,6 @@ def concurrent_invitation_data(independent_db_connections):
     recipient = User(
         name="Recipient",
         lastname="Test",
-        company_name="Other Company",
         email=f"recipient-{unique_id}@test.local",
         password="test-password",
         role=UserRole.USER,

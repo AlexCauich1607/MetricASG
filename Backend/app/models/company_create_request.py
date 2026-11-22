@@ -1,5 +1,5 @@
 ﻿from pydantic import BaseModel, ConfigDict, Field
-
+from datetime import datetime
 
 class CompanyCreateRequest(BaseModel):
     name: str = Field(min_length=1, max_length=150)
@@ -22,7 +22,6 @@ class CompanyUpdateRequest(BaseModel):
     sector_id: int | None = Field(default=None, gt=0)
     size_id: int | None = Field(default=None, gt=0)
 
-
 class CompanyDetailResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -31,3 +30,6 @@ class CompanyDetailResponse(BaseModel):
     sector_id: int | None
     size_id: int | None
     active: bool
+
+    biannual_evaluation: bool
+    next_evaluation: datetime | None

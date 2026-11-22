@@ -21,7 +21,6 @@ def test_create_methodology_catalog_records_audit(db_session):
     admin = User(
         name="Admin",
         email=f"catalog-admin-{unique_id}@test.local",
-        company_name="Test Company",
         password="test-password",
         role=UserRole.ADMIN,
         active=True,
@@ -192,7 +191,6 @@ def test_update_methodology_catalog_records_audit(db_session):
     admin = User(
         name="Admin",
         email=f"catalog-update-{unique_id}@test.local",
-        company_name="Test Company",
         password="test-password",
         role=UserRole.ADMIN,
         active=True,
@@ -445,7 +443,6 @@ def test_delete_methodology_catalog_records_audit(db_session):
     admin = User(
         name="Admin",
         email=f"catalog-delete-{unique_id}@test.local",
-        company_name="Test Company",
         password="test-password",
         role=UserRole.ADMIN,
         active=True,
@@ -629,7 +626,6 @@ def test_create_methodology_catalog_http_records_audit(
     admin = User(
         name="Catalog HTTP Admin",
         email=f"catalog-http-{unique_id}@test.local",
-        company_name="Test Company",
         password="test-password",
         role=UserRole.ADMIN,
         active=True,
@@ -697,7 +693,6 @@ def test_update_methodology_catalog_http_records_audit(
     admin = User(
         name="Catalog HTTP Update Admin",
         email=f"catalog-http-upd-{unique_id}@test.local",
-        company_name="Test Company",
         password="test-password",
         role=UserRole.ADMIN,
         active=True,
@@ -775,7 +770,6 @@ def test_delete_methodology_catalog_http_records_audit(
     admin = User(
         name="Catalog HTTP Delete Admin",
         email=f"catalog-http-del-{unique_id}@test.local",
-        company_name="Test Company",
         password="test-password",
         role=UserRole.ADMIN,
         active=True,
@@ -849,7 +843,6 @@ def test_methodology_catalog_http_rejects_non_admin(
     user = User(
         name="Catalog Regular User",
         email=f"catalog-user-{unique_id}@test.local",
-        company_name="Test Company",
         password="test-password",
         role=UserRole.USER,
         active=True,
@@ -952,7 +945,6 @@ def test_methodology_catalog_http_returns_404_for_missing_resource(
     admin = User(
         name="Catalog HTTP Admin",
         email=f"catalog-404-{unique_id}@test.local",
-        company_name="Test Company",
         password="test-password",
         role=UserRole.ADMIN,
         active=True,

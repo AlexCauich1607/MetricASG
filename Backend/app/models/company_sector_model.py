@@ -7,8 +7,3 @@ class CompanySector(Base):
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     name = Column(String(150), nullable=False, unique=True)
-
-    users = relationship(
-        "User",
-        back_populates="sector"
-    )

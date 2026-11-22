@@ -34,6 +34,11 @@ from app.models.notification_model import (
     NotificationStatus,
 )
 
+from app.models.company_membership_model import (
+    CompanyMembership,
+    CompanyMembershipStatus,
+)
+
 logger = logging.getLogger(__name__)
 
 
@@ -200,6 +205,7 @@ class ReevaluationReminderDeliveryService:
     ) -> None:
         deduplication_key = (
             f"reevaluation:{reminder.user_id}:"
+            f"{reminder.company_id}:"
             f"{reminder.target_date.isoformat()}:"
             f"{reminder.reminder_type.value}"
         )
@@ -219,12 +225,14 @@ class ReevaluationReminderDeliveryService:
                 == NotificationEventType.REEVALUATION_REMINDER.value,
                 Notification.channel == NotificationChannel.EMAIL,
                 Notification.deduplication_key == deduplication_key,
+                Notification.company_id == reminder.company_id,
             )
             .update(
                 updates,
                 synchronize_session=False,
             )
         )
+
 
     def _is_eligible(
         self,
@@ -236,10 +244,30 @@ class ReevaluationReminderDeliveryService:
         if user is None or not user.active:
             return False
 
-        if user.next_evaluation is None:
+        company = reminder.company
+
+        if company is None or not company.active:
             return False
 
-        if user.next_evaluation.date() != reminder.target_date:
+        if company.next_evaluation is None:
+            return False
+
+        if company.next_evaluation.date() != reminder.target_date:
+            return False
+
+        # El destinatario debe seguir perteneciendo a la empresa.
+        active_membership = (
+            self.db.query(CompanyMembership.id)
+            .filter(
+                CompanyMembership.user_id == user.id,
+                CompanyMembership.company_id == company.id,
+                CompanyMembership.status
+                == CompanyMembershipStatus.ACTIVE,
+            )
+            .first()
+        )
+
+        if active_membership is None:
             return False
 
         preference_service = NotificationPreferenceService(self.db)

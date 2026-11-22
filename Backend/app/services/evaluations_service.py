@@ -36,6 +36,43 @@ class EvaluationService:
     def __init__(self, db):
         self.db = db
 
+    def _lock_company_for_evaluation(
+        self,
+        company_id: int,
+    ) -> Company:
+        company = (
+            self.db.query(Company)
+            .filter(
+                Company.id == company_id,
+                Company.active.is_(True),
+            )
+            .with_for_update()
+            .first()
+        )
+
+        if company is None:
+            raise HTTPException(
+                status_code=404,
+                detail="Company not found or inactive",
+            )
+
+        if company.biannual_evaluation:
+            next_evaluation = company.next_evaluation
+
+            if (
+                next_evaluation is None
+                or next_evaluation.date() > date.today()
+            ):
+                raise HTTPException(
+                    status_code=409,
+                    detail=(
+                        "The company is not yet eligible "
+                        "for a new evaluation cycle"
+                    ),
+                )
+
+        return company
+
     def _resolve_company_id(
         self,
         user_id: int,
@@ -208,7 +245,10 @@ class EvaluationService:
             )
 
         files_to_delete: list[str] = []
+
         try:
+            self._lock_company_for_evaluation(company_id)
+
             evaluation = (
                 self.db.query(Evaluation)
                 .filter(
@@ -312,7 +352,7 @@ class EvaluationService:
             if (
                 getattr(exc.orig, "diag", None)
                 and exc.orig.diag.constraint_name
-                == "uq_evaluations_user_methodology_draft"
+                == "uq_evaluations_company_user_methodology_draft"
             ):
                 raise HTTPException(
                     status_code=409,
@@ -322,6 +362,10 @@ class EvaluationService:
             raise
 
         except SQLAlchemyError:
+            self.db.rollback()
+            raise
+
+        except Exception:
             self.db.rollback()
             raise
 
@@ -433,9 +477,14 @@ class EvaluationService:
         methodology = MethodologyService(self.db).get_active()
 
         self.validate_duplicate_indicators(responses)
-        self.validate_evaluation_completeness(responses,methodology.id)
+        self.validate_evaluation_completeness(
+            responses,
+            methodology.id,
+        )
 
         try:
+            company = self._lock_company_for_evaluation(company_id)
+
             evaluation = (
                 self.db.query(Evaluation)
                 .filter(
@@ -535,10 +584,16 @@ class EvaluationService:
 
             evaluation.global_maturity_level_id = global_maturity_level.id
 
+            # Registrar la fecha efectiva de finalización.
+            completed_date = date.today()
+            evaluation.date = completed_date
             evaluation.status = EvaluationStatus.COMPLETED
 
-            user.biannual_evaluation = True
-            user.next_evaluation = date.today() + relativedelta(months=6)
+            # El estado pertenece a la empresa, no al usuario.
+            company.biannual_evaluation = True
+            company.next_evaluation = (
+                completed_date + relativedelta(months=6)
+            )
 
             AuditService.record(
                 db=self.db,

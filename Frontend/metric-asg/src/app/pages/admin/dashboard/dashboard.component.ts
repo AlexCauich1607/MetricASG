@@ -31,18 +31,18 @@ export class DashboardComponent {
   summary: Sumary | null = null;
   stats = [
     { label: 'Usuarios Registrados', value: 0, color: '#00245dff', icon: 'person' },
-    { label: 'Diagnósticos Completados', value: 0, color: '#5D9732', icon: 'task_alt' },
-    { label: 'Diagnósticos Pendientes', value: 0, color: '#97324dff', icon: 'schedule' },
+    { label: 'Empresas Evaluadas', value: 0, color: '#5D9732', icon: 'task_alt' },
+    { label: 'Empresas Pendientes', value: 0, color: '#97324dff', icon: 'schedule' },
     { label: 'Promedio Global ASG', value: 0, color: '#5774aaff', icon: 'equalizer' }
   ];
-  blueColor= "#00245D";
+  blueColor = "#00245D";
   loadingChart = false;
 
-  usersData ={
+  usersData = {
     name: 'Usuarios Registrados',
-    data: [] as string [],
-    colors: [] as string [],
-    value: [] as number []
+    data: [] as string[],
+    colors: [] as string[],
+    value: [] as number[]
   }
 
   data: Map<number, AmbitChart> = new Map();
@@ -57,21 +57,22 @@ export class DashboardComponent {
     this.adminService.getSummary().subscribe({
       next: (data) => {
         this.summary = data;
-        let user_info = this.summary.users;
-        this.stats[0].value = user_info.total;
-        this.stats[1].value = user_info.completed_evaluation;
-        this.stats[2].value = user_info.pending_evaluation;
-        this.stats[3].value = Number.parseInt(this.summary.asg.global_average.toFixed(1));
+        this.stats[0].value = this.summary.users.total;
+        this.stats[1].value = this.summary.companies.completed_evaluation;
+        this.stats[2].value = this.summary.companies.pending_evaluation;
+        this.stats[3].value = Number(
+          this.summary.asg.global_average.toFixed(1)
+        );
         this.summary.users_by_month.forEach(u => {
           this.usersData.data.push(u.month);
           this.usersData.value.push(u.count);
-          this.usersData.colors.push(this.blueColor); 
-          
+          this.usersData.colors.push(this.blueColor);
+
         });
-        this.summary.ambits.forEach(a=>{
+        this.summary.ambits.forEach(a => {
           let ambito = this.data.get(a.id);
-          if(!ambito){
-            let newAmbito: AmbitChart ={
+          if (!ambito) {
+            let newAmbito: AmbitChart = {
               name: a.name,
               color: a.color,
               letter: a.letter,
@@ -82,15 +83,15 @@ export class DashboardComponent {
             this.data.set(a.id, newAmbito);
             ambito = this.data.get(a.id);
           }
-          if(ambito){
-            a.maturity_levels.forEach(m =>{
+          if (ambito) {
+            a.maturity_levels.forEach(m => {
               ambito.data.push(m.name);
               ambito.colors.push(m.color);
               ambito.scores.push(m.user_count);
             })
           }
         });
-        this.loadingChart=true;
+        this.loadingChart = true;
       },
       error: (err) => {
 

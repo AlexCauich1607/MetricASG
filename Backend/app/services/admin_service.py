@@ -10,6 +10,8 @@ from sqlalchemy import func, extract
 from ..models.user_model import User
 from ..models.evaluation_model import Evaluation
 from ..services.audit_service import AuditService
+from ..models.company_model import Company
+from ..models.evaluation_model import EvaluationStatus
 
 class AdminService:
     
@@ -59,53 +61,93 @@ class AdminService:
             .filter(User.role == "user")\
             .count()
 
-        completed = db.query(User)\
-            .filter(
-                User.role == "user",
-                User.biannual_evaluation == True
-            )\
+        # Las cuentas personales y las empresas son entidades distintas.
+        total_companies = (
+            db.query(Company)
+            .filter(Company.active.is_(True))
             .count()
+        )
 
-        pending = total_users - completed
-
-       
-        subquery = (
-            db.query(
-                func.max(Evaluation.id).label("last_eval_id")
+        completed = (
+            db.query(func.count(func.distinct(Evaluation.company_id)))
+            .join(Company, Company.id == Evaluation.company_id)
+            .filter(
+                Company.active.is_(True),
+                Evaluation.status == EvaluationStatus.COMPLETED,
             )
-            .group_by(Evaluation.user_id)
+            .scalar()
+        ) or 0
+
+        pending = total_companies - completed
+
+        # Identificar la última evaluación completada por empresa.
+        # La fecha determina la más reciente; el ID rompe empates.
+        ranked_evaluations = (
+            db.query(
+                Evaluation.id.label("evaluation_id"),
+                func.row_number().over(
+                    partition_by=Evaluation.company_id,
+                    order_by=(
+                        Evaluation.date.desc().nullslast(),
+                        Evaluation.id.desc(),
+                    ),
+                ).label("row_number"),
+            )
+            .filter(
+                Evaluation.status == EvaluationStatus.COMPLETED,
+                Evaluation.company_id.isnot(None),
+            )
             .subquery()
         )
 
-       
+        latest_evaluations = (
+            db.query(ranked_evaluations.c.evaluation_id)
+            .filter(ranked_evaluations.c.row_number == 1)
+            .subquery()
+        )
+
         global_avg = (
             db.query(func.avg(Evaluation.global_score))
-            .join(User, User.id == Evaluation.user_id)
-            .filter(User.role == "user")
-            .filter(Evaluation.id.in_(subquery))
+            .join(Company, Company.id == Evaluation.company_id)
+            .filter(
+                Company.active.is_(True),
+                Evaluation.id.in_(
+                    db.query(latest_evaluations.c.evaluation_id)
+                ),
+            )
             .scalar()
         )
-        
+
         ambit_rows = (
             db.query(
                 EvaluationAmbitScore.ambit_id,
                 EvaluationAmbitScore.maturity_level_id,
-                func.count(func.distinct(Evaluation.user_id)).label("user_count")
+                func.count(
+                    func.distinct(Evaluation.company_id)
+                ).label("company_count"),
             )
-            .join(Evaluation,
-                  Evaluation.id == EvaluationAmbitScore.evaluation_id)
-            .join(User,
-                  User.id == Evaluation.user_id)
-            .filter(User.role == "user")
-            .filter(Evaluation.id.in_(subquery))
+            .join(
+                Evaluation,
+                Evaluation.id
+                == EvaluationAmbitScore.evaluation_id,
+            )
+            .join(
+                Company,
+                Company.id == Evaluation.company_id,
+            )
+            .filter(
+                Company.active.is_(True),
+                Evaluation.id.in_(
+                    db.query(latest_evaluations.c.evaluation_id)
+                ),
+            )
             .group_by(
                 EvaluationAmbitScore.ambit_id,
-                EvaluationAmbitScore.maturity_level_id
+                EvaluationAmbitScore.maturity_level_id,
             )
             .all()
         )
 
-      
         users_by_month = (
             db.query(
                 func.to_char(User.joined, 'YYYY-MM').label("month"),
@@ -161,8 +203,11 @@ class AdminService:
         return {
             "users": {
                 "total": total_users,
+            },
+            "companies": {
+                "total": total_companies,
                 "completed_evaluation": completed,
-                "pending_evaluation": pending
+                "pending_evaluation": pending,
             },
             "asg": {
                 "global_average": round(global_avg, 2) if global_avg else 0

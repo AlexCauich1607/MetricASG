@@ -337,6 +337,8 @@ def test_get_company_http_success(client):
         sector_id=2,
         size_id=3,
         active=True,
+        biannual_evaluation=False,
+        next_evaluation=None,
     )
 
     def override_current_user():
@@ -371,6 +373,8 @@ def test_get_company_http_success(client):
             "sector_id": 2,
             "size_id": 3,
             "active": True,
+            "biannual_evaluation": False,
+            "next_evaluation": None,
         }
 
         assert "password" not in body
@@ -396,6 +400,8 @@ def test_update_company_http_success(client):
         sector_id=2,
         size_id=3,
         active=True,
+        biannual_evaluation=False,
+        next_evaluation=None,
     )
 
     def override_current_user():
@@ -439,6 +445,8 @@ def test_update_company_http_success(client):
             "sector_id": 2,
             "size_id": 3,
             "active": True,
+            "biannual_evaluation": False,
+            "next_evaluation": None,
         }
 
     finally:

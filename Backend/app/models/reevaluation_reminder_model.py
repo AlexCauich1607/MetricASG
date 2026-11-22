@@ -40,6 +40,7 @@ class ReevaluationReminder(Base):
     __table_args__ = (
         UniqueConstraint(
             "user_id",
+            "company_id",
             "target_date",
             "reminder_type",
             "channel",
@@ -53,6 +54,13 @@ class ReevaluationReminder(Base):
         Integer,
         ForeignKey("users.id", ondelete="CASCADE"),
         nullable=False,
+        index=True,
+    )
+
+    company_id = Column(
+        Integer,
+        ForeignKey("companies.id", ondelete="CASCADE"),
+        nullable=True,
         index=True,
     )
 
@@ -115,3 +123,5 @@ class ReevaluationReminder(Base):
         "User",
         back_populates="reevaluation_reminders",
     )
+
+    company = relationship("Company")

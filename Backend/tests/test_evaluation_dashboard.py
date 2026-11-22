@@ -235,7 +235,6 @@ def test_dashboard_isolates_evaluations_by_user(
         name="Other",
         lastname="User",
         position="Tester",
-        company_name="Other Dashboard Company",
         email="other-dashboard-user@test.local",
         phone="9999999998",
         password="test-password",

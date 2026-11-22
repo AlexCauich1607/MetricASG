@@ -32,7 +32,6 @@ def create_company_membership(
         name="Test",
         lastname="Member",
         email=f"permissions-{unique_id}@example.com",
-        company_name=company.name,
         password="test-password",
         active=user_active,
     )

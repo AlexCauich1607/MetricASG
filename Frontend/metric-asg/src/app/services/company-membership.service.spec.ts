@@ -219,7 +219,9 @@ describe('CompanyMembershipService', () => {
             name: 'Empresa ASG',
             sector_id: 2,
             size_id: 4,
-            active: true
+            active: true,
+            biannual_evaluation: false,
+            next_evaluation: null
         };
 
         service.getCompany(3).subscribe(response => {
@@ -239,7 +241,7 @@ describe('CompanyMembershipService', () => {
         const payload: CompanyUpdateRequest = {
             name: 'Empresa Actualizada',
             sector_id: null,
-            size_id: 4
+            size_id: 4,
         };
 
         const updatedCompany: CompanyDetailResponse = {
@@ -247,7 +249,9 @@ describe('CompanyMembershipService', () => {
             name: 'Empresa Actualizada',
             sector_id: null,
             size_id: 4,
-            active: true
+            active: true,
+            biannual_evaluation: false,
+            next_evaluation: null
         };
 
         service.updateCompany(3, payload).subscribe(response => {

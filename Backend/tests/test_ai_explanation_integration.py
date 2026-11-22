@@ -140,7 +140,6 @@ def test_ai_explanation_rejects_other_user_with_real_database(
     other_user = User(
         name="Other",
         lastname="User",
-        company_name="Other Test Company",
         email="other-ai-user@test.local",
         password="test-password",
         active=True,

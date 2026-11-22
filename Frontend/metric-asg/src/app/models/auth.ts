@@ -1,7 +1,6 @@
 export interface AuthUserResponse {
     id: number,
     name: string,
-    company_name: string | null,
     profile_photo: string | null,
     role: string,
     email: string,
@@ -24,18 +23,6 @@ export interface ChangePassword{
   bf_password: string
 }
 
-export interface UserRegister {
-    name: string,
-    lastname: string,
-    position: string,
-    company_name: string,
-    company_sector_id: number,
-    company_size_id: number,
-    email: string,
-    phone: string,
-    password: string,
-}
-
 export interface PersonalUserRegister {
     name: string;
     lastname: string;
@@ -50,4 +37,9 @@ export interface UserLogin {
     password: string
 }
 
-
+export interface AdminRegister {
+  name: string;
+  lastname: string;
+  email: string;
+  password: string;
+}

@@ -131,7 +131,9 @@ describe('CompanySettingsComponent', () => {
       name: 'Empresa Original',
       sector_id: 2,
       size_id: 4,
-      active: true
+      active: true,
+      biannual_evaluation: false,
+      next_evaluation: null
     });
 
     component.name.set('Empresa Actualizada');
@@ -200,7 +202,9 @@ describe('CompanySettingsComponent', () => {
       name: 'Empresa ASG',
       sector_id: null,
       size_id: null,
-      active: true
+      active: true,
+      biannual_evaluation: false,
+      next_evaluation: null
     });
 
     component.name.set('Cambio no autorizado');
@@ -263,7 +267,9 @@ describe('CompanySettingsComponent', () => {
       name: 'Empresa A',
       sector_id: null,
       size_id: null,
-      active: true
+      active: true,
+      biannual_evaluation: false,
+      next_evaluation: null
     });
 
     component.name.set('Empresa A Actualizada');
@@ -343,7 +349,9 @@ describe('CompanySettingsComponent', () => {
       name: 'Empresa Original',
       sector_id: null,
       size_id: null,
-      active: true
+      active: true,
+      biannual_evaluation: false,
+      next_evaluation: null
     });
 
     component.name.set('Empresa Actualizada');

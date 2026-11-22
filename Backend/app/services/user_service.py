@@ -5,6 +5,14 @@ from app.services.base_service import BaseService
 
 class UserService(BaseService):
 
+    EDITABLE_PROFILE_FIELDS = frozenset({
+        "name",
+        "lastname",
+        "position",
+        "phone",
+        "profile_photo",
+    })
+
     def create(self, data: dict, actor_id: int):
         try:
             user_data = data.copy()
@@ -46,16 +54,9 @@ class UserService(BaseService):
         if user is None:
             return None
 
-        protected_fields = {
-            "id",
-            "role",
-            "active",
-            "password",
-        }
-
         try:
             for key, value in data.items():
-                if key not in protected_fields and hasattr(user, key):
+                if key in self.EDITABLE_PROFILE_FIELDS:
                     setattr(user, key, value)
 
             self.db.flush()
@@ -94,15 +95,8 @@ class UserService(BaseService):
             return None
 
         try:
-            protected_fields = {
-                "id",
-                "role",
-                "active",
-                "password",
-            }
-
             for key, value in data.items():
-                if key not in protected_fields and hasattr(user, key):
+                if key in self.EDITABLE_PROFILE_FIELDS:
                     setattr(user, key, value)
 
             self.db.flush()

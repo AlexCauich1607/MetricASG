@@ -48,7 +48,8 @@ describe('AuthService', () => {
 
     service.createUser(personalData).subscribe(response => {
       expect(response.id).toBe(10);
-      expect(response.company_name).toBeNull();
+      expect(Object.prototype.hasOwnProperty.call(response, 'company_name'))
+        .toBeFalse();
     });
 
     const request = httpTestingController.expectOne(

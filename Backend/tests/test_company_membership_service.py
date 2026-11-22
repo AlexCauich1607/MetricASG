@@ -40,7 +40,6 @@ def test_list_company_members_success(db_session, member_role):
         name="Ana",
         lastname="López",
         email=f"requester-{unique_id}@example.com",
-        company_name=company.name,
         password="test-password",
         active=True,
     )
@@ -49,7 +48,6 @@ def test_list_company_members_success(db_session, member_role):
         name="Carlos",
         lastname="Pérez",
         email=f"member-{unique_id}@example.com",
-        company_name=company.name,
         password="test-password",
         active=True,
     )
@@ -146,7 +144,6 @@ def test_list_company_members_rejects_unauthorized_access(
 
     requester = User(
         email=f"requester-{unique_id}@example.com",
-        company_name=company.name,
         password="test-password",
         active=scenario != "user_inactive",
     )
@@ -196,7 +193,6 @@ def test_remove_company_member_success(db_session):
     requester = User(
         name="Ana",
         email=f"requester-{unique_id}@example.com",
-        company_name=company.name,
         password="test-password",
         active=True,
     )
@@ -204,7 +200,6 @@ def test_remove_company_member_success(db_session):
     target_user = User(
         name="Carlos",
         email=f"member-{unique_id}@example.com",
-        company_name=company.name,
         password="test-password",
         active=True,
     )
@@ -309,7 +304,6 @@ def test_remove_last_active_company_member_is_rejected(db_session):
     requester = User(
         name="Ana",
         email=f"requester-{unique_id}@example.com",
-        company_name=company.name,
         password="test-password",
         active=True,
     )
@@ -402,14 +396,12 @@ def test_remove_company_member_rejects_invalid_operations(
 
     requester = User(
         email=f"requester-{unique_id}@example.com",
-        company_name=company.name,
         password="test-password",
         active=scenario != "requester_user_inactive",
     )
 
     target_user = User(
         email=f"target-{unique_id}@example.com",
-        company_name=company.name,
         password="test-password",
         active=True,
     )
@@ -502,7 +494,6 @@ def test_remove_another_company_member_is_forbidden(db_session):
     requester = User(
         name="Ana",
         email=f"requester-{unique_id}@example.com",
-        company_name=company.name,
         password="test-password",
         active=True,
     )
@@ -510,7 +501,6 @@ def test_remove_another_company_member_is_forbidden(db_session):
     target_user = User(
         name="Carlos",
         email=f"target-{unique_id}@example.com",
-        company_name=company.name,
         password="test-password",
         active=True,
     )
@@ -589,7 +579,6 @@ def test_list_company_members_enforces_company_roles(
         name="Test",
         lastname="Member",
         email=f"role-member-{unique_id}@example.com",
-        company_name=company.name,
         password="test-password",
         active=True,
     )
@@ -648,7 +637,6 @@ def create_membership_role_scenario(
         name="Requester",
         lastname="Test",
         email=f"removal-requester-{unique_id}@example.com",
-        company_name=company.name,
         password="test-password",
         active=True,
     )
@@ -657,7 +645,6 @@ def create_membership_role_scenario(
         name="Target",
         lastname="Test",
         email=f"removal-target-{unique_id}@example.com",
-        company_name=company.name,
         password="test-password",
         active=True,
     )
@@ -869,7 +856,6 @@ def test_list_user_memberships_filters_access(
         name="Ana",
         lastname="López",
         email=f"current-{unique_id}@example.com",
-        company_name=company.name,
         password="test-password",
         active=True,
     )
@@ -878,7 +864,6 @@ def test_list_user_memberships_filters_access(
         name="Carlos",
         lastname="Pérez",
         email=f"other-{unique_id}@example.com",
-        company_name=company.name,
         password="test-password",
         active=True,
     )
@@ -935,7 +920,6 @@ def test_list_my_company_memberships_http(client, db_session):
         name="Ana",
         lastname="López",
         email=f"http-member-{unique_id}@example.com",
-        company_name=company.name,
         password="test-password",
         active=True,
     )
@@ -981,7 +965,6 @@ def test_authenticated_user_creates_company_with_admin_membership(
         name="Personal",
         lastname="Owner",
         email=f"company-owner-{unique_id}@example.com",
-        company_name=None,
         password="test-password",
         active=True,
     )
@@ -1058,7 +1041,7 @@ def test_authenticated_user_creates_company_with_admin_membership(
             == memberships_before + 1
         )
 
-        assert db_session.get(User, user_id).company_name is None
+        assert db_session.get(User, user_id) is not None
 
         memberships_response = client.get(
             "/api/companies/me/memberships"
@@ -1084,7 +1067,6 @@ def test_inactive_user_cannot_create_company(db_session):
         name="Inactive",
         lastname="Owner",
         email=f"inactive-company-owner-{unique_id}@example.com",
-        company_name=None,
         password="test-password",
         active=False,
     )
@@ -1118,7 +1100,6 @@ def test_create_company_rolls_back_on_commit_failure(db_session):
         name="Rollback",
         lastname="Owner",
         email=f"company-commit-rollback-{unique_id}@example.com",
-        company_name=None,
         password="test-password",
         active=True,
     )
@@ -1187,7 +1168,6 @@ def test_create_company_rolls_back_on_audit_failure(db_session):
         name="Audit",
         lastname="Rollback",
         email=f"company-audit-rollback-{unique_id}@example.com",
-        company_name=None,
         password="test-password",
         active=True,
     )
@@ -1260,7 +1240,6 @@ def test_create_company_rejects_unknown_catalog_reference(
         name="Catalog",
         lastname="Validation",
         email=f"catalog-validation-{unique_id}@example.com",
-        company_name=None,
         password="test-password",
         active=True,
     )
@@ -1316,7 +1295,6 @@ def test_create_company_accepts_valid_catalog_references(
         name="Catalog",
         lastname="Owner",
         email=f"catalog-owner-{unique_id}@example.com",
-        company_name=None,
         password="test-password",
         active=True,
     )

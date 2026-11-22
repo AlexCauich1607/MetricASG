@@ -22,7 +22,6 @@ def create_authorization_user(db_session, email, role):
         name="Authorization",
         lastname="Test",
         position="Tester",
-        company_name="Authorization Test Company",
         email=email,
         phone="9999999999",
         password=auth_service.hash_password(TEST_PASSWORD),
@@ -214,9 +213,6 @@ def test_personal_user_without_company_can_access_profile(
         name="Personal",
         lastname="Account",
         position="Developer",
-        company_name=None,
-        company_sector_id=None,
-        company_size_id=None,
         email="personal-profile-no-company@test.local",
         phone="9999999999",
         password=auth_service.hash_password(TEST_PASSWORD),
@@ -243,9 +239,11 @@ def test_personal_user_without_company_can_access_profile(
     assert body["lastname"] == "Account"
     assert body["email"] == user.email
 
-    assert body["company_name"] is None
-    assert body["company_sector_id"] is None
-    assert body["company_size_id"] is None
+    assert "company_name" not in body
+    assert "company_sector_id" not in body
+    assert "company_size_id" not in body
+    assert "biannual_evaluation" not in body
+    assert "next_evaluation" not in body
 
     assert "password" not in body
 
@@ -295,7 +293,6 @@ def test_login_supports_multiple_company_memberships(
         name="Multiple",
         lastname="Companies",
         position="Developer",
-        company_name=None,
         email=f"multi-company-{unique_id}@test.local",
         phone="9999999999",
         password=AuthService().hash_password(TEST_PASSWORD),
@@ -341,7 +338,11 @@ def test_login_supports_multiple_company_memberships(
     assert body["access_token"]
     assert body["user"]["id"] == user.id
     assert body["user"]["email"] == user.email
-    assert body["user"]["company_name"] is None
+    assert "company_name" not in body["user"]
+    assert "company_sector_id" not in body["user"]
+    assert "company_size_id" not in body["user"]
+    assert "biannual_evaluation" not in body["user"]
+    assert "next_evaluation" not in body["user"]
 
     memberships_response = client.get(
         "/api/companies/me/memberships",
@@ -366,7 +367,6 @@ def test_inactive_user_cannot_use_existing_access_token(
         name="Inactive",
         lastname="Token",
         position="Developer",
-        company_name=None,
         email=f"inactive-token-{unique_id}@test.local",
         phone="9999999999",
         password=AuthService().hash_password(TEST_PASSWORD),
@@ -436,7 +436,6 @@ def test_inactive_user_cannot_refresh_existing_session(
         name="Refresh",
         lastname="Inactive",
         position="Developer",
-        company_name=None,
         email=f"inactive-refresh-{unique_id}@test.local",
         phone="9999999999",
         password=AuthService().hash_password(TEST_PASSWORD),
