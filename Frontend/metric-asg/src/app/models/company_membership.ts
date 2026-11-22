@@ -43,3 +43,18 @@ export interface CompanyCreateResponse {
   size_id: number | null;
   active: boolean;
 }
+
+
+export interface CompanyDetailResponse {
+  id: number;
+  name: string;
+  sector_id: number | null;
+  size_id: number | null;
+  active: boolean;
+}
+
+export interface CompanyUpdateRequest {
+  name?: string;
+  sector_id?: number | null;
+  size_id?: number | null;
+}

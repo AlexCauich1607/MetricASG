@@ -15,6 +15,7 @@ from ..models.user_model import User
 from app.core.company_permissions import require_company_role
 from app.core.roles import CompanyRole
 from app.services.audit_service import AuditService
+from app.models.company_create_request import CompanyUpdateRequest
 from app.models.company_sector_model import CompanySector
 from app.models.company_sizes_model import CompanySize
 
@@ -97,6 +98,149 @@ class CompanyMembershipService:
             db.rollback()
             raise
 
+    def update_company(
+        self,
+        db: Session,
+        company_id: int,
+        current_user_id: int,
+        payload: CompanyUpdateRequest,
+    ) -> Company:
+        try:
+            company = (
+                db.query(Company)
+                .filter(Company.id == company_id)
+                .with_for_update()
+                .first()
+            )
+
+            if company is None or not company.active:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="Company not found",
+                )
+
+            current_user = db.get(User, current_user_id)
+
+            if current_user is None:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Active company membership required",
+                )
+
+            require_company_role(
+                db,
+                current_user,
+                company_id,
+                CompanyRole.COMPANY_ADMIN,
+            )
+
+            changes = payload.model_dump(exclude_unset=True)
+
+            if not changes:
+                raise HTTPException(
+                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                    detail="At least one field must be provided",
+                )
+
+            if "name" in changes:
+                name = changes["name"]
+
+                if name is None or not name.strip():
+                    raise HTTPException(
+                        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                        detail="Company name cannot be empty",
+                    )
+
+                changes["name"] = name.strip()
+
+            if "sector_id" in changes and changes["sector_id"] is not None:
+                sector = db.get(CompanySector, changes["sector_id"])
+
+                if sector is None:
+                    raise HTTPException(
+                        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                        detail="Company sector not found",
+                    )
+
+            if "size_id" in changes and changes["size_id"] is not None:
+                company_size = db.get(CompanySize, changes["size_id"])
+
+                if company_size is None:
+                    raise HTTPException(
+                        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                        detail="Company size not found",
+                    )
+
+            previous_values = {
+                field: getattr(company, field)
+                for field in changes
+            }
+
+            for field, value in changes.items():
+                setattr(company, field, value)
+
+            db.flush()
+
+            AuditService.record(
+                db=db,
+                action="company.updated",
+                resource_type="company",
+                resource_id=company.id,
+                actor_id=current_user.id,
+                company_id=company.id,
+                context={
+                    "previous_values": previous_values,
+                    "new_values": changes,
+                },
+            )
+
+            db.commit()
+            db.refresh(company)
+
+            return company
+
+        except Exception:
+            db.rollback()
+            raise
+
+    def get_company(
+        self,
+        db: Session,
+        company_id: int,
+        current_user_id: int,
+    ) -> Company:
+        company = (
+            db.query(Company)
+            .filter(
+                Company.id == company_id,
+                Company.active.is_(True),
+            )
+            .first()
+        )
+
+        if company is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Company not found",
+            )
+
+        current_user = db.get(User, current_user_id)
+
+        if current_user is None:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Active company membership required",
+            )
+
+        require_company_role(
+            db,
+            current_user,
+            company_id,
+            *list(CompanyRole),
+        )
+
+        return company
+
     def list_user_memberships(
         self,
         db: Session,
@@ -171,9 +315,7 @@ class CompanyMembershipService:
             db,
             requester,
             company_id,
-            CompanyRole.COMPANY_ADMIN,
-            CompanyRole.ASG_MANAGER,
-            CompanyRole.COLLABORATOR,
+            *list(CompanyRole),
         )
 
         memberships = (

@@ -5,6 +5,8 @@ import {
     CompanyMember,
     CompanyCreateRequest,
     CompanyCreateResponse,
+    CompanyDetailResponse,
+    CompanyUpdateRequest,
     UserCompanyMembership
 } from '../models/company_membership';
 
@@ -45,4 +47,24 @@ export class CompanyMembershipService {
             `${this.apiUrl}/${companyId}/members/${membershipId}`
         );
     }
+
+
+    getCompany(
+        companyId: number
+    ): Observable<CompanyDetailResponse> {
+        return this.http.get<CompanyDetailResponse>(
+            `${this.apiUrl}/${companyId}`
+        );
+    }
+
+    updateCompany(
+        companyId: number,
+        data: CompanyUpdateRequest
+    ): Observable<CompanyDetailResponse> {
+        return this.http.patch<CompanyDetailResponse>(
+            `${this.apiUrl}/${companyId}`,
+            data
+        );
+    }
+
 }

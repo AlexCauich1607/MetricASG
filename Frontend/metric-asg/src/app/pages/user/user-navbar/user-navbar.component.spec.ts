@@ -323,7 +323,8 @@ describe('UserNavbarComponent', () => {
     ).toHaveBeenCalledOnceWith(7);
   });
 
-  it('should update members navigation when switching company roles', () => {
+
+  it('should keep company management navigation available when switching company roles', () => {
     const memberships: UserCompanyMembership[] = [
       {
         membership_id: 10,
@@ -344,45 +345,36 @@ describe('UserNavbarComponent', () => {
     companyContext.memberships.set(memberships);
     companyContext.selectedCompanyId.set(3);
 
-    // Simular que el usuario ya completó su primer acceso.
-    component.first = null;
-
     fixture.detectChanges();
 
-    let membersLink: HTMLAnchorElement | null =
+    const getManagementLink = (): HTMLAnchorElement | null =>
       fixture.nativeElement.querySelector(
-        'a[routerLink="/user/members"]'
+        'a[routerLink="/user/company-settings"]'
       );
 
+    // El administrador puede acceder a Gestión empresarial.
     expect(component.canManageMembers).toBeTrue();
-    expect(membersLink).not.toBeNull();
+    expect(getManagementLink()).not.toBeNull();
 
     // Cambiar a la empresa donde es colaborador.
     component.selectCompany(7);
 
     fixture.detectChanges();
 
-    membersLink = fixture.nativeElement.querySelector(
-      'a[routerLink="/user/members"]'
-    );
-
     expect(companyContext.selectedRole())
       .toBe(CompanyRole.COLLABORATOR);
 
+    // Pierde permisos administrativos, pero conserva acceso de lectura.
     expect(component.canManageMembers).toBeFalse();
-    expect(membersLink).toBeNull();
+    expect(getManagementLink()).not.toBeNull();
 
     // Regresar a la empresa donde es administrador.
     component.selectCompany(3);
 
     fixture.detectChanges();
 
-    membersLink = fixture.nativeElement.querySelector(
-      'a[routerLink="/user/members"]'
-    );
-
     expect(component.canManageMembers).toBeTrue();
-    expect(membersLink).not.toBeNull();
+    expect(getManagementLink()).not.toBeNull();
   });
 
   it('should hide members navigation for non-admin company roles', () => {
@@ -392,7 +384,6 @@ describe('UserNavbarComponent', () => {
       CompanyRole.AUDITOR
     ];
 
-    component.first = null;
 
     for (const role of restrictedRoles) {
       companyContext.memberships.set([

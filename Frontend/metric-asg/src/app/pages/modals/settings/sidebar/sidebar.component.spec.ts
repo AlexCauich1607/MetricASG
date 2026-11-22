@@ -41,7 +41,7 @@ describe('SidebarComponent', () => {
         {
           provide: UserService,
           useValue: {
-            getById: () => of(mockUser)
+            getMe: () => of(mockUser)
           }
         },
         {
@@ -59,12 +59,12 @@ describe('SidebarComponent', () => {
         {
           provide: MatDialogRef,
           useValue: {
-            close: () => {}
+            close: () => { }
           }
         }
       ]
     })
-    .compileComponents();
+      .compileComponents();
 
     fixture = TestBed.createComponent(SidebarComponent);
     component = fixture.componentInstance;

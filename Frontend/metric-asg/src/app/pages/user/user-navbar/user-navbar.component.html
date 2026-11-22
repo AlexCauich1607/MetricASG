@@ -56,13 +56,14 @@
         }
 
         <li class="nav-item mx-2">
-          <button type="button" class="nav-link fw-bold border-0 bg-transparent" (click)="openCreateCompany()"
-            [disabled]="companySelectionLocked" aria-label="Crear una nueva empresa">
+          <button type="button"
+            class="btn btn-outline-secondary btn-sm d-inline-flex align-items-center gap-1 text-nowrap company-create-button"
+            (click)="openCreateCompany()" [disabled]="companySelectionLocked" aria-label="Crear una nueva empresa">
             <i class="bi bi-building-add me-1" aria-hidden="true"></i>
             Crear empresa
           </button>
         </li>
-        @if (!first) {
+        @if (companyContext.selectedMembership()) {
         <li class="nav-item mx-2">
           <a class="nav-link fw-bold" routerLink="/user/home" routerLinkActive="active">
             Inicio
@@ -108,15 +109,15 @@
         </li>
         }
 
-        @if (!first && canManageMembers) {
+
+        @if (companyContext.selectedMembership()) {
         <li class="nav-item mx-2">
-          <a class="nav-link fw-bold" routerLink="/user/members" routerLinkActive="active">
-            <i class="bi bi-people-fill me-1"></i>
-            Miembros
+          <a class="nav-link fw-bold text-nowrap company-management-link" routerLink="/user/company-settings"  routerLinkActive="active">
+            <i class="bi bi-building-gear me-1"></i>
+            Gestión empresarial
           </a>
         </li>
         }
-
 
         <!-- Recordatorios de reevaluación -->
         <li class="nav-item dropdown mx-2 notification-dropdown">

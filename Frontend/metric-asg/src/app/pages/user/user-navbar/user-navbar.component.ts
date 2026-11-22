@@ -47,7 +47,6 @@ import {
 })
 export class UserNavbarComponent implements OnInit {
 
-  first = SessionService.getSessionItem('first-time');
   photo = SessionService.getSessionItem('photo');
 
   notifications: ReevaluationNotification[] = [];
@@ -151,6 +150,7 @@ export class UserNavbarComponent implements OnInit {
     this.authService.logout()
       .pipe(
         finalize(() => {
+          this.companyContext.clear();
           SessionService.logout();
           this.router.navigate(['/home']);
         })

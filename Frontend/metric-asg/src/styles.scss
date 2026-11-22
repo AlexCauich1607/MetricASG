@@ -1188,3 +1188,15 @@ body {
     margin-top: 0.2rem;
     margin-left: 0.4rem;
 }
+
+.company-edit-modal {
+  --mdc-dialog-container-color: #ffffff;
+  --mdc-dialog-subhead-color: #000080;
+  --mdc-dialog-supporting-text-color: #212529;
+}
+
+.company-edit-modal .mat-mdc-dialog-surface {
+  background-color: #ffffff;
+  color: #212529;
+  border-radius: 12px;
+}

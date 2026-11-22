@@ -4,6 +4,8 @@ from sqlalchemy.orm import Session
 from app.models.company_create_request import (
     CompanyCreateRequest,
     CompanyCreateResponse,
+    CompanyDetailResponse,
+    CompanyUpdateRequest,
 )
 from app.database.database import get_db
 from app.models.company_membership_response import (
@@ -52,6 +54,38 @@ class CompanyMembershipController:
             return CompanyMembershipService().list_user_memberships(
                 db=db,
                 current_user_id=current_user.id,
+            )
+
+        @self.router.get(
+            "/{company_id}",
+            response_model=CompanyDetailResponse,
+        )
+        def get_company(
+            company_id: int,
+            current_user: User = Depends(get_current_user),
+            db: Session = Depends(get_db),
+        ):
+            return CompanyMembershipService().get_company(
+                db=db,
+                company_id=company_id,
+                current_user_id=current_user.id,
+            )
+
+        @self.router.patch(
+            "/{company_id}",
+            response_model=CompanyDetailResponse,
+        )
+        def update_company(
+            company_id: int,
+            payload: CompanyUpdateRequest,
+            current_user: User = Depends(get_current_user),
+            db: Session = Depends(get_db),
+        ):
+            return CompanyMembershipService().update_company(
+                db=db,
+                company_id=company_id,
+                current_user_id=current_user.id,
+                payload=payload,
             )
 
         @self.router.get(

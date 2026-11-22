@@ -17,6 +17,7 @@ from app.core.roles import CompanyRole
 import pytest
 from fastapi import HTTPException
 from app.models.audit_log_model import AuditLog
+from app.models.company_create_request import CompanyUpdateRequest
 
 @pytest.mark.parametrize(
     "member_role",
@@ -569,7 +570,7 @@ def test_remove_another_company_member_is_forbidden(db_session):
         (CompanyRole.COMPANY_ADMIN, 200),
         (CompanyRole.ASG_MANAGER, 200),
         (CompanyRole.COLLABORATOR, 200),
-        (CompanyRole.AUDITOR, 403),
+        (CompanyRole.AUDITOR, 200),
     ],
 )
 def test_list_company_members_enforces_company_roles(
@@ -1366,3 +1367,506 @@ def test_create_company_accepts_valid_catalog_references(
 
     finally:
         app.dependency_overrides.pop(get_current_user, None)
+
+
+@pytest.mark.parametrize(
+    "member_role",
+    [
+        CompanyRole.COMPANY_ADMIN,
+        CompanyRole.ASG_MANAGER,
+        CompanyRole.COLLABORATOR,
+        CompanyRole.AUDITOR,
+    ],
+)
+def test_get_company_allows_active_members(
+    db_session,
+    member_role,
+):
+    unique_id = uuid4().hex
+
+    company = Company(
+        name=f"Company {unique_id}",
+        active=True,
+    )
+
+    requester = User(
+        email=f"requester-{unique_id}@example.com",
+        password="test-password",
+        active=True,
+    )
+
+    db_session.add_all([company, requester])
+    db_session.flush()
+
+    membership = CompanyMembership(
+        company_id=company.id,
+        user_id=requester.id,
+        role=member_role,
+        status=CompanyMembershipStatus.ACTIVE,
+    )
+
+    db_session.add(membership)
+    db_session.flush()
+
+    result = CompanyMembershipService().get_company(
+        db=db_session,
+        company_id=company.id,
+        current_user_id=requester.id,
+    )
+
+    assert result.id == company.id
+    assert result.name == company.name
+    assert result.active is True
+
+
+@pytest.mark.parametrize(
+    "scenario, expected_status",
+    [
+        ("company_not_found", 404),
+        ("company_inactive", 404),
+        ("membership_not_found", 403),
+        ("membership_inactive", 403),
+        ("user_inactive", 403),
+    ],
+)
+def test_get_company_rejects_unauthorized_access(
+    db_session,
+    scenario,
+    expected_status,
+):
+    unique_id = uuid4().hex
+
+    company = Company(
+        name=f"Company {unique_id}",
+        active=scenario != "company_inactive",
+    )
+
+    requester = User(
+        email=f"requester-{unique_id}@example.com",
+        password="test-password",
+        active=scenario != "user_inactive",
+    )
+
+    db_session.add_all([company, requester])
+    db_session.flush()
+
+    if scenario != "membership_not_found":
+        membership = CompanyMembership(
+            company_id=company.id,
+            user_id=requester.id,
+            role=CompanyRole.COMPANY_ADMIN,
+            status=(
+                CompanyMembershipStatus.INACTIVE
+                if scenario == "membership_inactive"
+                else CompanyMembershipStatus.ACTIVE
+            ),
+        )
+
+        db_session.add(membership)
+        db_session.flush()
+
+    requested_company_id = (
+        -1 if scenario == "company_not_found"
+        else company.id
+    )
+
+    with pytest.raises(HTTPException) as exc_info:
+        CompanyMembershipService().get_company(
+            db=db_session,
+            company_id=requested_company_id,
+            current_user_id=requester.id,
+        )
+
+    assert exc_info.value.status_code == expected_status
+
+
+def test_update_company_success_and_audit(db_session):
+    unique_id = uuid4().hex
+
+    company = Company(
+        name=f"Original Company {unique_id}",
+        active=True,
+    )
+
+    administrator = User(
+        email=f"admin-{unique_id}@example.com",
+        password="test-password",
+        active=True,
+    )
+
+    db_session.add_all([company, administrator])
+    db_session.flush()
+
+    membership = CompanyMembership(
+        company_id=company.id,
+        user_id=administrator.id,
+        role=CompanyRole.COMPANY_ADMIN,
+        status=CompanyMembershipStatus.ACTIVE,
+    )
+
+    db_session.add(membership)
+    db_session.flush()
+
+    company_id = company.id
+    administrator_id = administrator.id
+    original_name = company.name
+
+    payload = CompanyUpdateRequest(
+        name="  Empresa Actualizada  ",
+    )
+
+    result = CompanyMembershipService().update_company(
+        db=db_session,
+        company_id=company_id,
+        current_user_id=administrator_id,
+        payload=payload,
+    )
+
+    assert result.id == company_id
+    assert result.name == "Empresa Actualizada"
+
+    db_session.expire_all()
+
+    updated_company = db_session.get(Company, company_id)
+
+    assert updated_company is not None
+    assert updated_company.name == "Empresa Actualizada"
+
+    audit = (
+        db_session.query(AuditLog)
+        .filter(
+            AuditLog.action == "company.updated",
+            AuditLog.resource_type == "company",
+            AuditLog.resource_id == company_id,
+        )
+        .order_by(AuditLog.id.desc())
+        .first()
+    )
+
+    assert audit is not None
+    assert audit.actor_id == administrator_id
+    assert audit.company_id == company_id
+    assert audit.context["previous_values"]["name"] == original_name
+    assert audit.context["new_values"]["name"] == "Empresa Actualizada"
+
+
+@pytest.mark.parametrize(
+    "member_role",
+    [
+        CompanyRole.ASG_MANAGER,
+        CompanyRole.COLLABORATOR,
+        CompanyRole.AUDITOR,
+    ],
+)
+def test_update_company_rejects_non_admin_roles(
+    db_session,
+    member_role,
+):
+    unique_id = uuid4().hex
+
+    company = Company(
+        name=f"Original Company {unique_id}",
+        active=True,
+    )
+
+    requester = User(
+        email=f"requester-{unique_id}@example.com",
+        password="test-password",
+        active=True,
+    )
+
+    db_session.add_all([company, requester])
+    db_session.flush()
+
+    membership = CompanyMembership(
+        company_id=company.id,
+        user_id=requester.id,
+        role=member_role,
+        status=CompanyMembershipStatus.ACTIVE,
+    )
+
+    db_session.add(membership)
+    db_session.flush()
+
+    company_id = company.id
+    requester_id = requester.id
+    original_name = company.name
+
+    # Confirmar los datos iniciales para que el rollback
+    # de update_company() no elimine la empresa de prueba.
+    db_session.commit()
+
+    with pytest.raises(HTTPException) as exc_info:
+        CompanyMembershipService().update_company(
+            db=db_session,
+            company_id=company_id,
+            current_user_id=requester_id,
+            payload=CompanyUpdateRequest(
+                name="Unauthorized Change",
+            ),
+        )
+
+    assert exc_info.value.status_code == 403
+
+    db_session.expire_all()
+
+    unchanged_company = db_session.get(Company, company_id)
+
+    assert unchanged_company is not None
+    assert unchanged_company.name == original_name
+
+
+@pytest.mark.parametrize(
+    "payload_data",
+    [
+        {},
+        {"name": None},
+        {"name": "   "},
+        {"sector_id": 999999999},
+        {"size_id": 999999999},
+    ],
+)
+def test_update_company_rejects_invalid_payloads(
+    db_session,
+    payload_data,
+):
+    unique_id = uuid4().hex
+
+    company = Company(
+        name=f"Original Company {unique_id}",
+        active=True,
+    )
+
+    administrator = User(
+        email=f"admin-{unique_id}@example.com",
+        password="test-password",
+        active=True,
+    )
+
+    db_session.add_all([company, administrator])
+    db_session.flush()
+
+    membership = CompanyMembership(
+        company_id=company.id,
+        user_id=administrator.id,
+        role=CompanyRole.COMPANY_ADMIN,
+        status=CompanyMembershipStatus.ACTIVE,
+    )
+
+    db_session.add(membership)
+    db_session.flush()
+
+    company_id = company.id
+    administrator_id = administrator.id
+    original_name = company.name
+
+    # Preservar los datos iniciales frente al rollback
+    # ejecutado por update_company().
+    db_session.commit()
+
+    with pytest.raises(HTTPException) as exc_info:
+        CompanyMembershipService().update_company(
+            db=db_session,
+            company_id=company_id,
+            current_user_id=administrator_id,
+            payload=CompanyUpdateRequest(**payload_data),
+        )
+
+    assert exc_info.value.status_code == 422
+
+    db_session.expire_all()
+
+    unchanged_company = db_session.get(Company, company_id)
+
+    assert unchanged_company is not None
+    assert unchanged_company.name == original_name
+
+
+def test_update_company_preserves_omitted_fields(db_session):
+    unique_id = uuid4().hex
+
+    sector = CompanySector(name=f"Sector {unique_id}")
+    size = CompanySize(name=f"Size {unique_id}")
+
+    company = Company(
+        name=f"Original Company {unique_id}",
+        sector_id=None,
+        size_id=None,
+        active=True,
+    )
+
+    administrator = User(
+        email=f"admin-{unique_id}@example.com",
+        password="test-password",
+        active=True,
+    )
+
+    db_session.add_all([sector, size, company, administrator])
+    db_session.flush()
+
+    company.sector_id = sector.id
+    company.size_id = size.id
+
+    membership = CompanyMembership(
+        company_id=company.id,
+        user_id=administrator.id,
+        role=CompanyRole.COMPANY_ADMIN,
+        status=CompanyMembershipStatus.ACTIVE,
+    )
+
+    db_session.add(membership)
+    db_session.flush()
+
+    company_id = company.id
+    administrator_id = administrator.id
+    original_sector_id = sector.id
+    original_size_id = size.id
+
+    result = CompanyMembershipService().update_company(
+        db=db_session,
+        company_id=company_id,
+        current_user_id=administrator_id,
+        payload=CompanyUpdateRequest(
+            name="Empresa Renombrada",
+        ),
+    )
+
+    assert result.name == "Empresa Renombrada"
+    assert result.sector_id == original_sector_id
+    assert result.size_id == original_size_id
+
+
+def test_update_company_clears_optional_fields(db_session):
+    unique_id = uuid4().hex
+
+    sector = CompanySector(name=f"Sector {unique_id}")
+    size = CompanySize(name=f"Size {unique_id}")
+
+    company = Company(
+        name=f"Original Company {unique_id}",
+        active=True,
+    )
+
+    administrator = User(
+        email=f"admin-{unique_id}@example.com",
+        password="test-password",
+        active=True,
+    )
+
+    db_session.add_all([sector, size, company, administrator])
+    db_session.flush()
+
+    company.sector_id = sector.id
+    company.size_id = size.id
+
+    membership = CompanyMembership(
+        company_id=company.id,
+        user_id=administrator.id,
+        role=CompanyRole.COMPANY_ADMIN,
+        status=CompanyMembershipStatus.ACTIVE,
+    )
+
+    db_session.add(membership)
+    db_session.flush()
+
+    company_id = company.id
+    administrator_id = administrator.id
+    original_name = company.name
+
+    result = CompanyMembershipService().update_company(
+        db=db_session,
+        company_id=company_id,
+        current_user_id=administrator_id,
+        payload=CompanyUpdateRequest(
+            sector_id=None,
+            size_id=None,
+        ),
+    )
+
+    assert result.name == original_name
+    assert result.sector_id is None
+    assert result.size_id is None
+
+    db_session.expire_all()
+
+    updated_company = db_session.get(Company, company_id)
+
+    assert updated_company is not None
+    assert updated_company.sector_id is None
+    assert updated_company.size_id is None
+
+
+@pytest.mark.parametrize(
+    "scenario, expected_status",
+    [
+        ("company_not_found", 404),
+        ("company_inactive", 404),
+        ("membership_not_found", 403),
+        ("membership_inactive", 403),
+        ("user_inactive", 403),
+    ],
+)
+def test_update_company_rejects_inactive_or_missing_access(
+    db_session,
+    scenario,
+    expected_status,
+):
+    unique_id = uuid4().hex
+
+    company = Company(
+        name=f"Original Company {unique_id}",
+        active=scenario != "company_inactive",
+    )
+
+    requester = User(
+        email=f"admin-{unique_id}@example.com",
+        password="test-password",
+        active=scenario != "user_inactive",
+    )
+
+    db_session.add_all([company, requester])
+    db_session.flush()
+
+    if scenario != "membership_not_found":
+        membership = CompanyMembership(
+            company_id=company.id,
+            user_id=requester.id,
+            role=CompanyRole.COMPANY_ADMIN,
+            status=(
+                CompanyMembershipStatus.INACTIVE
+                if scenario == "membership_inactive"
+                else CompanyMembershipStatus.ACTIVE
+            ),
+        )
+        db_session.add(membership)
+        db_session.flush()
+
+    company_id = company.id
+    requester_id = requester.id
+    original_name = company.name
+
+    db_session.commit()
+
+    requested_company_id = (
+        -1 if scenario == "company_not_found"
+        else company_id
+    )
+
+    with pytest.raises(HTTPException) as exc_info:
+        CompanyMembershipService().update_company(
+            db=db_session,
+            company_id=requested_company_id,
+            current_user_id=requester_id,
+            payload=CompanyUpdateRequest(
+                name="Cambio no autorizado",
+            ),
+        )
+
+    assert exc_info.value.status_code == expected_status
+
+    db_session.expire_all()
+
+    unchanged_company = db_session.get(Company, company_id)
+
+    assert unchanged_company is not None
+    assert unchanged_company.name == original_name

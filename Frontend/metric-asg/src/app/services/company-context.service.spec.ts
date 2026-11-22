@@ -44,7 +44,7 @@ describe('CompanyContextService', () => {
         }
       ]
     });
-
+    sessionStorage.removeItem('metricasg-selected-company-id');
     service = TestBed.inject(CompanyContextService);
   });
 
@@ -159,5 +159,33 @@ describe('CompanyContextService', () => {
     expect(service.selectedRole()).toBeNull();
     expect(service.error()).toBeFalse();
   });
+  it('should persist the selected company in sessionStorage', () => {
+    const memberships = [
+      {
+        membership_id: 10,
+        company_id: 3,
+        company_name: 'Empresa A',
+        role: CompanyRole.COMPANY_ADMIN,
+        joined_at: '2026-11-09T10:00:00'
+      },
+      {
+        membership_id: 18,
+        company_id: 7,
+        company_name: 'Empresa B',
+        role: CompanyRole.COLLABORATOR,
+        joined_at: '2026-11-09T10:30:00'
+      }
+    ];
 
+    // Utiliza aquí el nombre de tu variable de servicio.
+    service.memberships.set(memberships);
+
+    service.selectCompany(7);
+
+    expect(service.selectedCompanyId()).toBe(7);
+
+    expect(
+      sessionStorage.getItem('metricasg-selected-company-id')
+    ).toBe('7');
+  });
 });

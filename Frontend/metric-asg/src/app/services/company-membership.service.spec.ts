@@ -12,7 +12,9 @@ import {
     CompanyRole,
     CompanyCreateRequest,
     CompanyCreateResponse,
-    UserCompanyMembership
+    UserCompanyMembership,
+    CompanyDetailResponse,
+    CompanyUpdateRequest,
 } from '../models/company_membership';
 
 describe('CompanyMembershipService', () => {
@@ -210,4 +212,56 @@ describe('CompanyMembershipService', () => {
 
         expect(errorStatus).toBe(422);
     });
+
+    it('should retrieve the selected company details', () => {
+        const company: CompanyDetailResponse = {
+            id: 3,
+            name: 'Empresa ASG',
+            sector_id: 2,
+            size_id: 4,
+            active: true
+        };
+
+        service.getCompany(3).subscribe(response => {
+            expect(response).toEqual(company);
+        });
+
+        const request = httpMock.expectOne(
+            'http://localhost:8000/api/companies/3'
+        );
+
+        expect(request.request.method).toBe('GET');
+
+        request.flush(company);
+    });
+
+    it('should update company information using PATCH', () => {
+        const payload: CompanyUpdateRequest = {
+            name: 'Empresa Actualizada',
+            sector_id: null,
+            size_id: 4
+        };
+
+        const updatedCompany: CompanyDetailResponse = {
+            id: 3,
+            name: 'Empresa Actualizada',
+            sector_id: null,
+            size_id: 4,
+            active: true
+        };
+
+        service.updateCompany(3, payload).subscribe(response => {
+            expect(response).toEqual(updatedCompany);
+        });
+
+        const request = httpMock.expectOne(
+            'http://localhost:8000/api/companies/3'
+        );
+
+        expect(request.request.method).toBe('PATCH');
+        expect(request.request.body).toEqual(payload);
+
+        request.flush(updatedCompany);
+    });
+
 });

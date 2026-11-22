@@ -1,0 +1,130 @@
+
+<section class="container py-5">
+
+  <div class="mb-4">
+    <h2 class="text-my-purple fw-bold mb-2">
+      <i class="bi bi-building-gear me-2"></i>
+      Gestión empresarial
+    </h2>
+
+    <p class="sw-gris mb-0">
+      Consulta la información y los integrantes
+      de la empresa seleccionada.
+    </p>
+  </div>
+
+  @if (companyContext.loading()) {
+    <div class="alert alert-info" role="status">
+      Cargando empresas...
+    </div>
+
+  } @else if (companyContext.error()) {
+    <div class="alert alert-danger" role="alert">
+      No fue posible consultar tus empresas.
+    </div>
+
+  } @else if (!companyContext.selectedMembership()) {
+    <div class="alert alert-warning" role="alert">
+      Selecciona una empresa o crea una nueva para continuar.
+    </div>
+
+  } @else {
+
+    <div class="card shadow-sm mb-4">
+      <div class="card-body p-4">
+
+        <div
+          class="d-flex flex-wrap justify-content-between
+                 align-items-center gap-3 mb-4">
+
+          <h3 class="h5 fw-bold text-my-purple mb-0">
+            <i class="bi bi-building me-2"></i>
+            Información general
+          </h3>
+
+          @if (canEdit() && company() && !loading()) {
+            <button
+              type="button"
+              class="btn btn-outline-primary btn-sm"
+              (click)="openEditCompany()">
+              <i class="bi bi-pencil-square me-1"></i>
+              Editar empresa
+            </button>
+          }
+
+        </div>
+
+        @if (loading()) {
+          <div class="text-center py-4" role="status">
+            <span
+              class="spinner-border text-my-purple"
+              aria-hidden="true">
+            </span>
+            <p class="mt-3 mb-0">
+              Cargando información empresarial...
+            </p>
+          </div>
+
+        } @else if (error()) {
+          <div class="alert alert-danger" role="alert">
+            No fue posible cargar la información de la empresa.
+          </div>
+
+          <button
+            type="button"
+            class="btn btn-outline-danger"
+            (click)="retryLoad()">
+            Reintentar
+          </button>
+
+        } @else if (company(); as selectedCompany) {
+
+          <div class="row g-4">
+
+            <div class="col-12 col-md-6">
+              <div class="text-muted small mb-1">
+                Nombre de la empresa
+              </div>
+              <div class="fw-semibold">
+                {{ selectedCompany.name }}
+              </div>
+            </div>
+
+            <div class="col-12 col-md-6">
+              <div class="text-muted small mb-1">
+                Sector económico
+              </div>
+              <div class="fw-semibold">
+                {{ sectorName(selectedCompany.sector_id) }}
+              </div>
+            </div>
+
+            <div class="col-12 col-md-6">
+              <div class="text-muted small mb-1">
+                Tamaño de la empresa
+              </div>
+              <div class="fw-semibold">
+                {{ sizeName(selectedCompany.size_id) }}
+              </div>
+            </div>
+
+          </div>
+
+        } @else {
+          <div class="alert alert-warning" role="alert">
+            No hay información empresarial disponible.
+          </div>
+        }
+
+      </div>
+    </div>
+
+    <div class="card shadow-sm">
+      <div class="card-body p-4">
+        <app-company-members></app-company-members>
+      </div>
+    </div>
+
+  }
+
+</section>

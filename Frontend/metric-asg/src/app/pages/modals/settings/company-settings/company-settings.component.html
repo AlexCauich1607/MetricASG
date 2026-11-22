@@ -1,55 +1,139 @@
-@if (!user?.company_name) {
-<div class="text-center py-4">
-  <i class="bi bi-building fs-1 text-my-purple" aria-hidden="true"></i>
+<div class="company-edit-dialog">
 
-  <h6 class="fw-bold text-my-purple mt-3">
-    No hay información empresarial asociada a tu perfil
-  </h6>
+  <header class="company-edit-dialog__header">
+    <div>
+      <h2 class="company-edit-dialog__title">
+        Editar empresa
+      </h2>
+      <p class="company-edit-dialog__subtitle">
+        Actualiza la información general de tu empresa.
+      </p>
+    </div>
 
-  <p class="mb-0">
-    Consulta tus empresas desde la sección de gestión empresarial.
-  </p>
+    <button type="button" class="btn-close" aria-label="Cerrar" [disabled]="saving()" (click)="closeDialog()">
+    </button>
+  </header>
 
-  <p class="mb-0">
-    Puedes crear una empresa o unirte a una existente
-    desde la sección de gestión empresarial.
-  </p>
-</div>
-} @else {
-<div class="p-4 sw-height">
-  <h6 class="fw-bold text-my-purple mb-4"><i class="bi bi-building-fill"></i> Empresa</h6>
-  <div class="mb-3">
-    <label class="form-label sw-fs-7 fw-bold text-my-purple"><i class="bi bi-building-fill me-1"></i> Nombre</label>
-    <input type="text" class="form-control sw-fs-7 sw-bg-transparent" placeholder="Ingrese el nombre de la empresa"
-      [(ngModel)]="user!.company_name" />
-    @if ((user?.company_name?.length ?? 0) < 3) { <div class="m-0 p-0">
-      <p class="sw-text-error mb-0 pb-0">*El nombre debe tener minimo 3 caracteres</p>
+  <div class="company-edit-dialog__body">
+    @if (loading()) {
+    <div class="text-center py-4" role="status">
+      <span class="spinner-border text-my-purple" aria-hidden="true">
+      </span>
+      <p class="mt-3 mb-0">
+        Cargando información de la empresa...
+      </p>
+    </div>
+    } @else if (error()) {
+    <div class="alert alert-danger" role="alert">
+      No fue posible cargar la información de la empresa.
+    </div>
+
+    <button type="button" class="btn btn-outline-danger" (click)="retryLoad()">
+      <i class="bi bi-arrow-clockwise me-1"></i>
+      Reintentar
+    </button>
+    } @else if (company(); as selectedCompany) {
+    <form (ngSubmit)="update()">
+      <div class="mb-3">
+        <label for="companyName" class="form-label fw-bold text-my-purple">
+          Nombre de la empresa
+        </label>
+
+        <input id="companyName" name="companyName" type="text" class="form-control" maxlength="150" required
+          [ngModel]="name()" (ngModelChange)="name.set($event)" [disabled]="!canEdit() || saving()" />
+
+        @if (!name().trim()) {
+        <p class="text-danger small mt-1">
+          El nombre de la empresa es obligatorio.
+        </p>
+        }
+      </div>
+
+      <div class="mb-3">
+        <label for="companySector" class="form-label fw-bold text-my-purple">
+          Sector económico
+        </label>
+
+        <select id="companySector" name="companySector" class="form-select" [ngModel]="sectorId()"
+          (ngModelChange)="sectorId.set($event)" [disabled]="!canEdit() || saving()">
+
+          <option [ngValue]="null">
+            Sin especificar
+          </option>
+
+          @for (sector of sectors(); track sector.id) {
+          <option [ngValue]="sector.id">
+            {{ sector.name }}
+          </option>
+          }
+        </select>
+      </div>
+
+      <div class="mb-3">
+        <label for="companySize" class="form-label fw-bold text-my-purple">
+          Tamaño de la empresa
+        </label>
+
+        <select id="companySize" name="companySize" class="form-select" [ngModel]="sizeId()"
+          (ngModelChange)="sizeId.set($event)" [disabled]="!canEdit() || saving()">
+
+          <option [ngValue]="null">
+            Sin especificar
+          </option>
+
+          @for (size of sizes(); track size.id) {
+          <option [ngValue]="size.id">
+            {{ size.name }}
+          </option>
+          }
+        </select>
+      </div>
+
+      @if (saveSuccess()) {
+      <div class="alert alert-success" role="status">
+        <i class="bi bi-check-circle me-2"></i>
+        La información empresarial se actualizó correctamente.
+      </div>
+      }
+
+      @if (saveError(); as message) {
+      <div class="alert alert-danger" role="alert">
+        {{ message }}
+      </div>
+      }
+
+      @if (canEdit()) {
+      <div class="d-flex justify-content-end gap-2 flex-wrap">
+        <button type="button" class="btn btn-outline-secondary" [disabled]="saving()" (click)="closeDialog()">
+          Cancelar
+        </button>
+        <button type="submit" class="btn btn-my-purple"
+          [disabled]="saving() || !name().trim() || name().trim().length > 150">
+
+          @if (saving()) {
+          <span class="spinner-border spinner-border-sm me-2" aria-hidden="true">
+          </span>
+          Guardando...
+          } @else {
+          <i class="bi bi-check-lg me-1"></i>
+          Guardar cambios
+          }
+        </button>
+
+      </div>
+      } @else {
+      <div class="alert alert-info" role="status">
+        <i class="bi bi-info-circle me-2"></i>
+        Puedes consultar la información empresarial.
+        Solo los administradores de la empresa pueden modificarla.
+      </div>
+      }
+    </form>
+    } @else {
+    <div class="alert alert-warning" role="alert">
+      No hay información empresarial disponible.
+      Selecciona una empresa para continuar.
+    </div>
+    }
   </div>
-  }
 </div>
-<div class="mb-3">
-  <label class="form-label sw-fs-7 fw-bold text-my-purple"><i class="bi bi-gear-fill me-1"></i> Sector</label>
-  <select id="sector" class="form-control sw-fs-7 sw-bg-transparent" [(ngModel)]="sectorSeleccionado">
-    @for (sector of sectores; track sector) {
-    <option [ngValue]="sector">
-      {{ sector.name }}
-    </option>
-    }
-  </select>
-</div>
-<div class="mb-3">
-  <label class="form-label sw-fs-7 fw-bold text-my-purple"><i class="bi bi-people-fill me-1"></i>
-    Tamaño</label>
-  <select id="size" class="form-control sw-fs-7 sw-bg-transparent" [(ngModel)]="sizeSeleccionado">
-    @for (size of sizes; track size) {
-    <option [ngValue]="size">
-      {{ size.name }}
-    </option>
-    }
-  </select>
-</div>
-<div class="sw-end">
-  <button class="btn-my-purple sw-fs-7 mb-3" (click)="update()"><i class="bi bi-check-lg"></i> Guardar</button>
-</div>
-</div>
-}

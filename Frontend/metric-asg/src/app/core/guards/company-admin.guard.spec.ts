@@ -38,7 +38,7 @@ describe('companyAdminGuard', () => {
             'CompanyMembershipService',
             ['getMyMemberships']
         );
-
+        sessionStorage.removeItem('metricasg-selected-company-id');
         membershipService.getMyMemberships.and.returnValue(of(memberships));
 
         TestBed.configureTestingModule({
@@ -83,21 +83,35 @@ describe('companyAdminGuard', () => {
         expect(await executeGuard()).toBe('/user/home');
     });
 
-    it('should initialize company context when no company is selected', async () => {
+    it('should redirect when no company is selected', async () => {
         expect(context.selectedCompanyId()).toBeNull();
 
-        expect(await executeGuard()).toBeTrue();
+        expect(await executeGuard()).toBe('/user/home');
 
-        expect(context.selectedCompanyId()).toBe(3);
+        expect(context.selectedCompanyId()).toBeNull();
+
         expect(context.memberships()).toEqual(memberships);
+
+        expect(
+            sessionStorage.getItem('metricasg-selected-company-id')
+        ).toBeNull();
     });
+
 
     it('should deny access when the selected membership was removed', async () => {
         context.selectedCompanyId.set(99);
 
         expect(await executeGuard()).toBe('/user/home');
-        expect(context.selectedCompanyId()).toBe(99);
+
+        expect(context.selectedCompanyId()).toBeNull();
+
+        expect(context.memberships()).toEqual(memberships);
+
+        expect(
+            sessionStorage.getItem('metricasg-selected-company-id')
+        ).toBeNull();
     });
+
 
     it('should synchronize company roles with backend memberships', async () => {
         context.selectedCompanyId.set(3);
