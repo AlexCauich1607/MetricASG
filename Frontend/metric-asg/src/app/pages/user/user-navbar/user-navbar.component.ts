@@ -86,7 +86,24 @@ export class UserNavbarComponent implements OnInit {
         return '';
     }
   }
+  getRoleLabel(role: CompanyRole): string {
+    switch (role) {
+      case CompanyRole.COMPANY_ADMIN:
+        return 'Administrador empresarial';
 
+      case CompanyRole.ASG_MANAGER:
+        return 'Responsable ASG';
+
+      case CompanyRole.COLLABORATOR:
+        return 'Colaborador';
+
+      case CompanyRole.AUDITOR:
+        return 'Auditor';
+
+      default:
+        return 'Rol no disponible';
+    }
+  }
   loadNotifications(): void {
     this.notificationsLoading = true;
     this.notificationsError = false;

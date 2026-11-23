@@ -277,18 +277,41 @@ describe('UserNavbarComponent', () => {
 
     fixture.detectChanges();
 
-    const select: HTMLSelectElement =
-      fixture.nativeElement.querySelector('#selected-company');
+    const trigger: HTMLButtonElement =
+      fixture.nativeElement.querySelector(
+        '.company-context__trigger'
+      );
 
-    expect(select).not.toBeNull();
-    expect(select.options.length).toBe(2);
-    expect(select.value).toBe('3');
+    const options: NodeListOf<HTMLButtonElement> =
+      fixture.nativeElement.querySelectorAll(
+        '.company-context__option'
+      );
 
-    select.value = '7';
-    select.dispatchEvent(new Event('change'));
+    expect(trigger).not.toBeNull();
+    expect(trigger.textContent).toContain('Empresa A');
+    expect(trigger.textContent).toContain('Administrador empresarial');
 
-    expect(companyContext.selectCompany).toHaveBeenCalledWith(7);
+    expect(options.length).toBe(2);
+
+    expect(options[0].textContent).toContain('Empresa A');
+    expect(options[0].textContent).toContain('Administrador empresarial');
+    expect(options[0].getAttribute('aria-current')).toBe('true');
+
+    expect(options[1].textContent).toContain('Empresa B');
+    expect(options[1].textContent).toContain('Colaborador');
+
+    options[1].click();
+    fixture.detectChanges();
+
+    expect(companyContext.selectCompany)
+      .toHaveBeenCalledOnceWith(7);
+
     expect(companyContext.selectedCompanyId()).toBe(7);
+
+    expect(trigger.textContent).toContain('Empresa B');
+    expect(trigger.textContent).toContain('Colaborador');
+
+    expect(options[1].getAttribute('aria-current')).toBe('true');
   });
 
   it('should prevent changing companies while evaluating', () => {
@@ -476,26 +499,27 @@ describe('UserNavbarComponent', () => {
 
   describe('HU-054 T06 - Creación empresarial', () => {
 
-    it('should display the create company button without memberships', () => {
+    it('should display the create company option without memberships', () => {
       fixture.detectChanges();
 
-      const button: HTMLButtonElement | null =
-        fixture.nativeElement.querySelector(
-          'button[aria-label="Crear una nueva empresa"]'
-        );
+      const trigger: HTMLButtonElement =
+        fixture.nativeElement.querySelector('.company-context__trigger');
+
+      const button: HTMLButtonElement =
+        fixture.nativeElement.querySelector('.company-context__create');
 
       expect(companyContext.memberships()).toEqual([]);
+      expect(trigger).not.toBeNull();
+      expect(trigger.textContent).toContain('Sin empresa');
       expect(button).not.toBeNull();
-      expect(button?.disabled).toBeFalse();
+      expect(button.disabled).toBeFalse();
     });
 
     it('should open the company creation dialog', () => {
       fixture.detectChanges();
 
       const button: HTMLButtonElement =
-        fixture.nativeElement.querySelector(
-          'button[aria-label="Crear una nueva empresa"]'
-        );
+        fixture.nativeElement.querySelector('.company-context__create');
 
       button.click();
 
@@ -550,11 +574,13 @@ describe('UserNavbarComponent', () => {
 
       fixture.detectChanges();
 
-      const button: HTMLButtonElement =
-        fixture.nativeElement.querySelector(
-          'button[aria-label="Crear una nueva empresa"]'
-        );
+      const trigger: HTMLButtonElement =
+        fixture.nativeElement.querySelector('.company-context__trigger');
 
+      const button: HTMLButtonElement =
+        fixture.nativeElement.querySelector('.company-context__create');
+
+      expect(trigger.disabled).toBeTrue();
       expect(button.disabled).toBeTrue();
 
       component.openCreateCompany();
@@ -563,5 +589,113 @@ describe('UserNavbarComponent', () => {
     });
 
   });
+  it('should distinguish membership loading errors from an empty company list', () => {
+    companyContext.memberships.set([]);
+    companyContext.error.set(true);
 
+    fixture.detectChanges();
+
+    const element: HTMLElement = fixture.nativeElement;
+
+    expect(element.textContent).toContain(
+      'No se pudieron cargar las empresas'
+    );
+
+    expect(
+      element.querySelector('.company-context__trigger')
+    ).toBeNull();
+
+    expect(
+      element.querySelector('.company-context__create')
+    ).toBeNull();
+
+    companyContext.error.set(false);
+    fixture.detectChanges();
+
+    const trigger: HTMLButtonElement | null =
+      element.querySelector('.company-context__trigger');
+
+    expect(trigger).not.toBeNull();
+    expect(trigger?.textContent).toContain('Sin empresa');
+
+    expect(
+      element.querySelector('.company-context__create')
+    ).not.toBeNull();
+  });
+  it('should show loading state without displaying company actions', () => {
+    companyContext.memberships.set([]);
+    companyContext.loading.set(true);
+
+    fixture.detectChanges();
+
+    const element: HTMLElement = fixture.nativeElement;
+
+    expect(element.textContent).toContain('Cargando empresas...');
+
+    expect(
+      element.querySelector('.company-context__trigger')
+    ).toBeNull();
+
+    expect(
+      element.querySelector('.company-context__create')
+    ).toBeNull();
+
+    companyContext.loading.set(false);
+    fixture.detectChanges();
+
+    const trigger: HTMLButtonElement | null =
+      element.querySelector('.company-context__trigger');
+
+    expect(trigger).not.toBeNull();
+    expect(trigger?.textContent).toContain('Sin empresa');
+  });
+  it('should display three companies with their respective roles', () => {
+    companyContext.memberships.set([
+      {
+        membership_id: 10,
+        company_id: 3,
+        company_name: 'Empresa A',
+        role: CompanyRole.COMPANY_ADMIN,
+        joined_at: '2026-11-09T10:00:00'
+      },
+      {
+        membership_id: 18,
+        company_id: 7,
+        company_name: 'Empresa B',
+        role: CompanyRole.COLLABORATOR,
+        joined_at: '2026-11-09T10:30:00'
+      },
+      {
+        membership_id: 22,
+        company_id: 9,
+        company_name: 'Empresa C',
+        role: CompanyRole.AUDITOR,
+        joined_at: '2026-11-09T11:00:00'
+      }
+    ]);
+
+    companyContext.selectedCompanyId.set(3);
+
+    fixture.detectChanges();
+
+    const options: NodeListOf<HTMLButtonElement> =
+      fixture.nativeElement.querySelectorAll(
+        '.company-context__option'
+      );
+
+    expect(options.length).toBe(3);
+
+    expect(options[0].textContent).toContain('Empresa A');
+    expect(options[0].textContent).toContain('Administrador empresarial');
+
+    expect(options[1].textContent).toContain('Empresa B');
+    expect(options[1].textContent).toContain('Colaborador');
+
+    expect(options[2].textContent).toContain('Empresa C');
+    expect(options[2].textContent).toContain('Auditor');
+
+    expect(options[0].getAttribute('aria-current')).toBe('true');
+    expect(options[1].getAttribute('aria-current')).toBeNull();
+    expect(options[2].getAttribute('aria-current')).toBeNull();
+  });
 });
