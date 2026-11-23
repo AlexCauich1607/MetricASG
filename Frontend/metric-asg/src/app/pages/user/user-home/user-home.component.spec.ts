@@ -10,12 +10,16 @@ import { CompanyContextService } from '../../../services/company-context.service
 import { UserService } from '../../../services/user.service';
 import { ResultEvaluation } from '../../../models/evaluation_result';
 
+import { CompanyInvitationService } from '../../../services/company-invitation.service';
+
 describe('UserHomeComponent', () => {
   let component: UserHomeComponent;
   let fixture: ComponentFixture<UserHomeComponent>;
 
   let evaluationService: jasmine.SpyObj<EvaluationService>;
   let userService: jasmine.SpyObj<UserService>;
+  let invitationService: jasmine.SpyObj<CompanyInvitationService>;
+  let companyContext: CompanyContextService;
   let selectedCompanyId: ReturnType<typeof signal<number | null>>;
 
   const companyAResults = {
@@ -62,7 +66,10 @@ describe('UserHomeComponent', () => {
       'UserService',
       ['getMe']
     );
-
+    invitationService = jasmine.createSpyObj<CompanyInvitationService>(
+      'CompanyInvitationService',
+      ['acceptInvitation']
+    );
     await TestBed.configureTestingModule({
       imports: [UserHomeComponent],
       providers: [
@@ -76,15 +83,25 @@ describe('UserHomeComponent', () => {
           useValue: userService
         },
         {
+          provide: CompanyInvitationService,
+          useValue: invitationService
+        },
+        {
           provide: CompanyContextService,
-          useValue: { selectedCompanyId }
+          useValue: {
+            selectedCompanyId,
+            memberships: signal([]),
+            loading: signal(false),
+            error: signal(false),
+            refreshMemberships: jasmine.createSpy('refreshMemberships')
+          }
         }
       ]
     }).compileComponents();
 
     fixture = TestBed.createComponent(UserHomeComponent);
     component = fixture.componentInstance;
-
+    companyContext = TestBed.inject(CompanyContextService);
     // Evitar que la carga del perfil interfiera con estas pruebas.
     spyOn(component, 'loadUser');
 
@@ -251,5 +268,51 @@ describe('UserHomeComponent', () => {
 
     expect(component.resultsStatus).toBe('error');
   });
+  it('should retry membership synchronization without resending the invitation', () => {
+    const acceptedMembership = {
+      membership_id: 25,
+      company_id: 15,
+      company_name: 'Empresa Invitada',
+      role: 'COLLABORATOR',
+      joined_at: '2026-11-23T12:00:00'
+    };
 
+    const contextMock = companyContext as unknown as {
+      selectedCompanyId: ReturnType<typeof signal<number | null>>;
+      memberships: ReturnType<typeof signal<any[]>>;
+      error: ReturnType<typeof signal<boolean>>;
+      refreshMemberships: jasmine.Spy;
+    };
+
+    invitationService.acceptInvitation.and.returnValue(of({}));
+
+    contextMock.refreshMemberships.and.callFake(() => {
+      if (contextMock.refreshMemberships.calls.count() === 1) {
+        contextMock.error.set(true);
+        return of([]);
+      }
+
+      contextMock.error.set(false);
+      contextMock.memberships.set([acceptedMembership]);
+      contextMock.selectedCompanyId.set(15);
+
+      return of([acceptedMembership]);
+    });
+
+    component.invitationToken = 'token-de-prueba';
+    component.acceptInvitation();
+
+    expect(invitationService.acceptInvitation).toHaveBeenCalledTimes(1);
+    expect(contextMock.refreshMemberships).toHaveBeenCalledTimes(1);
+    expect(component.invitationAcceptedPendingSync).toBeTrue();
+    expect(component.invitationError).toContain('actualizar tus empresas');
+
+    component.syncAcceptedInvitation();
+
+    expect(invitationService.acceptInvitation).toHaveBeenCalledTimes(1);
+    expect(contextMock.refreshMemberships).toHaveBeenCalledTimes(2);
+    expect(component.invitationAcceptedPendingSync).toBeFalse();
+    expect(component.invitationSuccess).toBeTrue();
+    expect(contextMock.selectedCompanyId()).toBe(15);
+  });
 });

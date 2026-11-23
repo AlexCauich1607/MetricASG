@@ -1,6 +1,6 @@
 
 import { Injectable, computed, signal } from '@angular/core';
-import { finalize } from 'rxjs';
+import { catchError, finalize, Observable, of, tap } from 'rxjs';
 
 import { CompanyMembershipService } from './company-membership.service';
 import {
@@ -68,55 +68,57 @@ export class CompanyContextService {
   ) { }
 
   loadMemberships(preferredCompanyId?: number): void {
+    this.refreshMemberships(preferredCompanyId).subscribe();
+  }
+
+  refreshMemberships(
+    preferredCompanyId?: number
+  ): Observable<UserCompanyMembership[]> {
     this.loading.set(true);
     this.error.set(false);
 
-    this.membershipService.getMyMemberships()
-      .pipe(finalize(() => this.loading.set(false)))
-      .subscribe({
-        next: memberships => {
-          this.memberships.set(memberships);
+    return this.membershipService.getMyMemberships().pipe(
+      tap(memberships => {
+        this.memberships.set(memberships);
 
-          const preferredMembership = memberships.find(
-            membership => membership.company_id === preferredCompanyId
-          );
+        const preferredMembership = memberships.find(
+          membership => membership.company_id === preferredCompanyId
+        );
 
-          if (preferredMembership) {
-            this.selectedCompanyId.set(
-              preferredMembership.company_id
-            );
-
-            this.persistSelectedCompanyId(
-              preferredMembership.company_id
-            );
-
-            return;
-          }
-
-          const selectedId = this.selectedCompanyId();
-
-          if (
-            selectedId === null ||
-            !memberships.some(
-              membership => membership.company_id === selectedId
-            )
-          ) {
-            const nextCompanyId =
-              memberships[0]?.company_id ?? null;
-
-            this.selectedCompanyId.set(nextCompanyId);
-            this.persistSelectedCompanyId(nextCompanyId);
-          } else {
-            this.persistSelectedCompanyId(selectedId);
-          }
-        },
-        error: () => {
-          this.memberships.set([]);
-          this.selectedCompanyId.set(null);
-          this.error.set(true);
-          this.persistSelectedCompanyId(null);
+        if (preferredMembership) {
+          this.selectedCompanyId.set(preferredMembership.company_id);
+          this.persistSelectedCompanyId(preferredMembership.company_id);
+          return;
         }
-      });
+
+        const selectedId = this.selectedCompanyId();
+
+        if (
+          selectedId === null ||
+          !memberships.some(
+            membership => membership.company_id === selectedId
+          )
+        ) {
+          const nextCompanyId = memberships[0]?.company_id ?? null;
+
+          this.selectedCompanyId.set(nextCompanyId);
+          this.persistSelectedCompanyId(nextCompanyId);
+        } else {
+          this.persistSelectedCompanyId(selectedId);
+        }
+      }),
+      catchError(() => {
+        this.memberships.set([]);
+        this.selectedCompanyId.set(null);
+        this.error.set(true);
+        this.persistSelectedCompanyId(null);
+
+        return of([]);
+      }),
+      finalize(() => {
+        this.loading.set(false);
+      })
+    );
   }
 
   selectCompany(companyId: number): void {

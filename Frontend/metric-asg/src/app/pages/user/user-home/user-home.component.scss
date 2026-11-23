@@ -18,13 +18,13 @@
 
 
 
-.text-gray{
+.text-gray {
     color: #a1a1a1;
 }
 
 .chart-container {
     position: relative;
-    height: 65vh; 
+    height: 65vh;
     width: 100%;
     padding: 10px;
 }
@@ -63,15 +63,17 @@
 
 @media (min-width: 1400px) {
     .chart-container {
-        height: 60vh; 
+        height: 60vh;
         width: 100%;
         max-width: 1400px;
         margin: 0 auto;
     }
 }
-.color-bg{
+
+.color-bg {
     background-color: #5e97320f;
 }
+
 .sw-gris {
     color: #7c8c6f;
 
@@ -79,8 +81,98 @@
 
 /* HU-049 / T01: permitir que el contenido principal
    se ajuste al ancho disponible del viewport. */
-:host .sw-split-ly > div {
-  min-width: 0;
-  width: 100%;
-  box-sizing: border-box;
+:host .sw-split-ly>div {
+    min-width: 0;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.company-onboarding {
+    width: 100%;
+    max-width: 900px;
+    margin-inline: auto;
+
+    &__actions {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 16px;
+        margin-top: 24px;
+    }
+
+    &__card {
+        min-width: 0;
+        padding: 24px;
+        border: 1px solid var(--bs-border-color);
+        border-radius: 12px;
+        background: #fff;
+
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+
+        h4 {
+            font-size: 1.125rem;
+            font-weight: 600;
+            margin: 0;
+        }
+
+        p {
+            margin: 0;
+            flex: 1;
+        }
+    }
+}
+
+@media (max-width: 767px) {
+    .company-onboarding {
+        &__actions {
+            grid-template-columns: minmax(0, 1fr);
+        }
+
+        &__card {
+            padding: 16px;
+        }
+    }
+}
+
+.company-onboarding {
+    &__invitation {
+        width: 100%;
+        min-width: 0;
+
+        form {
+            width: 100%;
+        }
+
+        .form-control {
+            width: 100%;
+            min-width: 0;
+            border-radius: 8px;
+        }
+
+        .asg-btn {
+            max-width: 100%;
+            white-space: normal;
+            text-align: center;
+        }
+    }
+
+    &__success {
+        display: flex;
+        align-items: flex-start;
+        gap: 8px;
+        color: var(--asg-color-brand-accent, #5d9732);
+        font-size: 0.875rem;
+        margin-bottom: 0;
+    }
+}
+
+@media (max-width: 767px) {
+    .company-onboarding__invitation {
+        .asg-btn {
+            width: 100%;
+            justify-content: center;
+        }
+    }
 }

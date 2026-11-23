@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { of } from 'rxjs';
+import { of, Subject } from 'rxjs';
 
 import { CompanyContextService } from './company-context.service';
 import { CompanyMembershipService } from './company-membership.service';
@@ -187,5 +187,30 @@ describe('CompanyContextService', () => {
     expect(
       sessionStorage.getItem('metricasg-selected-company-id')
     ).toBe('7');
+  });
+  it('should track loading state during an asynchronous refresh', () => {
+    const pendingMemberships =
+      new Subject<UserCompanyMembership[]>();
+
+    membershipService.getMyMemberships.and.returnValue(
+      pendingMemberships.asObservable()
+    );
+
+    let receivedMemberships: UserCompanyMembership[] | undefined;
+
+    service.refreshMemberships().subscribe(value => {
+      receivedMemberships = value;
+    });
+
+    expect(service.loading()).toBeTrue();
+    expect(service.error()).toBeFalse();
+
+    pendingMemberships.next(memberships);
+    pendingMemberships.complete();
+
+    expect(receivedMemberships).toEqual(memberships);
+    expect(service.memberships()).toEqual(memberships);
+    expect(service.selectedCompanyId()).toBe(3);
+    expect(service.loading()).toBeFalse();
   });
 });
