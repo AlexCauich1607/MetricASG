@@ -63,7 +63,6 @@ def create_peer(
         name="Benchmark",
         lastname="Test",
         position="Tester",
-        company_name=f"Benchmark Company {identifier}",
         email=f"benchmark-{identifier}@test.local",
         phone="9999999999",
         password="test-password",
@@ -75,13 +74,15 @@ def create_peer(
     db_session.flush()
 
     company = Company(
-        name=user.company_name,
+        name=f"Benchmark Company {identifier}",
         sector_id=(
-            sector_id if sector_id is not None
+            sector_id
+            if sector_id is not None
             else data["sector"].id
         ),
         size_id=(
-            size_id if size_id is not None
+            size_id
+            if size_id is not None
             else data["size"].id
         ),
         active=active,
@@ -343,7 +344,6 @@ def test_benchmark_counts_multiuser_company_only_once(
         name="Second",
         lastname="Member",
         position="Collaborator",
-        company_name=company.name,
         email=f"multiuser-{uuid4().hex}@test.local",
         phone="9999999999",
         password="test-password",

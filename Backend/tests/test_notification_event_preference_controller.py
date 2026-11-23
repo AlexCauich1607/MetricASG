@@ -22,7 +22,6 @@ def preference_api_users(db_session):
     for number in (1, 2):
         user = User(
             name=f"Preference API User {number}",
-            company_name="Test Company",
             email=f"preference-api-{number}@example.com",
             password="test-password-hash",
         )

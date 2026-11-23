@@ -1,7 +1,7 @@
 import uuid
 from uuid import uuid4
 from unittest.mock import patch
-from datetime import date
+from datetime import date, datetime, timedelta
 
 import pytest
 from fastapi import HTTPException
@@ -162,7 +162,6 @@ def create_evaluation_data(db_session):
         name="Evaluation",
         lastname="Test",
         position="Tester",
-        company_name="Evaluation Test Company",
         email="evaluation-test@test.local",
         phone="9999999999",
         password="test-password",
@@ -174,9 +173,7 @@ def create_evaluation_data(db_session):
     db_session.flush()
 
     company = Company(
-        name=user.company_name,
-        sector_id=user.company_sector_id,
-        size_id=user.company_size_id,
+        name="Evaluation Test Company",
         active=True,
     )
 
@@ -800,7 +797,7 @@ def test_save_draft_returns_409_on_duplicate_draft(db_session):
                 (),
                 {
                     "constraint_name":
-                    "uq_evaluations_user_methodology_draft"
+                    "uq_evaluations_company_user_methodology_draft"
                 },
             )()
 
@@ -855,14 +852,12 @@ def test_evaluation_row_lock_prevents_concurrent_access():
             user_id = connection.execute(
                 text(
                     """
-                    INSERT INTO users (
-                        company_name,
+                   INSERT INTO users (
                         email,
                         password,
                         role
                     )
                     VALUES (
-                        'Concurrency Test Company',
                         :email,
                         'test-password',
                         'USER'
@@ -1050,7 +1045,6 @@ def test_get_draft_does_not_return_another_users_draft(db_session):
         name="Other",
         lastname="User",
         position="Tester",
-        company_name="Other Test Company",
         email="other-evaluation-user@test.local",
         phone="9999999998",
         password="test-password",
@@ -1062,7 +1056,7 @@ def test_get_draft_does_not_return_another_users_draft(db_session):
     db_session.flush()
 
     other_company = Company(
-        name=other_user.company_name,
+        name="Other Test Company",
         active=True,
     )
 
@@ -1758,7 +1752,6 @@ def test_get_results_by_id_rejects_other_user(db_session):
         name="Other",
         lastname="User",
         position="Tester",
-        company_name="Other Company",
         email="other-results-user@test.local",
         phone="9999999998",
         password="test-password",
@@ -1857,7 +1850,6 @@ def test_results_by_id_endpoint_rejects_other_user(
         name="Other",
         lastname="User",
         position="Tester",
-        company_name="Other Company",
         email="other-results-endpoint@test.local",
         phone="9999999998",
         password="test-password",
@@ -2588,3 +2580,128 @@ def test_submit_evaluation_enforces_company_roles(
         )
 
         assert evaluations == []
+
+
+@pytest.mark.parametrize("operation", ["draft", "submit"])
+def test_evaluation_rejects_company_before_next_cycle(
+    db_session,
+    operation,
+):
+    data = create_evaluation_data(db_session)
+    service = EvaluationService(db_session)
+
+    company = data["company"]
+    company.biannual_evaluation = True
+    company.next_evaluation = datetime.combine(
+        date.today() + timedelta(days=1),
+        datetime.min.time(),
+    )
+    db_session.flush()
+
+    payload = {
+        "company_id": company.id,
+        "responses": (
+            build_responses(data)[:1]
+            if operation == "draft"
+            else build_responses(data)
+        ),
+    }
+
+    with pytest.raises(HTTPException) as exc_info:
+        if operation == "draft":
+            service.save_draft(payload, data["user"].id)
+        else:
+            service.submit_evaluation(payload, data["user"].id)
+
+    assert exc_info.value.status_code == 409
+
+    assert (
+        db_session.query(Evaluation)
+        .filter(Evaluation.company_id == company.id)
+        .count()
+        == 0
+    )
+
+
+@pytest.mark.parametrize("operation", ["draft", "submit"])
+def test_evaluation_allows_company_when_next_cycle_arrives(
+    db_session,
+    operation,
+):
+    data = create_evaluation_data(db_session)
+    service = EvaluationService(db_session)
+
+    company = data["company"]
+    company.biannual_evaluation = True
+    company.next_evaluation = datetime.combine(
+        date.today(),
+        datetime.min.time(),
+    )
+    db_session.flush()
+
+    payload = {
+        "company_id": company.id,
+        "responses": (
+            build_responses(data)[:1]
+            if operation == "draft"
+            else build_responses(data)
+        ),
+    }
+
+    if operation == "draft":
+        result = service.save_draft(
+            payload,
+            data["user"].id,
+        )
+        expected_status = EvaluationStatus.DRAFT
+    else:
+        result = service.submit_evaluation(
+            payload,
+            data["user"].id,
+        )
+        expected_status = EvaluationStatus.COMPLETED
+
+    evaluation = db_session.get(
+        Evaluation,
+        result["evaluation_id"],
+    )
+
+    assert evaluation is not None
+    assert evaluation.company_id == company.id
+    assert evaluation.status == expected_status
+
+def test_completed_evaluation_blocks_another_company_submission(
+    db_session,
+):
+    data = create_evaluation_data(db_session)
+    service = EvaluationService(db_session)
+
+    payload = {
+        "company_id": data["company"].id,
+        "responses": build_responses(data),
+    }
+
+    first_result = service.submit_evaluation(
+        payload,
+        data["user"].id,
+    )
+
+    with pytest.raises(HTTPException) as exc_info:
+        service.submit_evaluation(
+            payload,
+            data["user"].id,
+        )
+
+    assert exc_info.value.status_code == 409
+
+    completed = (
+        db_session.query(Evaluation)
+        .filter(
+            Evaluation.company_id == data["company"].id,
+            Evaluation.status == EvaluationStatus.COMPLETED,
+        )
+        .all()
+    )
+
+    assert len(completed) == 1
+    assert completed[0].id == first_result["evaluation_id"]

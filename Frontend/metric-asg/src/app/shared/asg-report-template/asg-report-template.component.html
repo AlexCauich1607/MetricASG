@@ -12,7 +12,7 @@
             <h1>Reporte de desempeño ASG</h1>
 
             <p class="report-company">
-                {{ report.company.company_name }}
+                {{ report.company.name }}
             </p>
 
             <div class="report-meta">
@@ -348,7 +348,7 @@
 
             <p>
                 La evaluación ASG de
-                <strong>{{ report.company.company_name }}</strong>
+                <strong>{{ report.company.name }}</strong>
                 obtuvo una puntuación global de
                 <strong>
                     {{ report.evaluation.global_score | number:'1.1-1' }}

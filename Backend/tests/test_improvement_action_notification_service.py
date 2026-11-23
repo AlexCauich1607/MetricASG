@@ -249,7 +249,6 @@ def test_improvement_notification_isolated_between_companies(
     other_user = User(
         name="Other",
         lastname="Administrator",
-        company_name=other_company.name,
         email=f"other-admin-{unique_id}@test.local",
         password="test-password",
         role=UserRole.USER,

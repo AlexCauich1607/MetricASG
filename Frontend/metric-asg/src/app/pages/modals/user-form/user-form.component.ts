@@ -6,7 +6,7 @@ import {
   ReactiveFormsModule,
   FormsModule
 } from '@angular/forms';
-import { UserRegister } from '../../../models/auth';
+import { AdminRegister } from '../../../models/auth';
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 import { AuthService } from '../../../services/auth.service';
 
@@ -28,9 +28,9 @@ export class UserFormComponent {
 
   constructor(
     private fb: FormBuilder,
-    private dialogRef: MatDialogRef<UserRegister>,
+    private dialogRef: MatDialogRef<AdminRegister>,
     private authService: AuthService,
-    @Inject(MAT_DIALOG_DATA) public data?: UserRegister
+    @Inject(MAT_DIALOG_DATA) public data?: AdminRegister
   ) {
     this.form = this.fb.group({
       name: [data?.name || '', [Validators.required, Validators.minLength(3)]],
@@ -58,7 +58,7 @@ export class UserFormComponent {
 
     this.saving = true;
 
-    const result: UserRegister = {
+    const result: AdminRegister = {
       ...this.form.value
     };
     this.authService.createAdmin(result).subscribe({

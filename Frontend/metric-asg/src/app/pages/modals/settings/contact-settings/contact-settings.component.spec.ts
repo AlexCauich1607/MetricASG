@@ -26,18 +26,13 @@ describe('ContactSettingsComponent', () => {
       name: 'Usuario',
       lastname: 'Prueba',
       position: 'Administrador',
-      company_name: 'Empresa de prueba',
-      company_sector_id: null,
-      company_size_id: null,
       email: 'test@example.com',
       phone: '',
       role: 'user',
       profile_photo: null,
       joined: '2026-01-01',
       last_login: '2026-01-01',
-      biannual_evaluation: false,
       active: true,
-      next_evaluation: '2026-07-01'
     };
 
     component.tel_bf = component.user.phone;

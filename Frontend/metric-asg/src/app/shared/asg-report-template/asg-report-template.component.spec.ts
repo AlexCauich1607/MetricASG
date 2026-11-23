@@ -3,7 +3,6 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { AsgReportTemplateComponent } from './asg-report-template.component';
 import { AsgReport } from '../../models/asg_report';
-import { User } from '../../models/user';
 import { AsgReportPaginatorService } from '../../services/asg-report-paginator.service';
 import { EvaluationComparison } from '../../models/evaluation_comparison';
 
@@ -13,8 +12,8 @@ describe('AsgReportTemplateComponent', () => {
     const report: AsgReport = {
         company: {
             id: 1,
-            company_name: 'Empresa de prueba'
-        } as User,
+            name: 'Empresa de prueba'
+        },
 
         evaluation: {
             evaluation_id: 20,

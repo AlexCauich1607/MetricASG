@@ -13,6 +13,8 @@ import { toObservable, takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { EMPTY, switchMap, tap, catchError } from 'rxjs';
 import { CompanyContextService } from '../../../services/company-context.service';
 import { UiStateComponent } from '../../../shared/ui-state/ui-state.component';
+import { CompanyMembershipService } from '../../../services/company-membership.service';
+import { CompanyDetailResponse } from '../../../models/company_membership';
 
 Chart.register(...registerables);
 
@@ -46,6 +48,41 @@ export class UserHomeComponent {
 
   user: User | null = null;
 
+  company: CompanyDetailResponse | null = null;
+  companyLoading = true;
+  companyError = false;
+
+  get canStartEvaluation(): boolean {
+    const company = this.company;
+
+    if (
+      this.companyLoading ||
+      this.companyError ||
+      !company ||
+      !company.active
+    ) {
+      return false;
+    }
+
+    if (!company.biannual_evaluation) {
+      return true;
+    }
+
+    if (!company.next_evaluation) {
+      return false;
+    }
+
+    // Comparación por fecha calendario, sin depender de la hora.
+    const today = new Date();
+    const todayDate = [
+      today.getFullYear(),
+      String(today.getMonth() + 1).padStart(2, '0'),
+      String(today.getDate()).padStart(2, '0')
+    ].join('-');
+
+    return company.next_evaluation.slice(0, 10) <= todayDate;
+  }
+
   loadingChart = false;
   resultsStatus: 'loading' | 'error' | 'empty' | 'success' = 'loading';
 
@@ -55,8 +92,9 @@ export class UserHomeComponent {
     private router: Router,
     private dialog: MatDialog,
     private vcr: ViewContainerRef,
-    private companyContext: CompanyContextService,
-    private destroyRef: DestroyRef
+    public companyContext: CompanyContextService,
+    private destroyRef: DestroyRef,
+    private companyMembershipService: CompanyMembershipService,
   ) {
 
     toObservable(this.companyContext.selectedCompanyId)
@@ -104,7 +142,39 @@ export class UserHomeComponent {
         this.getPeriodo(data.date);
         this.cargarGrafica();
       });
+    toObservable(this.companyContext.selectedCompanyId)
+      .pipe(
+        tap(() => {
+          this.company = null;
+          this.companyLoading = true;
+          this.companyError = false;
+          this.evaluationDate = '';
+        }),
+        switchMap(companyId => {
+          if (companyId === null) {
+            this.companyLoading = false;
+            return EMPTY;
+          }
 
+          return this.companyMembershipService.getCompany(companyId).pipe(
+            catchError(error => {
+              console.error('Error al consultar empresa:', error);
+              this.companyError = true;
+              this.companyLoading = false;
+              return EMPTY;
+            })
+          );
+        }),
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe(company => {
+        this.company = company;
+        this.companyLoading = false;
+
+        this.evaluationDate = company.next_evaluation
+          ? this.formatDateDDMMYYString(company.next_evaluation)
+          : '';
+      });
   }
 
   private clearResultsState(): void {
@@ -129,27 +199,13 @@ export class UserHomeComponent {
   }
 
 
-  loadUser() {
+  loadUser(): void {
     this.userService.getMe().subscribe({
-      next: (value) => {
+      next: value => {
         this.user = value;
-
-        if (
-          this.formatDateDDMMYYString(this.user.joined) ===
-          this.formatDateDDMMYYString(this.user.next_evaluation)
-        ) {
-          SessionService.setSessionItem('first-time', true);
-        } else {
-          SessionService.setSessionItem('first-time', false);
-        }
-
-        console.log(this.user.joined);
-        console.log(this.user.next_evaluation);
-
-        this.getNextEvaluation();
       },
-      error: (err) => {
-        console.log(err);
+      error: err => {
+        console.error('Error al cargar el perfil:', err);
       }
     });
   }
@@ -219,10 +275,6 @@ export class UserHomeComponent {
     this.anioAnterior = before.toLocaleString('es-ES', { year: 'numeric' });
   }
 
-  getNextEvaluation() {
-    const future = new Date(this.user?.next_evaluation ?? '');
-    this.evaluationDate = this.formatDateDDMMYY(future);
-  }
   formatDateDDMMYY(date: Date): string {
     const day = date.getDate().toString().padStart(2, '0');
     const month = (date.getMonth() + 1).toString().padStart(2, '0');
@@ -238,8 +290,12 @@ export class UserHomeComponent {
 
     return `${day}/${month}/${year}`;
   }
-  goEvaluation() {
-    if (!this.user?.biannual_evaluation) {
+
+  goEvaluation(): void {
+    if (
+      this.companyContext.selectedCompanyId() !== null &&
+      this.canStartEvaluation
+    ) {
       this.router.navigate(['/user/evaluation']);
     }
   }

@@ -14,6 +14,9 @@ from app.services.token_service import get_current_user
 from tests.test_evaluation import create_evaluation_data
 from datetime import date, datetime
 
+from app.models.company_membership_model import CompanyMembership
+from app.models.company_model import Company
+
 @pytest.fixture
 def notification_user(db_session):
     data = create_evaluation_data(db_session)
@@ -99,11 +102,25 @@ def test_get_only_internal_notifications(
     )
 
     notification_user.active = True
-    notification_user.next_evaluation = datetime(2027, 5, 5)
+    company = (
+        db_session.query(Company)
+        .join(
+            CompanyMembership,
+            CompanyMembership.company_id == Company.id,
+        )
+        .filter(
+            CompanyMembership.user_id == notification_user.id,
+        )
+        .one()
+    )
+
+    company.biannual_evaluation = True
+    company.next_evaluation = datetime(2027, 5, 5)
     db_session.flush()
 
     internal = ReevaluationReminder(
         user_id=notification_user.id,
+        company_id=company.id,
         target_date=date(2027, 5, 5),
         reminder_type=ReminderType.FIRST,
         channel=ReminderChannel.IN_APP,
@@ -111,6 +128,7 @@ def test_get_only_internal_notifications(
 
     email = ReevaluationReminder(
         user_id=notification_user.id,
+        company_id=company.id,
         target_date=date(2027, 5, 5),
         reminder_type=ReminderType.FIRST,
         channel=ReminderChannel.EMAIL,
@@ -139,7 +157,6 @@ def test_notifications_are_isolated_by_user(
 
     other_user = User(
         name="Other User",
-        company_name="Other Company",
         email="other-notification-user@example.com",
         password="test-password-hash",
     )
@@ -177,10 +194,24 @@ def test_previous_cycle_notifications_are_hidden(
     )
 
     notification_user.active = True
-    notification_user.next_evaluation = datetime(2027, 11, 5)
+    company = (
+        db_session.query(Company)
+        .join(
+            CompanyMembership,
+            CompanyMembership.company_id == Company.id,
+        )
+        .filter(
+            CompanyMembership.user_id == notification_user.id,
+        )
+        .one()
+    )
+
+    company.biannual_evaluation = True
+    company.next_evaluation = datetime(2027, 11, 5)
 
     previous_reminder = ReevaluationReminder(
         user_id=notification_user.id,
+        company_id=company.id,
         target_date=date(2027, 5, 5),
         reminder_type=ReminderType.DUE,
         channel=ReminderChannel.IN_APP,

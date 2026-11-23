@@ -88,7 +88,6 @@ def test_concurrent_evidence_creation_respects_limit():
                 name="Concurrency",
                 lastname="Test",
                 position="Tester",
-                company_name="Concurrency Test Company",
                 email=f"concurrency-{unique_id}@test.local",
                 phone="9999999999",
                 password="test-password",

@@ -12,8 +12,44 @@ import {
   providedIn: 'root'
 })
 export class CompanyContextService {
+  private readonly selectedCompanyStorageKey =
+    'metricasg-selected-company-id';
+
+  private readStoredCompanyId(): number | null {
+    const stored = sessionStorage.getItem(
+      this.selectedCompanyStorageKey
+    );
+
+    if (stored === null) {
+      return null;
+    }
+
+    const companyId = Number(stored);
+
+    return Number.isSafeInteger(companyId) && companyId > 0
+      ? companyId
+      : null;
+  }
+
+  private persistSelectedCompanyId(
+    companyId: number | null
+  ): void {
+    if (companyId === null) {
+      sessionStorage.removeItem(
+        this.selectedCompanyStorageKey
+      );
+      return;
+    }
+
+    sessionStorage.setItem(
+      this.selectedCompanyStorageKey,
+      String(companyId)
+    );
+  }
   readonly memberships = signal<UserCompanyMembership[]>([]);
-  readonly selectedCompanyId = signal<number | null>(null);
+  readonly selectedCompanyId = signal<number | null>(
+    this.readStoredCompanyId()
+  );
   readonly loading = signal(false);
   readonly error = signal(false);
 
@@ -29,9 +65,9 @@ export class CompanyContextService {
 
   constructor(
     private membershipService: CompanyMembershipService
-  ) {}
+  ) { }
 
-  loadMemberships(): void {
+  loadMemberships(preferredCompanyId?: number): void {
     this.loading.set(true);
     this.error.set(false);
 
@@ -41,6 +77,22 @@ export class CompanyContextService {
         next: memberships => {
           this.memberships.set(memberships);
 
+          const preferredMembership = memberships.find(
+            membership => membership.company_id === preferredCompanyId
+          );
+
+          if (preferredMembership) {
+            this.selectedCompanyId.set(
+              preferredMembership.company_id
+            );
+
+            this.persistSelectedCompanyId(
+              preferredMembership.company_id
+            );
+
+            return;
+          }
+
           const selectedId = this.selectedCompanyId();
 
           if (
@@ -49,15 +101,20 @@ export class CompanyContextService {
               membership => membership.company_id === selectedId
             )
           ) {
-            this.selectedCompanyId.set(
-              memberships[0]?.company_id ?? null
-            );
+            const nextCompanyId =
+              memberships[0]?.company_id ?? null;
+
+            this.selectedCompanyId.set(nextCompanyId);
+            this.persistSelectedCompanyId(nextCompanyId);
+          } else {
+            this.persistSelectedCompanyId(selectedId);
           }
         },
         error: () => {
           this.memberships.set([]);
           this.selectedCompanyId.set(null);
           this.error.set(true);
+          this.persistSelectedCompanyId(null);
         }
       });
   }
@@ -67,9 +124,17 @@ export class CompanyContextService {
       membership => membership.company_id === companyId
     );
 
-    if (belongsToCompany) {
-      this.selectedCompanyId.set(companyId);
+    if (!belongsToCompany) {
+      return;
     }
+
+    this.selectedCompanyId.set(companyId);
+    this.persistSelectedCompanyId(companyId);
+  }
+
+  clearSelectedCompany(): void {
+    this.selectedCompanyId.set(null);
+    this.persistSelectedCompanyId(null);
   }
 
   clear(): void {
@@ -77,5 +142,6 @@ export class CompanyContextService {
     this.selectedCompanyId.set(null);
     this.loading.set(false);
     this.error.set(false);
+    this.persistSelectedCompanyId(null);
   }
 }

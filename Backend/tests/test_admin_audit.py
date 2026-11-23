@@ -30,7 +30,6 @@ def test_change_user_state_http_records_audit(
     admin = User(
         name="Audit Admin",
         email=f"admin-state-{unique_id}@test.local",
-        company_name="Test Company",
         password="test-password",
         role=UserRole.ADMIN,
         active=True,
@@ -39,7 +38,6 @@ def test_change_user_state_http_records_audit(
     target_user = User(
         name="Target User",
         email=f"target-state-{unique_id}@test.local",
-        company_name="Test Company",
         password="test-password",
         role=UserRole.USER,
         active=initial_state,
@@ -97,7 +95,6 @@ def test_change_user_state_http_rejects_non_admin(
     regular_user = User(
         name="Regular User",
         email=f"regular-state-{unique_id}@test.local",
-        company_name="Test Company",
         password="test-password",
         role=UserRole.USER,
         active=True,
@@ -106,7 +103,6 @@ def test_change_user_state_http_rejects_non_admin(
     target_user = User(
         name="Protected User",
         email=f"protected-state-{unique_id}@test.local",
-        company_name="Test Company",
         password="test-password",
         role=UserRole.USER,
         active=True,
@@ -147,7 +143,6 @@ def test_change_user_state_rolls_back_on_audit_failure(db_session):
     admin = User(
         name="Audit Admin",
         email=f"admin-rollback-{unique_id}@test.local",
-        company_name="Test Company",
         password="test-password",
         role=UserRole.ADMIN,
         active=True,
@@ -156,7 +151,6 @@ def test_change_user_state_rolls_back_on_audit_failure(db_session):
     target_user = User(
         name="Rollback Target",
         email=f"target-rollback-{unique_id}@test.local",
-        company_name="Test Company",
         password="test-password",
         role=UserRole.USER,
         active=True,
@@ -217,7 +211,6 @@ def test_audit_logs_http_rejects_non_admin(client, db_session):
     user = User(
         name="Regular User",
         email=f"audit-reader-{unique_id}@test.local",
-        company_name="Test Company",
         password=AuthService().hash_password("Password123!"),
         role=UserRole.USER,
         active=True,
@@ -251,7 +244,6 @@ def test_audit_logs_http_admin_filters_and_paginates(
     admin = User(
         name="Audit Admin",
         email=f"audit-admin-{unique_id}@test.local",
-        company_name="Test Company",
         password=AuthService().hash_password("Password123!"),
         role=UserRole.ADMIN,
         active=True,
@@ -363,7 +355,6 @@ def test_audit_logs_http_rejects_invalid_parameters(
     admin = User(
         name="Audit Validation Admin",
         email=f"audit-validation-{unique_id}@test.local",
-        company_name="Test Company",
         password=AuthService().hash_password("Password123!"),
         role=UserRole.ADMIN,
         active=True,
@@ -403,7 +394,6 @@ def test_audit_logs_http_rejects_company_admin(
     user = User(
         name="Company Admin",
         email=f"company-audit-{unique_id}@test.local",
-        company_name="Test Company",
         password=AuthService().hash_password("Password123!"),
         role=UserRole.USER,
         active=True,

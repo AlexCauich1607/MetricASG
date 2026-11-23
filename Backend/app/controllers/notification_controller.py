@@ -45,6 +45,12 @@ from app.models.notification_center_response import (
 from fastapi import HTTPException, status
 from sqlalchemy import update
 
+from app.models.company_model import Company
+from app.models.company_membership_model import (
+    CompanyMembership,
+    CompanyMembershipStatus,
+)
+
 class NotificationController:
 
     def __init__(self):
@@ -61,27 +67,40 @@ class NotificationController:
             current_user: User = Depends(get_current_user),
             db: Session = Depends(get_db),
         ):
-            if (
-                not current_user.active
-                or current_user.next_evaluation is None
-            ):
+            if not current_user.active:
                 return []
 
             return (
                 db.query(ReevaluationReminder)
+                .join(
+                    Company,
+                    Company.id == ReevaluationReminder.company_id,
+                )
+                .join(
+                    CompanyMembership,
+                    (CompanyMembership.company_id == Company.id)
+                    & (CompanyMembership.user_id == current_user.id),
+                )
                 .filter(
                     ReevaluationReminder.user_id == current_user.id,
-                    ReevaluationReminder.channel == ReminderChannel.IN_APP,
-                    ReevaluationReminder.target_date
-                    == current_user.next_evaluation.date(),
+                    Company.active.is_(True),
+                    CompanyMembership.status
+                    == CompanyMembershipStatus.ACTIVE,
+                    Company.next_evaluation.isnot(None),
+                    ReevaluationReminder.channel
+                    == ReminderChannel.IN_APP,
                     ReevaluationReminder.status.in_([
                         ReminderStatus.PENDING,
                         ReminderStatus.SENT,
                     ]),
+                    func.date(Company.next_evaluation) == ReevaluationReminder.target_date,
                 )
-                .order_by(ReevaluationReminder.created_at.desc())
+                .order_by(
+                    ReevaluationReminder.created_at.desc()
+                )
                 .all()
             )
+
 
         @self.router.get(
             "/preferences/me",

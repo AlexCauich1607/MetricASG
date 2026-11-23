@@ -12,13 +12,8 @@ from app.models.user_model import User
 
 from app.models.refresh_session_model import RefreshSession
 
-from app.core.roles import UserRole, CompanyRole
+from app.core.roles import UserRole
 
-from ..models.company_model import Company
-from ..models.company_membership_model import (
-    CompanyMembership,
-    CompanyMembershipStatus,
-)
 from app.services.audit_service import AuditService
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -125,6 +120,14 @@ class AuthService:
         if refresh_session.expires_at <= datetime.utcnow():
             raise HTTPException(401, "Refresh session expired")
 
+        user = db.get(User, refresh_session.user_id)
+
+        if user is None or not user.active:
+            raise HTTPException(
+                status_code=401,
+                detail="The account is not active",
+            )
+
         refresh_session.revoked_at = datetime.utcnow()
 
         new_access = self.create_token({
@@ -208,7 +211,6 @@ class AuthService:
             "user": {
                 "id": user.id,
                 "name": user.name,
-                "company_name": user.company_name,
                 "role": user.role,
                 "email": user.email,
                 "profile_photo": user.profile_photo,
@@ -216,38 +218,24 @@ class AuthService:
             }
         }
 
-    def _create_company_account(self, data: dict, db: Session):
+    def create_user(self, data: dict, db: Session):
         if db.query(User).filter(User.email == data["email"]).first():
             raise HTTPException(400, "Email already registered")
 
-        user_data = data.copy()
-        user_data["password"] = self.hash_password(user_data["password"])
-        user_data["role"] = UserRole.USER.value
-        user_data["next_evaluation"] = datetime.now()
+        user_data = {
+            "name": data["name"],
+            "lastname": data["lastname"],
+            "position": data["position"],
+            "email": data["email"],
+            "phone": data["phone"],
+            "password": self.hash_password(data["password"]),
+            "role": UserRole.USER.value,
+        }
 
         try:
-            company = Company(
-                name=user_data["company_name"],
-                sector_id=user_data.get("company_sector_id"),
-                size_id=user_data.get("company_size_id"),
-                active=True,
-            )
-
-            db.add(company)
-            db.flush()
-
             user = User(**user_data)
+
             db.add(user)
-            db.flush()
-
-            membership = CompanyMembership(
-                user_id=user.id,
-                company_id=company.id,
-                role=CompanyRole.COMPANY_ADMIN,
-                status=CompanyMembershipStatus.ACTIVE,
-            )
-
-            db.add(membership)
             db.flush()
 
             AuditService.record(
@@ -256,9 +244,8 @@ class AuthService:
                 resource_type="user",
                 resource_id=user.id,
                 actor_id=user.id,
-                company_id=company.id,
                 context={
-                    "registration_type": "company_account",
+                    "registration_type": "personal_account",
                 },
             )
 
@@ -270,12 +257,6 @@ class AuthService:
         except Exception:
             db.rollback()
             raise
-
-    def create_user(self, data: dict, db: Session):
-        return self._create_company_account(data, db)
-
-    def create_company(self, data: dict, db: Session):
-        return self._create_company_account(data, db)
 
     def create_admin(
         self,
@@ -290,9 +271,8 @@ class AuthService:
         admin_data["password"] = self.hash_password(
             admin_data["password"]
         )
-        admin_data["company_name"] = admin_data["name"]
+
         admin_data["role"] = UserRole.ADMIN.value
-        admin_data["next_evaluation"] = datetime.now()
 
         try:
             admin = User(**admin_data)

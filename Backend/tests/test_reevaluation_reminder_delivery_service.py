@@ -27,12 +27,15 @@ TARGET_DATE = date(2026, 12, 5)
 def create_pending_email(db_session):
     data = create_evaluation_data(db_session)
     user = data["user"]
+    company = data["company"]
 
     user.active = True
-    user.next_evaluation = datetime(2026, 12, 5)
+    company.biannual_evaluation = True
+    company.next_evaluation = datetime(2026, 12, 5)
 
     reminder = ReevaluationReminder(
         user_id=user.id,
+        company_id=company.id,
         target_date=TARGET_DATE,
         reminder_type=ReminderType.FIRST,
         channel=ReminderChannel.EMAIL,
@@ -170,7 +173,7 @@ def test_delivery_cancels_previous_evaluation_cycle(db_session):
     user, reminder = create_pending_email(db_session)
 
     # El usuario completó otra evaluación y cambió su fecha.
-    user.next_evaluation = datetime(2027, 6, 5)
+    reminder.company.next_evaluation = datetime(2027, 6, 5)
     db_session.flush()
 
     email_service = MagicMock()
@@ -346,12 +349,14 @@ from app.models.notification_model import (
 def create_linked_notification(db_session, reminder):
     notification = Notification(
         user_id=reminder.user_id,
+        company_id=reminder.company_id,
         event_type="REEVALUATION_REMINDER",
         channel=NotificationChannel.EMAIL,
         title="Recordatorio de reevaluación",
         message="Tu próxima reevaluación está programada.",
         deduplication_key=(
             f"reevaluation:{reminder.user_id}:"
+            f"{reminder.company_id}:"
             f"{reminder.target_date.isoformat()}:"
             f"{reminder.reminder_type.value}"
         ),
@@ -390,7 +395,7 @@ def test_delivery_synchronizes_notification_status(
         )
 
     if scenario == "cancelled":
-        user.next_evaluation = datetime(2027, 6, 5)
+        reminder.company.next_evaluation = datetime(2027, 6, 5)
         db_session.flush()
 
     service = ReevaluationReminderDeliveryService(

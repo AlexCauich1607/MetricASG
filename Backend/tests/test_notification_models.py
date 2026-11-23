@@ -15,7 +15,6 @@ from app.models.user_model import User
 def notification_user(db_session):
     user = User(
         name="Notification Test",
-        company_name="Test Company",
         email="notification-test@example.com",
         password="test-password-hash",
     )

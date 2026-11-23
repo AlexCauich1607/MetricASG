@@ -24,6 +24,9 @@ import {
   ReminderType
 } from '../../../models/notification';
 
+import { CreateCompanyComponent } from '../../modals/create-company/create-company.component';
+import { CompanyCreateResponse } from '../../../models/company_membership';
+
 import {
   ElementRef,
   HostListener,
@@ -44,7 +47,6 @@ import {
 })
 export class UserNavbarComponent implements OnInit {
 
-  first = SessionService.getSessionItem('first-time');
   photo = SessionService.getSessionItem('photo');
 
   notifications: ReevaluationNotification[] = [];
@@ -148,6 +150,7 @@ export class UserNavbarComponent implements OnInit {
     this.authService.logout()
       .pipe(
         finalize(() => {
+          this.companyContext.clear();
           SessionService.logout();
           this.router.navigate(['/home']);
         })
@@ -202,5 +205,29 @@ export class UserNavbarComponent implements OnInit {
 
     // Devolver el foco al botón hamburguesa.
     toggler.focus();
+  }
+  openCreateCompany(): void {
+    if (this.companySelectionLocked) {
+      return;
+    }
+
+    const dialogRef = this.dialog.open(
+      CreateCompanyComponent,
+      {
+        width: '520px',
+        maxWidth: '95vw',
+        disableClose: true
+      }
+    );
+
+    dialogRef.afterClosed().subscribe(
+      (company: CompanyCreateResponse | null | undefined) => {
+        if (!company) {
+          return;
+        }
+
+        this.companyContext.loadMemberships(company.id);
+      }
+    );
   }
 }

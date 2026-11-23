@@ -26,7 +26,6 @@ def create_test_user(db_session, email=TEST_EMAIL):
         name="Auth",
         lastname="Test",
         position="Tester",
-        company_name="Auth Test Company",
         email=email,
         phone="9999999999",
         password=auth_service.hash_password(TEST_PASSWORD),
@@ -416,23 +415,28 @@ def test_revoked_refresh_token_is_rejected(client, db_session):
     assert response.status_code == 401
     assert response.json()["detail"] == "Refresh session revoked"
 
-def test_register_creates_company_and_active_membership(client, db_session):
-    email = "register-company-member@test.local"
+def test_register_creates_personal_account_without_company(
+    client,
+    db_session,
+):
+    email = "register-personal@test.local"
+
+    companies_before = db_session.query(Company).count()
+    memberships_before = db_session.query(CompanyMembership).count()
 
     response = client.post(
         "/api/auth/register",
         json={
-            "name": "Company",
-            "lastname": "Member",
-            "position": "Manager",
-            "company_name": "Registration Test Company",
+            "name": "Personal",
+            "lastname": "Account",
+            "position": "Developer",
             "email": email,
             "phone": "9999999999",
             "password": TEST_PASSWORD,
         },
     )
 
-    assert response.status_code == 200
+    assert response.status_code == 200, response.text
 
     user = (
         db_session.query(User)
@@ -440,26 +444,25 @@ def test_register_creates_company_and_active_membership(client, db_session):
         .one()
     )
 
-    company = (
-        db_session.query(Company)
-        .filter(Company.name == "Registration Test Company")
-        .one()
-    )
-
-    membership = (
-        db_session.query(CompanyMembership)
-        .filter(
-            CompanyMembership.user_id == user.id,
-            CompanyMembership.company_id == company.id,
-        )
-        .one()
-    )
-
     assert user.role == UserRole.USER.value
-    assert company.active is True
-    assert membership.status == CompanyMembershipStatus.ACTIVE
-    assert membership.role == CompanyRole.COMPANY_ADMIN
-    assert user.company_name == company.name
+
+    assert AuthService().verify_password(
+        TEST_PASSWORD,
+        user.password,
+    )
+
+    assert db_session.query(Company).count() == companies_before
+    assert (
+        db_session.query(CompanyMembership).count()
+        == memberships_before
+    )
+
+    assert (
+        db_session.query(CompanyMembership)
+        .filter(CompanyMembership.user_id == user.id)
+        .count()
+        == 0
+    )
 
     audit_events = (
         db_session.query(AuditLog)
@@ -476,93 +479,87 @@ def test_register_creates_company_and_active_membership(client, db_session):
     audit_event = audit_events[0]
 
     assert audit_event.actor_id == user.id
-    assert audit_event.company_id == company.id
+    assert audit_event.company_id is None
     assert audit_event.context == {
-        "registration_type": "company_account",
+        "registration_type": "personal_account",
     }
-    assert audit_event.created_at is not None
 
-def test_register_company_creates_active_membership(client, db_session):
-    email = "register-organization@test.local"
+def test_register_personal_rejects_duplicate_email(
+    client,
+    db_session,
+):
+    email = "duplicate-personal@test.local"
 
+    payload = {
+        "name": "Personal",
+        "lastname": "Duplicate",
+        "position": "Developer",
+        "email": email,
+        "phone": "9999999999",
+        "password": TEST_PASSWORD,
+    }
+
+    first_response = client.post(
+        "/api/auth/register",
+        json=payload,
+    )
+
+    assert first_response.status_code == 200
+
+    second_response = client.post(
+        "/api/auth/register",
+        json=payload,
+    )
+
+    assert second_response.status_code == 400
+    assert second_response.json()["detail"] == "Email already registered"
+
+    assert (
+        db_session.query(User)
+        .filter(User.email == email)
+        .count()
+        == 1
+    )
+
+    assert (
+        db_session.query(CompanyMembership)
+        .join(User, CompanyMembership.user_id == User.id)
+        .filter(User.email == email)
+        .count()
+        == 0
+    )
+
+def test_legacy_company_registration_endpoint_is_removed(client):
     response = client.post(
         "/api/auth/register-company",
         json={
-            "company_name": "Organization Registration Test",
-            "email": email,
+            "company_name": "Legacy Company",
+            "email": "legacy-company@test.local",
             "phone": "9999999998",
             "password": TEST_PASSWORD,
         },
     )
 
-    assert response.status_code == 200
+    assert response.status_code == 404
 
-    user = (
-        db_session.query(User)
-        .filter(User.email == email)
-        .one()
-    )
-
-    company = (
-        db_session.query(Company)
-        .filter(Company.name == "Organization Registration Test")
-        .one()
-    )
-
-    membership = (
-        db_session.query(CompanyMembership)
-        .filter(
-            CompanyMembership.user_id == user.id,
-            CompanyMembership.company_id == company.id,
-        )
-        .one()
-    )
-
-    assert user.name is None
-    assert user.lastname is None
-    assert user.position is None
-    assert user.role == UserRole.USER.value
-    assert company.active is True
-    assert membership.status == CompanyMembershipStatus.ACTIVE
-    assert membership.role == CompanyRole.COMPANY_ADMIN
-    assert user.company_name == company.name
-
-    audit_events = (
-        db_session.query(AuditLog)
-        .filter(
-            AuditLog.action == "user.created",
-            AuditLog.resource_type == "user",
-            AuditLog.resource_id == user.id,
-        )
-        .all()
-    )
-
-    assert len(audit_events) == 1
-
-    audit_event = audit_events[0]
-
-    assert audit_event.actor_id == user.id
-    assert audit_event.company_id == company.id
-    assert audit_event.context == {
-        "registration_type": "company_account",
-    }
-    assert audit_event.created_at is not None
-
-def test_register_company_rolls_back_on_commit_failure(db_session):
-    email = "rollback-company@test.local"
-    company_name = "Rollback Test Company"
+def test_register_personal_rolls_back_on_commit_failure(
+    db_session,
+):
+    email = "rollback-personal@test.local"
 
     service = AuthService()
 
     payload = {
         "name": "Rollback",
-        "lastname": "Test",
-        "position": "Manager",
-        "company_name": company_name,
+        "lastname": "Personal",
+        "position": "Developer",
         "email": email,
         "phone": "9999999999",
         "password": TEST_PASSWORD,
     }
+
+    companies_before = db_session.query(Company).count()
+    memberships_before = db_session.query(CompanyMembership).count()
 
     with patch.object(
         db_session,
@@ -582,6 +579,8 @@ def test_register_company_rolls_back_on_commit_failure(db_session):
 
         mock_rollback.assert_called_once()
 
+    db_session.expire_all()
+
     assert (
         db_session.query(User)
         .filter(User.email == email)
@@ -589,24 +588,87 @@ def test_register_company_rolls_back_on_commit_failure(db_session):
         == 0
     )
 
+    assert db_session.query(Company).count() == companies_before
+
     assert (
-        db_session.query(Company)
-        .filter(Company.name == company_name)
-        .count()
-        == 0
+        db_session.query(CompanyMembership).count()
+        == memberships_before
     )
 
     assert (
-        db_session.query(CompanyMembership)
-        .join(
-            User,
-            CompanyMembership.user_id == User.id,
+        db_session.query(AuditLog)
+        .filter(
+            AuditLog.action == "user.created",
+            AuditLog.context["registration_type"].as_string()
+            == "personal_account",
         )
-        .filter(User.email == email)
         .count()
         == 0
     )
 
+def test_register_personal_rolls_back_on_audit_failure(
+    db_session,
+):
+    from uuid import uuid4
+
+    unique_id = uuid4().hex
+    email = f"personal-audit-rollback-{unique_id}@test.local"
+
+    companies_before = db_session.query(Company).count()
+    memberships_before = db_session.query(CompanyMembership).count()
+
+    with patch(
+        "app.services.auth_service.AuditService.record",
+        side_effect=RuntimeError("Audit recording failed"),
+    ), patch.object(
+        db_session,
+        "rollback",
+        wraps=db_session.rollback,
+    ) as mock_rollback:
+
+        with pytest.raises(
+            RuntimeError,
+            match="Audit recording failed",
+        ):
+            AuthService().create_user(
+                data={
+                    "name": "Personal",
+                    "lastname": "Rollback",
+                    "position": "Developer",
+                    "email": email,
+                    "phone": "9999999999",
+                    "password": TEST_PASSWORD,
+                },
+                db=db_session,
+            )
+
+        mock_rollback.assert_called_once()
+
+    db_session.expire_all()
+
+    assert (
+        db_session.query(User)
+        .filter(User.email == email)
+        .first()
+    ) is None
+
+    assert db_session.query(Company).count() == companies_before
+
+    assert (
+        db_session.query(CompanyMembership).count()
+        == memberships_before
+    )
+
+    assert (
+        db_session.query(AuditLog)
+        .filter(
+            AuditLog.action == "user.created",
+            AuditLog.context["registration_type"].as_string()
+            == "personal_account",
+        )
+        .count()
+        == 0
+    )
 
 def test_change_password_success(client, db_session):
     user = create_test_user(db_session)
@@ -756,56 +818,6 @@ def test_change_password_user_not_found(db_session):
 
     assert audit_events == []
 
-
-def test_register_company_rolls_back_on_audit_failure(db_session):
-    from uuid import uuid4
-
-    unique_id = uuid4().hex
-    email = f"registration-audit-rollback-{unique_id}@test.local"
-    company_name = f"Audit Rollback Company {unique_id}"
-
-    with patch(
-        "app.services.auth_service.AuditService.record",
-        side_effect=RuntimeError("Audit recording failed"),
-    ):
-        with pytest.raises(
-            RuntimeError,
-            match="Audit recording failed",
-        ):
-            AuthService().create_company(
-                data={
-                    "company_name": company_name,
-                    "email": email,
-                    "phone": "9999999998",
-                    "password": TEST_PASSWORD,
-                },
-                db=db_session,
-            )
-
-    db_session.expire_all()
-
-    assert (
-        db_session.query(User)
-        .filter(User.email == email)
-        .first()
-    ) is None
-
-    assert (
-        db_session.query(Company)
-        .filter(Company.name == company_name)
-        .first()
-    ) is None
-
-    assert (
-        db_session.query(AuditLog)
-        .filter(
-            AuditLog.action == "user.created",
-            AuditLog.context["registration_type"].as_string()
-            == "company_account",
-        )
-        .count()
-    ) == 0
-
 def test_create_admin_http_records_audit(client, db_session):
     from uuid import uuid4
 
@@ -816,7 +828,6 @@ def test_create_admin_http_records_audit(client, db_session):
     creator = User(
         name="Creator Admin",
         email=f"creator-admin-{unique_id}@test.local",
-        company_name="Test Company",
         password=AuthService().hash_password(TEST_PASSWORD),
         role=UserRole.ADMIN,
         active=True,
@@ -849,7 +860,6 @@ def test_create_admin_http_records_audit(client, db_session):
     )
 
     assert created_admin.role == UserRole.ADMIN.value
-    assert created_admin.company_name == "Created Admin"
 
     assert AuthService().verify_password(
         TEST_PASSWORD,
@@ -886,7 +896,6 @@ def test_create_admin_rolls_back_on_audit_failure(db_session):
     creator = User(
         name="Creator Admin",
         email=f"creator-rollback-{unique_id}@test.local",
-        company_name="Test Company",
         password=AuthService().hash_password(TEST_PASSWORD),
         role=UserRole.ADMIN,
         active=True,

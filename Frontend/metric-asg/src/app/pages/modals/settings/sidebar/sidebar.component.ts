@@ -1,10 +1,8 @@
 import { Component, ChangeDetectionStrategy } from '@angular/core';
 import { UserService } from '../../../../services/user.service';
 import { User } from '../../../../models/user';
-import { SessionService } from '../../../../shared/class/temporalStorage';
 import { MatDialogRef } from '@angular/material/dialog';
 import { UserSettingsComponent } from '../user-settings/user-settings.component';
-import { CompanySettingsComponent } from '../company-settings/company-settings.component';
 import { ContactSettingsComponent } from '../contact-settings/contact-settings.component';
 
 @Component({
@@ -12,7 +10,6 @@ import { ContactSettingsComponent } from '../contact-settings/contact-settings.c
   standalone: true,
   imports: [
     UserSettingsComponent,
-    CompanySettingsComponent,
     ContactSettingsComponent
   ],
   templateUrl: './sidebar.component.html',
@@ -21,28 +18,38 @@ import { ContactSettingsComponent } from '../contact-settings/contact-settings.c
 })
 export class SidebarComponent {
   ix = 0;
-  user: User | null= null;
-  id= SessionService.getSessionItem("id");
-  constructor(private userService: UserService, private dialogRef: MatDialogRef<SidebarComponent>){
+  user: User | null = null;
+  loadingUser = false;
+  userError = false;
+  constructor(private userService: UserService, private dialogRef: MatDialogRef<SidebarComponent>) {
 
   }
-  ngOnInit(): void{
+  ngOnInit(): void {
     this.loadUser();
   }
-  loadUser(){
-    this.userService.getById(this.id??0).subscribe({
-      next: (value)=>{
-        this.user = value;
-      },
-      error: (err)=>{
 
+  loadUser(): void {
+    this.loadingUser = true;
+    this.userError = false;
+    this.user = null;
+
+    this.userService.getMe().subscribe({
+      next: (user) => {
+        this.user = user;
+        this.loadingUser = false;
+      },
+      error: () => {
+        this.user = null;
+        this.userError = true;
+        this.loadingUser = false;
       }
-    })
+    });
   }
-  selectIx(n:number){
-    this.ix= n;
+
+  selectIx(n: number) {
+    this.ix = n;
   }
-  
+
   close(): void {
     this.dialogRef.close(null);
   }

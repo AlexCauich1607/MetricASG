@@ -1,5 +1,13 @@
 import { Injectable } from '@angular/core';
-import { AuthResponse, AuthUserResponse, ChangePassword, RefreshToken, UserLogin, UserRegister } from '../models/auth';
+import {
+  AdminRegister,
+  AuthResponse,
+  AuthUserResponse,
+  ChangePassword,
+  PersonalUserRegister,
+  RefreshToken,
+  UserLogin
+} from '../models/auth';
 import { Observable, tap } from 'rxjs';
 import { User } from '../models/user';
 import { HttpClient } from '@angular/common/http';
@@ -14,12 +22,12 @@ export class AuthService {
 
   constructor(protected http: HttpClient) { }
 
-  createUser(data: UserRegister): Observable<User> {
+  createUser(data: PersonalUserRegister): Observable<User> {
     return this.http.post<User>(`${this.apiUrl}register`, data);
   }
 
 
-  createAdmin(data: UserRegister): Observable<User> {
+  createAdmin(data: AdminRegister): Observable<User> {
     return this.http.post<User>(`${this.apiUrl}create-admin`, data);
   }
 
@@ -31,7 +39,6 @@ export class AuthService {
         SessionService.setSessionItem('user', res.user.name);
         SessionService.setSessionItem('role', res.user.role);
         SessionService.setSessionItem('token', res.access_token);
-        SessionService.setSessionItem('company', res.user.company_name);
         SessionService.setSessionItem('id', res.user.id);
         SessionService.setSessionItem('photo', res.user.profile_photo);
       }

@@ -1,4 +1,3 @@
-from typing import Optional
 from ..services.token_service import get_current_user, require_admin
 from fastapi import APIRouter, Depends, HTTPException, Response, Request
 from sqlalchemy.orm import Session
@@ -29,24 +28,11 @@ class RegisterRequest(BaseModel):
     name: str
     lastname: str
     position: str
-    
-    company_name: str
-    company_sector_id: Optional[int] = None
-    company_size_id: Optional[int] = None
-    
+
     email: str
     phone: str
     password: str
 
-
-class RegisterCompanyRequest(BaseModel):
-    company_name: str
-    company_sector_id: Optional[int] = None
-    company_size_id: Optional[int] = None
-    
-    email: str
-    phone: str
-    password: str
 
 class AdminRequest(BaseModel):
     name: str
@@ -90,10 +76,6 @@ class AuthController:
         @self.router.post("/register")
         def register(payload: RegisterRequest, db: Session = Depends(get_db)):
             return auth_service.create_user(payload.dict(), db)
-        
-        @self.router.post("/register-company")
-        def register_company(payload: RegisterCompanyRequest, db: Session = Depends(get_db)):
-            return auth_service.create_company(payload.dict(), db)
      
         @self.router.post("/create-admin", dependencies=[Depends(require_admin)])
         def create_admin(payload: AdminRequest, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):

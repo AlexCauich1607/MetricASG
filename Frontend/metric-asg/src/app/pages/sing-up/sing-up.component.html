@@ -10,7 +10,7 @@
       <div class="col-12 col-lg-6 my-5">
         <div class="color-bg rounded-5 p-3 p-md-5">
           <div class="d-flex align-items-center justify-content-between">
-            <p class="fw-bold text-my-purple fs-5">Crear Cuenta</p>
+            <p class="fw-bold text-my-purple fs-5">Crear cuenta personal</p>
             <div class="">
               <h3 class="fw-bold text-my-purple sw-fs-6"><img src="assets/logo.png" class="mb-2" [height]="24">
                 MetricASG</h3>
@@ -74,8 +74,7 @@
                     }
                     <div class="floating-input mb-1">
                       <input type="text" class="color-input-bg" id="position"
-                        placeholder="Ingrese su puesto dentro de la empresa" formControlName="position"
-                        [attr.aria-invalid]="
+                        placeholder="Ingrese su puesto u ocupación" formControlName="position" [attr.aria-invalid]="
   getValue('position')!.invalid &&
   (getValue('position')!.dirty || getValue('position')!.touched)
     ? 'true'
@@ -107,107 +106,7 @@
               </mat-step>
               <mat-step>
                 <ng-template matStepLabel>
-                  <i class="bi bi-building-fill"></i> Paso 2
-                </ng-template>
-
-                <div class="row">
-                  <div class="">
-                    <p class="text-my-purple mb-1 fw-bold">
-                      <i class="bi bi-building-fill"></i> Información de la Empresa
-                    </p>
-                    <div class="floating-input mb-1 ">
-                      <input type="text" class="color-input-bg" id="company_name"
-                        placeholder="Ingrese el nombre de la empresa" formControlName="company_name"
-                        [attr.aria-invalid]="
-    getValue('company_name')!.invalid &&
-    (getValue('company_name')!.dirty || getValue('company_name')!.touched)
-      ? 'true'
-      : null
-  " [attr.aria-describedby]="
-    getValue('company_name')!.invalid &&
-    (getValue('company_name')!.dirty || getValue('company_name')!.touched)
-      ? 'company-name-error'
-      : null
-  " required>
-                      <label for="company_name"><i class="bi bi-building-fill"></i> Nombre de la
-                        empresa</label>
-
-                    </div>
-                    @if (getValue('company_name')!.invalid && (getValue('company_name')!.dirty ||
-                    getValue('company_name')!.touched)) {
-                    <div>
-                      <p id="company-name-error" class="sw-text-error mb-0 pb-0">*Este campo debe tener minimo 3
-                        caracteres</p>
-                    </div>
-                    }
-                    <div class="floating-input mb-1">
-                      <select id="sector" class="color-input-bg" [(ngModel)]="sectorSeleccionado"
-                        [ngModelOptions]="{standalone: true}"
-                        [attr.aria-invalid]="sectorSeleccionado === null ? 'true' : null"
-                        [attr.aria-describedby]="sectorSeleccionado === null ? 'sector-error' : null">
-
-                        <option [ngValue]="null">Seleccione un sector</option>
-
-                        @for (sector of sectores; track sector) {
-                        <option [ngValue]="sector">
-                          {{ sector.name }}
-                        </option>
-                        }
-                      </select>
-
-                      <label for="sector">
-                        <i class="bi bi-gear-fill"></i> Sector
-                      </label>
-                    </div>
-
-                    @if (sectorSeleccionado === null) {
-                    <div>
-                      <p id="sector-error" class="sw-text-error mb-0 pb-0">
-                        *Este campo no puede estar vacío.
-                      </p>
-                    </div>
-                    }
-                    <div class="floating-input mb-1">
-                      <select id="size" class="color-input-bg" [(ngModel)]="sizeSeleccionado"
-                        [ngModelOptions]="{standalone: true}"
-                        [attr.aria-invalid]="sizeSeleccionado === null ? 'true' : null"
-                        [attr.aria-describedby]="sizeSeleccionado === null ? 'size-error' : null">
-
-                        <option [ngValue]="null">Seleccione un Tamaño</option>
-
-                        @for (size of sizes; track size) {
-                        <option [ngValue]="size">
-                          {{ size.name }}
-                        </option>
-                        }
-                      </select>
-
-                      <label for="size">
-                        <i class="bi bi-people-fill"></i> Tamaño
-                      </label>
-                    </div>
-
-                    @if (sizeSeleccionado === null) {
-                    <div>
-                      <p id="size-error" class="sw-text-error mb-0 pb-0">
-                        *Este campo no puede estar vacío.
-                      </p>
-                    </div>
-                    }
-
-                    <div class="d-flex justify-content-between mt-4">
-                      <button mat-button matStepperPrevious><i class="bi bi-chevron-left"></i> Volver</button>
-                      @if (getValue('company_name')?.valid && sectorSeleccionado!=null && sizeSeleccionado!=null) {
-                      <button mat-button matStepperNext>Siguiente <i class="bi bi-chevron-right"></i></button>
-                      }
-                    </div>
-
-                  </div>
-                </div>
-              </mat-step>
-              <mat-step>
-                <ng-template matStepLabel>
-                  <i class="bi bi-envelope-fill me-1"></i> Paso 3
+                  <i class="bi bi-envelope-fill me-1"></i> Paso 2
                 </ng-template>
 
                 <div class="row">

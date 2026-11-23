@@ -168,7 +168,8 @@ describe('CompanyMembersComponent', () => {
     const companyContext = TestBed.inject(CompanyContextService);
     const membershipService = TestBed.inject(CompanyMembershipService);
 
-    const pendingRequest = new Subject<CompanyMember[]>();
+    const adminRequest = new Subject<CompanyMember[]>();
+    const auditorRequest = new Subject<CompanyMember[]>();
 
     const membership: UserCompanyMembership = {
       membership_id: 10,
@@ -181,7 +182,10 @@ describe('CompanyMembersComponent', () => {
     const getMembersSpy = spyOn(
       membershipService,
       'getMembers'
-    ).and.returnValue(pendingRequest.asObservable());
+    ).and.returnValues(
+      adminRequest.asObservable(),
+      auditorRequest.asObservable()
+    );
 
     companyContext.memberships.set([membership]);
     companyContext.selectedCompanyId.set(3);
@@ -191,7 +195,7 @@ describe('CompanyMembersComponent', () => {
     fixture.detectChanges();
 
     expect(getMembersSpy).toHaveBeenCalledOnceWith(3);
-    expect(pendingRequest.observed).toBeTrue();
+    expect(adminRequest.observed).toBeTrue();
 
     // Revocar el rol de administrador empresarial.
     companyContext.memberships.set([
@@ -205,16 +209,27 @@ describe('CompanyMembersComponent', () => {
     TestBed.flushEffects();
     fixture.detectChanges();
 
-    // La consulta anterior debe cancelarse.
-    expect(pendingRequest.observed).toBeFalse();
 
-    // No deben permanecer datos de miembros en el componente.
+    // Se cancela la solicitud correspondiente al rol anterior.
+    expect(adminRequest.observed).toBeFalse();
+
+    // El auditor conserva una solicitud activa de lectura.
+    expect(auditorRequest.observed).toBeTrue();
+
+    expect(getMembersSpy).toHaveBeenCalledTimes(2);
+    expect(getMembersSpy).toHaveBeenCalledWith(3);
+
+    // Mientras la nueva consulta está pendiente,
+    // no deben mostrarse datos de la solicitud anterior.
     expect(component.members()).toEqual([]);
-    expect(component.loading()).toBeFalse();
+    expect(component.loading()).toBeTrue();
     expect(component.error()).toBeFalse();
 
-    // No deben iniciarse nuevas consultas sin autorización.
-    expect(getMembersSpy).toHaveBeenCalledTimes(1);
+    auditorRequest.next([]);
+    auditorRequest.complete();
+
+    expect(component.loading()).toBeFalse();
+
   });
 
   it('should display an access restriction message when admin permissions are revoked', () => {
@@ -271,17 +286,29 @@ describe('CompanyMembersComponent', () => {
     TestBed.flushEffects();
     fixture.detectChanges();
 
+
     content = fixture.nativeElement.textContent;
 
-    expect(content).toContain(
-      'No tienes permisos para administrar los miembros'
-    );
+    // El auditor conserva acceso de lectura al directorio.
+    expect(content).toContain('ana@example.com');
+    expect(component.members()).toEqual(members);
 
-    expect(content).not.toContain('ana@example.com');
-    expect(component.members()).toEqual([]);
+    // No debe aparecer el formulario de invitaciones.
+    expect(
+      fixture.nativeElement.querySelector('form')
+    ).toBeNull();
 
-    // No deben realizarse consultas adicionales.
-    expect(getMembersSpy).toHaveBeenCalledTimes(1);
+    // Tampoco deben aparecer acciones de eliminación.
+    expect(
+      fixture.nativeElement.querySelector(
+        'button[aria-label="Eliminar a ana@example.com"]'
+      )
+    ).toBeNull();
+
+    // El cambio de rol vuelve a consultar los integrantes.
+    expect(getMembersSpy).toHaveBeenCalledTimes(2);
+    expect(getMembersSpy).toHaveBeenCalledWith(3);
+
   });
 
   it('should display an error when company members cannot be loaded', () => {
@@ -319,7 +346,7 @@ describe('CompanyMembersComponent', () => {
     const content: string = fixture.nativeElement.textContent;
 
     expect(content).toContain(
-      'No fue posible recuperar los miembros de la empresa.'
+      'No fue posible recuperar los integrantes de la empresa.'
     );
   });
 
@@ -455,7 +482,7 @@ describe('CompanyMembersComponent', () => {
     expect(getMembersSpy.calls.mostRecent().args).toEqual([7]);
   });
 
-  it('should prevent retrying members requests after admin permissions are revoked', () => {
+  it('should allow retrying members requests with read-only permissions', () => {
     const companyContext = TestBed.inject(CompanyContextService);
     const membershipService = TestBed.inject(CompanyMembershipService);
 
@@ -498,15 +525,28 @@ describe('CompanyMembersComponent', () => {
 
     fixture.detectChanges();
 
-    // No debe ejecutarse ninguna consulta adicional.
-    expect(getMembersSpy).toHaveBeenCalledTimes(1);
+
+    // El auditor conserva permiso de lectura.
+    // Primera consulta: administrador.
+    // Segunda consulta: cambio de rol.
+    // Tercera consulta: reintento manual.
+    expect(getMembersSpy).toHaveBeenCalledTimes(3);
+    expect(getMembersSpy.calls.mostRecent().args).toEqual([3]);
+
     expect(component.members()).toEqual([]);
 
-    const content: string = fixture.nativeElement.textContent;
+    const element: HTMLElement = fixture.nativeElement;
+    const content: string = element.textContent ?? '';
 
-    expect(content).toContain(
-      'No tienes permisos para administrar los miembros'
-    );
+    expect(content).toContain('Integrantes de la empresa');
+
+    // Ya no puede administrar integrantes.
+    expect(element.querySelector('form')).toBeNull();
+
+    expect(
+      element.querySelector('button[aria-label^="Eliminar a "]')
+    ).toBeNull();
+
   });
 
   it('should remove a company member after confirmation', () => {
@@ -846,20 +886,24 @@ describe('CompanyMembersComponent', () => {
     expect(component.removingMemberId()).toBeNull();
 
     // La lista debe limpiarse y no mostrar integrantes.
-    expect(component.members()).toEqual([]);
+    expect(component.members()).toEqual([member]);
 
     // Una respuesta tardía no debe modificar el estado.
     pendingRemoval.next();
     pendingRemoval.complete();
 
-    expect(component.members()).toEqual([]);
+    expect(component.members()).toEqual([member]);
     expect(removeSpy).toHaveBeenCalledTimes(1);
 
     const content: string = fixture.nativeElement.textContent;
 
-    expect(content).toContain(
-      'No tienes permisos para administrar los miembros'
-    );
+    expect(content).toContain('carlos@example.com');
+
+    expect(
+      fixture.nativeElement.querySelector(
+        'button[aria-label="Eliminar a carlos@example.com"]'
+      )
+    ).toBeNull();
   });
 
   it('should disable removal buttons while a member is being removed', () => {
@@ -1109,10 +1153,14 @@ describe('CompanyMembersComponent', () => {
     expect(companyContext.selectedRole())
       .toBe(CompanyRole.AUDITOR);
 
-    // El componente ya no debe mostrar miembros sin permisos.
-    expect(component.members()).toEqual([]);
+    // El usuario deja la empresa A y selecciona la empresa B.
+    expect(companyContext.selectedCompanyId()).toBe(7);
+    expect(companyContext.selectedRole()).toBe(CompanyRole.AUDITOR);
+
+    // La operación de eliminación debe haber terminado.
     expect(component.removingMemberId()).toBeNull();
 
+    // Se mantiene la navegación prevista después de abandonar la empresa.
     expect(router.navigate).toHaveBeenCalledWith(['/user/home']);
   });
 
@@ -1355,10 +1403,7 @@ describe('CompanyMembersComponent', () => {
     expect(form).toBeNull();
 
     const content: string = fixture.nativeElement.textContent;
-
-    expect(content).toContain(
-      'No tienes permisos para administrar los miembros de esta empresa.'
-    );
+    expect(content).toContain('Integrantes de la empresa');
   });
 
   it('should cancel a pending invitation when switching companies', () => {

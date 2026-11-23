@@ -10,27 +10,40 @@
       <button class="btn sw-fs-7 btn-size mb-1 text-start" [class]="ix==0?'btn-active':''" (click)="selectIx(0)">
         <i class="bi bi-person"></i> Mi perfil
       </button>
-      @if (user?.role!='admin') {
-        <button class="btn sw-fs-7 btn-size mb-1 text-start" [class]="ix==1?'btn-active':''" (click)="selectIx(1)">
-          <i class="bi bi-building"></i> Empresa
-        </button>
-      }
       <button class="btn sw-fs-7 btn-size mb-1 text-start" [class]="ix==2?'btn-active':''" (click)="selectIx(2)">
         <i class="bi bi-envelope me-1"></i> Contacto
       </button>
       <div class="sw-end">
-        <button class="sw-btn-white-purple text-my-purple bg-white sw-cursor-pointer sw-fs-7 mb-3" (click)="close()"> <i class="bi bi-x-lg"></i> Cerrar</button>
+        <button class="sw-btn-white-purple text-my-purple bg-white sw-cursor-pointer sw-fs-7 mb-3" (click)="close()"> <i
+            class="bi bi-x-lg"></i> Cerrar</button>
       </div>
     </div>
     <div class="content">
-      @if (ix==0) {
-        <app-user-settings [user]="user"></app-user-settings>
+
+      @if (ix == 0) {
+      @if (loadingUser) {
+      <div class="p-4 text-center" role="status">
+        <span class="spinner-border text-my-purple" aria-hidden="true">
+        </span>
+        <p class="mt-3">Cargando perfil...</p>
+      </div>
+      } @else if (userError) {
+      <div class="p-4">
+        <div class="alert alert-danger" role="alert">
+          No fue posible cargar tu perfil.
+        </div>
+
+        <button type="button" class="btn btn-outline-danger" (click)="loadUser()">
+          Reintentar
+        </button>
+      </div>
+      } @else if (user) {
+      <app-user-settings [user]="user"></app-user-settings>
       }
-      @if (ix==1 && user?.role!='admin') {
-        <app-company-settings [user]="user"></app-company-settings>
       }
+
       @if (ix==2) {
-        <app-contact-settings [user]="user"></app-contact-settings>
+      <app-contact-settings [user]="user"></app-contact-settings>
       }
 
     </div>

@@ -18,7 +18,6 @@ def test_create_user_http_records_audit(client, db_session):
     admin = User(
         name="Audit Admin",
         email=f"user-audit-admin-{unique_id}@test.local",
-        company_name="Test Company",
         password=AuthService().hash_password("Password123!"),
         role=UserRole.ADMIN,
         active=True,
@@ -36,7 +35,6 @@ def test_create_user_http_records_audit(client, db_session):
         json={
             "name": "Created User",
             "lastname": "Audit",
-            "company_name": "Test Company",
             "email": f"created-user-{unique_id}@test.local",
             "password": "Password123!",
             "role": UserRole.USER.value,
@@ -86,7 +84,6 @@ def test_create_user_rolls_back_on_audit_failure(db_session):
     admin = User(
         name="Audit Admin",
         email=f"admin-rollback-{unique_id}@test.local",
-        company_name="Test Company",
         password=AuthService().hash_password("Password123!"),
         role=UserRole.ADMIN,
         active=True,
@@ -110,7 +107,6 @@ def test_create_user_rolls_back_on_audit_failure(db_session):
             service.create(
                 data={
                     "name": "Rollback User",
-                    "company_name": "Test Company",
                     "email": email,
                     "password": "Password123!",
                     "role": UserRole.USER.value,
@@ -149,7 +145,6 @@ def test_update_profile_http_records_audit(client, db_session):
         name="Original Name",
         lastname="Original Lastname",
         email=f"profile-audit-{unique_id}@test.local",
-        company_name="Test Company",
         password=AuthService().hash_password("Password123!"),
         role=UserRole.USER,
         active=True,
@@ -220,7 +215,6 @@ def test_update_profile_rolls_back_on_audit_failure(db_session):
         name="Original Name",
         lastname="Original Lastname",
         email=f"profile-rollback-{unique_id}@test.local",
-        company_name="Test Company",
         password=AuthService().hash_password("Password123!"),
         role=UserRole.USER,
         active=True,
@@ -276,7 +270,6 @@ def test_update_user_http_records_audit(client, db_session):
     admin = User(
         name="Audit Admin",
         email=f"admin-update-{unique_id}@test.local",
-        company_name="Test Company",
         password=AuthService().hash_password("Password123!"),
         role=UserRole.ADMIN,
         active=True,
@@ -286,7 +279,6 @@ def test_update_user_http_records_audit(client, db_session):
         name="Original Name",
         lastname="Original Lastname",
         email=f"target-update-{unique_id}@test.local",
-        company_name="Test Company",
         password=AuthService().hash_password("Password123!"),
         role=UserRole.USER,
         active=True,
@@ -354,7 +346,6 @@ def test_update_user_rolls_back_on_audit_failure(db_session):
     admin = User(
         name="Audit Admin",
         email=f"admin-update-rollback-{unique_id}@test.local",
-        company_name="Test Company",
         password=AuthService().hash_password("Password123!"),
         role=UserRole.ADMIN,
         active=True,
@@ -364,7 +355,6 @@ def test_update_user_rolls_back_on_audit_failure(db_session):
         name="Original Name",
         lastname="Original Lastname",
         email=f"target-update-rollback-{unique_id}@test.local",
-        company_name="Test Company",
         password=AuthService().hash_password("Password123!"),
         role=UserRole.USER,
         active=True,
@@ -425,7 +415,6 @@ def test_update_user_http_rejects_non_admin(
     regular_user = User(
         name="Regular User",
         email=f"regular-update-{unique_id}@test.local",
-        company_name="Test Company",
         password=AuthService().hash_password("Password123!"),
         role=UserRole.USER,
         active=True,
@@ -434,7 +423,6 @@ def test_update_user_http_rejects_non_admin(
     target_user = User(
         name="Original Name",
         email=f"protected-update-{unique_id}@test.local",
-        company_name="Test Company",
         password=AuthService().hash_password("Password123!"),
         role=UserRole.USER,
         active=True,

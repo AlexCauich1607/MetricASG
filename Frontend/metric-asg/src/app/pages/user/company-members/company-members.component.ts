@@ -95,10 +95,7 @@ export class CompanyMembersComponent implements OnInit {
           this.members.set([]);
           this.error.set(false);
 
-          if (
-            !membership ||
-            membership.role !== CompanyRole.COMPANY_ADMIN
-          ) {
+          if (!membership) {
             this.loading.set(false);
             return of(null);
           }
@@ -134,10 +131,7 @@ export class CompanyMembersComponent implements OnInit {
   }
 
   retryLoadMembers(): void {
-    if (
-      this.companyContext.selectedMembership()?.role !==
-      CompanyRole.COMPANY_ADMIN
-    ) {
+    if (!this.companyContext.selectedMembership()) {
       return;
     }
 

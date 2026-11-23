@@ -611,6 +611,11 @@ def test_get_comparison_rejects_inactive_company_membership(
         data["user"].id,
     )
 
+    # Simular que la empresa ya puede iniciar un nuevo ciclo.
+    data["company"].biannual_evaluation = False
+    data["company"].next_evaluation = None
+    db_session.flush()
+
     second_result = service.submit_evaluation(
         {
             "company_id": data["company"].id,

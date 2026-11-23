@@ -147,3 +147,31 @@
     flex: 0 0 10.625rem;
   }
 }
+
+.company-create-button {
+  white-space: nowrap;
+  flex-shrink: 0;
+  font-size: 0.875rem;
+  padding: 0.375rem 0.625rem;
+}
+
+.company-management-link {
+  white-space: nowrap;
+  font-size: 0.875rem;
+}
+
+@media (min-width: 1200px) {
+  .company-context {
+    width: 10rem;
+    flex: 0 0 10rem;
+  }
+
+  .navbar-nav {
+    gap: 0.15rem;
+  }
+
+  .navbar-nav > .nav-item {
+    margin-left: 0.25rem !important;
+    margin-right: 0.25rem !important;
+  }
+}

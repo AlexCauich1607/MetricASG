@@ -27,8 +27,11 @@ def reminder_data(db_session):
     data = create_evaluation_data(db_session)
 
     user = data["user"]
+    company = data["company"]
+
     user.active = True
-    user.next_evaluation = datetime(2026, 12, 5)
+    company.biannual_evaluation = True
+    company.next_evaluation = datetime(2026, 12, 5)
 
     evaluation = Evaluation(
         user_id=user.id,
@@ -59,7 +62,7 @@ def test_generates_reminders_on_scheduled_dates(
     expected_type,
 ):
     user = reminder_data["user"]
-    user.next_evaluation = datetime.combine(
+    reminder_data["company"].next_evaluation = datetime.combine(
         TODAY + timedelta(days=days_until),
         datetime.min.time(),
     )
@@ -159,7 +162,7 @@ def test_does_not_generate_outside_schedule(
     db_session,
     reminder_data,
 ):
-    reminder_data["user"].next_evaluation = datetime(2026, 12, 10)
+    reminder_data["company"].next_evaluation = datetime(2026, 12, 10)
     db_session.flush()
 
     created = ReevaluationReminderService(db_session).generate(TODAY)
@@ -171,7 +174,7 @@ def test_does_not_generate_for_null_target_date(
     db_session,
     reminder_data,
 ):
-    reminder_data["user"].next_evaluation = None
+    reminder_data["company"].next_evaluation = None
     db_session.flush()
 
     created = ReevaluationReminderService(db_session).generate(TODAY)
@@ -185,10 +188,11 @@ def test_cancels_obsolete_in_app_after_cycle_change(db_session):
     user = data["user"]
 
     user.active = True
-    user.next_evaluation = datetime(2027, 11, 5)
+    data["company"].next_evaluation = datetime(2027, 11, 5)
 
     reminder = ReevaluationReminder(
         user_id=user.id,
+        company_id=data["company"].id,
         target_date=date(2027, 5, 5),
         reminder_type=ReminderType.DUE,
         channel=ReminderChannel.IN_APP,
@@ -215,7 +219,7 @@ def test_cancels_in_app_when_preference_disabled(db_session):
     user = data["user"]
 
     user.active = True
-    user.next_evaluation = datetime(2027, 5, 5)
+    data["company"].next_evaluation = datetime(2027, 5, 5)
 
     preference = NotificationPreference(
         user_id=user.id,
@@ -225,6 +229,7 @@ def test_cancels_in_app_when_preference_disabled(db_session):
 
     reminder = ReevaluationReminder(
         user_id=user.id,
+        company_id=data["company"].id,
         target_date=date(2027, 5, 5),
         reminder_type=ReminderType.FIRST,
         channel=ReminderChannel.IN_APP,
@@ -251,10 +256,11 @@ def test_keeps_valid_in_app_reminder(db_session):
     user = data["user"]
 
     user.active = True
-    user.next_evaluation = datetime(2027, 5, 5)
+    data["company"].next_evaluation = datetime(2027, 5, 5)
 
     reminder = ReevaluationReminder(
         user_id=user.id,
+        company_id=data["company"].id,
         target_date=date(2027, 5, 5),
         reminder_type=ReminderType.FIRST,
         channel=ReminderChannel.IN_APP,
@@ -321,7 +327,8 @@ def test_generates_reminders_across_calendar_boundaries(
     user = data["user"]
 
     user.active = True
-    user.next_evaluation = datetime.combine(
+    data["company"].biannual_evaluation = True
+    data["company"].next_evaluation = datetime.combine(
         target_date,
         datetime.min.time(),
     )
@@ -448,8 +455,8 @@ def test_reevaluation_creates_center_notifications(
     user = reminder_data["user"]
 
     target_date = TODAY + timedelta(days=days_until)
-    user.next_evaluation = datetime.combine(
-        target_date,
+    reminder_data["company"].next_evaluation = datetime.combine(
+        TODAY + timedelta(days=days_until),
         datetime.min.time(),
     )
 
@@ -633,7 +640,7 @@ def test_cancels_center_notification_with_obsolete_reminder(
     assert notification.status == NotificationStatus.PENDING
 
     if invalidating_change == "cycle_changed":
-        user.next_evaluation = datetime(2027, 6, 5)
+        reminder_data["company"].next_evaluation = datetime(2027, 6, 5)
 
     else:
         db_session.add(

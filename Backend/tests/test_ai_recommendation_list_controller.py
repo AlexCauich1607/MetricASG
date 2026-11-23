@@ -123,7 +123,6 @@ def test_list_recommendations_rejects_other_user(
     other_user = User(
         name="Other",
         lastname="User",
-        company_name="Other Company",
         email="other-recommendation-list@test.local",
         password="test-password",
         active=True,

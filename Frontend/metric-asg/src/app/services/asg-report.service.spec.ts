@@ -4,7 +4,7 @@ import { of, throwError } from 'rxjs';
 import { AsgReportService } from './asg-report.service';
 import { EvaluationService } from './evaluation.service';
 import { ImprovementActionService } from './improvement-action.service';
-import { UserService } from './user.service';
+import { CompanyContextService } from './company-context.service';
 
 import { User } from '../models/user';
 import { ResultEvaluation } from '../models/evaluation_result';
@@ -17,12 +17,17 @@ describe('AsgReportService', () => {
 
   let evaluationService: jasmine.SpyObj<EvaluationService>;
   let improvementService: jasmine.SpyObj<ImprovementActionService>;
-  let userService: jasmine.SpyObj<UserService>;
+  let selectedMembershipSpy: jasmine.Spy;
 
   const company = {
     id: 1,
+    name: 'Empresa Test'
+  };
+
+  const membership = {
+    company_id: 1,
     company_name: 'Empresa Test'
-  } as User;
+  };
 
   const evaluation: ResultEvaluation = {
     evaluation_id: 20,
@@ -83,10 +88,13 @@ describe('AsgReportService', () => {
       ['getActions', 'getProgressMetrics']
     );
 
-    userService = jasmine.createSpyObj(
-      'UserService',
-      ['getMe']
-    );
+    selectedMembershipSpy = jasmine.createSpy(
+      'selectedMembership'
+    ).and.returnValue(membership);
+
+    const companyContextMock = {
+      selectedMembership: selectedMembershipSpy
+    };
 
     TestBed.configureTestingModule({
       providers: [
@@ -100,15 +108,13 @@ describe('AsgReportService', () => {
           useValue: improvementService
         },
         {
-          provide: UserService,
-          useValue: userService
+          provide: CompanyContextService,
+          useValue: companyContextMock
         }
       ]
     });
 
     service = TestBed.inject(AsgReportService);
-
-    userService.getMe.and.returnValue(of(company));
 
     evaluationService.getEvaluationResultById
       .and.returnValue(of(evaluation));
@@ -239,5 +245,25 @@ describe('AsgReportService', () => {
         expect(error.message).toBe('Actions unavailable');
       }
     });
+  });
+  it('should reject report generation without a selected company', () => {
+    selectedMembershipSpy.and.returnValue(null);
+
+    service.getReport(20).subscribe({
+      next: () => fail('Expected missing company error'),
+      error: error => {
+        expect(error.message).toBe(
+          'No hay una empresa seleccionada'
+        );
+      }
+    });
+
+    expect(
+      evaluationService.getEvaluationResultById
+    ).not.toHaveBeenCalled();
+
+    expect(
+      improvementService.getActions
+    ).not.toHaveBeenCalled();
   });
 });

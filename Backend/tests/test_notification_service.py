@@ -28,7 +28,6 @@ EVENT = NotificationEventType.IMPROVEMENT_ACTION_DUE
 def notification_user(db_session):
     user = User(
         name="Notification Service Test",
-        company_name="Test Company",
         email=f"notification-service-{uuid.uuid4().hex}@test.local",
         password="test-password-hash",
     )

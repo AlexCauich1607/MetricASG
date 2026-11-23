@@ -11,13 +11,17 @@ from app.models.reevaluation_reminder_model import (
     ReminderType,
 )
 from app.models.user_model import User
-
+from app.models.company_model import Company
+from app.models.company_membership_model import (
+    CompanyMembership,
+    CompanyMembershipStatus,
+)
+from app.core.roles import CompanyRole
 
 @pytest.fixture
 def reminder_user(db_session):
     user = User(
         name="Reminder Test",
-        company_name="Test Company",
         email="reminder-test@example.com",
         password="test-password-hash",
     )
@@ -27,6 +31,27 @@ def reminder_user(db_session):
 
     return user
 
+@pytest.fixture
+def reminder_company(db_session, reminder_user):
+    company = Company(
+        name="Reminder Test Company",
+        active=True,
+    )
+
+    db_session.add(company)
+    db_session.flush()
+
+    membership = CompanyMembership(
+        user_id=reminder_user.id,
+        company_id=company.id,
+        role=CompanyRole.ASG_MANAGER,
+        status=CompanyMembershipStatus.ACTIVE,
+    )
+
+    db_session.add(membership)
+    db_session.flush()
+
+    return company
 
 def test_notification_preferences_defaults(db_session, reminder_user):
     preference = NotificationPreference(
@@ -58,9 +83,10 @@ def test_notification_preferences_unique_per_user(
         db_session.flush()
 
 
-def test_create_reevaluation_reminder(db_session, reminder_user):
+def test_create_reevaluation_reminder(db_session, reminder_user, reminder_company,):
     reminder = ReevaluationReminder(
         user_id=reminder_user.id,
+        company_id=reminder_company.id,
         target_date=date(2027, 5, 5),
         reminder_type=ReminderType.FIRST,
         channel=ReminderChannel.IN_APP,
@@ -74,13 +100,14 @@ def test_create_reevaluation_reminder(db_session, reminder_user):
     assert reminder.status == ReminderStatus.PENDING
     assert reminder.sent_at is None
 
-
 def test_duplicate_reevaluation_reminder_rejected(
     db_session,
     reminder_user,
+    reminder_company,
 ):
     reminder_data = {
         "user_id": reminder_user.id,
+        "company_id": reminder_company.id,
         "target_date": date(2027, 5, 5),
         "reminder_type": ReminderType.FIRST,
         "channel": ReminderChannel.IN_APP,
@@ -94,15 +121,16 @@ def test_duplicate_reevaluation_reminder_rejected(
     with pytest.raises(IntegrityError):
         db_session.flush()
 
-
 def test_reminder_channels_are_independent(
     db_session,
     reminder_user,
+    reminder_company
 ):
     for channel in (ReminderChannel.IN_APP, ReminderChannel.EMAIL):
         db_session.add(
             ReevaluationReminder(
                 user_id=reminder_user.id,
+                company_id=reminder_company.id,
                 target_date=date(2027, 5, 5),
                 reminder_type=ReminderType.FIRST,
                 channel=channel,
@@ -140,3 +168,60 @@ def test_invalid_reminder_status_rejected(
 
     with pytest.raises((StatementError, IntegrityError)):
         db_session.flush()
+
+def test_reminders_are_independent_between_companies(
+    db_session,
+    reminder_user,
+    reminder_company,
+):
+    other_company = Company(
+        name="Other Reminder Test Company",
+        active=True,
+    )
+
+    db_session.add(other_company)
+    db_session.flush()
+
+    db_session.add(
+        CompanyMembership(
+            user_id=reminder_user.id,
+            company_id=other_company.id,
+            role=CompanyRole.ASG_MANAGER,
+            status=CompanyMembershipStatus.ACTIVE,
+        )
+    )
+
+    common_data = {
+        "user_id": reminder_user.id,
+        "target_date": date(2027, 5, 5),
+        "reminder_type": ReminderType.FIRST,
+        "channel": ReminderChannel.IN_APP,
+    }
+
+    db_session.add_all([
+        ReevaluationReminder(
+            company_id=reminder_company.id,
+            **common_data,
+        ),
+        ReevaluationReminder(
+            company_id=other_company.id,
+            **common_data,
+        ),
+    ])
+
+    db_session.flush()
+
+    reminders = (
+        db_session.query(ReevaluationReminder)
+        .filter(
+            ReevaluationReminder.user_id == reminder_user.id,
+            ReevaluationReminder.target_date == date(2027, 5, 5),
+        )
+        .all()
+    )
+
+    assert len(reminders) == 2
+    assert {reminder.company_id for reminder in reminders} == {
+        reminder_company.id,
+        other_company.id,
+    }

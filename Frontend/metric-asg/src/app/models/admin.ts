@@ -1,9 +1,13 @@
 import { User } from "./user"
 
 export interface UserSumary {
-    total: number,
-    completed_evaluation: number,
-    pending_evaluation: number
+  total: number;
+}
+
+export interface CompanySumary {
+  total: number;
+  completed_evaluation: number;
+  pending_evaluation: number;
 }
 
 export interface ASGSumary {
@@ -27,11 +31,12 @@ export interface SumaryAmbit {
     maturity_levels:SumaryLevel []
 }
 
-export interface Sumary{
-    users: UserSumary,
-    asg: ASGSumary,
-    users_by_month: UserByMonth [],
-    ambits: SumaryAmbit []
+export interface Sumary {
+  users: UserSumary;
+  companies: CompanySumary;
+  asg: ASGSumary;
+  users_by_month: UserByMonth[];
+  ambits: SumaryAmbit[];
 }
 
 export interface AllUsers{

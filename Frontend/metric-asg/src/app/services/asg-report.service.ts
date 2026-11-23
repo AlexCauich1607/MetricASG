@@ -10,7 +10,8 @@ import {
 import { EvaluationComparison } from '../models/evaluation_comparison';
 import { EvaluationService } from './evaluation.service';
 import { ImprovementActionService } from './improvement-action.service';
-import { UserService } from './user.service';
+import { CompanyContextService } from './company-context.service';
+import { throwError } from 'rxjs';
 
 import { AsgReport } from '../models/asg_report';
 import { EvaluationHistory } from '../models/history_evaluations';
@@ -23,12 +24,19 @@ export class AsgReportService {
     constructor(
         private evaluationService: EvaluationService,
         private improvementActionService: ImprovementActionService,
-        private userService: UserService
+        private companyContext: CompanyContextService
     ) { }
 
     getReport(evaluationId: number): Observable<AsgReport> {
+        const membership = this.companyContext.selectedMembership();
+
+        if (!membership) {
+            return throwError(
+                () => new Error('No hay una empresa seleccionada')
+            );
+        }
+
         return forkJoin({
-            company: this.userService.getMe(),
             evaluation: this.evaluationService.getEvaluationResultById(
                 evaluationId
             ),
@@ -55,7 +63,10 @@ export class AsgReportService {
 
                 return comparison$.pipe(
                     map((comparison): AsgReport => ({
-                        company: data.company,
+                        company: {
+                            id: membership.company_id,
+                            name: membership.company_name
+                        },
                         evaluation: data.evaluation,
                         comparison,
                         improvement_actions: data.improvement_actions,
