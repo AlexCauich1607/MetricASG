@@ -65,10 +65,11 @@ describe('AuthService', () => {
 
     request.flush({
       id: 10,
-      ...personalData,
-      company_name: null,
-      company_sector_id: null,
-      company_size_id: null,
+      name: personalData.name,
+      lastname: personalData.lastname,
+      position: personalData.position,
+      email: personalData.email,
+      phone: personalData.phone,
       role: 'USER',
       active: true
     });
@@ -119,7 +120,6 @@ describe('AuthService', () => {
       user: {
         id: 1,
         name: 'Alex',
-        company_name: 'MetricASG',
         profile_photo: 'photo.jpg',
         role: 'USER',
         email: 'user@test.com',
@@ -150,8 +150,7 @@ describe('AuthService', () => {
     expect(JSON.parse(sessionStorage.getItem('token')!))
       .toBe('test-access-token');
 
-    expect(JSON.parse(sessionStorage.getItem('company')!))
-      .toBe('MetricASG');
+    expect(sessionStorage.getItem('company')).toBeNull();
 
     expect(JSON.parse(sessionStorage.getItem('id')!))
       .toBe(1);
@@ -300,7 +299,6 @@ describe('AuthService', () => {
       user: {
         id: 15,
         name: 'Personal',
-        company_name: null,
         profile_photo: null,
         role: 'USER',
         email: 'personal@test.com',
@@ -328,8 +326,7 @@ describe('AuthService', () => {
     expect(JSON.parse(sessionStorage.getItem('token')!))
       .toBe('personal-access-token');
 
-    expect(JSON.parse(sessionStorage.getItem('company')!))
-      .toBe('');
+    expect(sessionStorage.getItem('company')).toBeNull();
 
     expect(JSON.parse(sessionStorage.getItem('id')!))
       .toBe(15);
