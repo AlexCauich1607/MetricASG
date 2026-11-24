@@ -140,7 +140,62 @@ describe('CreateCompanyComponent', () => {
         expect(component.saving).toBeFalse();
         expect(dialogRef.close).not.toHaveBeenCalled();
     });
+    it('should reject whitespace-only names and show an accessible error', () => {
+        component.form.patchValue({
+            name: '   '
+        });
 
+        component.save();
+        fixture.detectChanges();
+
+        const nameControl = component.form.controls.name;
+
+        const nameInput = fixture.nativeElement.querySelector(
+            '#company-name'
+        ) as HTMLInputElement;
+
+        const errorElement = fixture.nativeElement.querySelector(
+            '#company-name-error'
+        ) as HTMLElement | null;
+
+        expect(nameControl.invalid).toBeTrue();
+        expect(nameControl.touched).toBeTrue();
+
+        expect(membershipService.createCompany).not.toHaveBeenCalled();
+        expect(dialogRef.close).not.toHaveBeenCalled();
+
+        expect(errorElement).not.toBeNull();
+        expect(errorElement?.textContent).toContain(
+            'El nombre debe contener al menos 3 caracteres válidos.'
+        );
+
+        expect(nameInput.getAttribute('aria-invalid')).toBe('true');
+        expect(nameInput.getAttribute('aria-describedby')).toBe(
+            'company-name-error'
+        );
+    });
+    it('should focus the company name field when submitting an invalid form', () => {
+        component.form.patchValue({
+            name: '   '
+        });
+
+        const nameInput = fixture.nativeElement.querySelector(
+            '#company-name'
+        ) as HTMLInputElement;
+
+        const focusSpy = spyOn(nameInput, 'focus').and.callThrough();
+
+        component.save();
+        fixture.detectChanges();
+
+        expect(component.form.controls.name.invalid).toBeTrue();
+        expect(component.form.controls.name.touched).toBeTrue();
+
+        expect(focusSpy).toHaveBeenCalled();
+        expect(document.activeElement).toBe(nameInput);
+
+        expect(membershipService.createCompany).not.toHaveBeenCalled();
+    });
     it('should close the dialog when cancelled', () => {
         component.close();
 

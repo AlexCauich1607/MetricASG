@@ -28,27 +28,148 @@
     </app-ui-state>
     }
 
-    @if (resultsStatus === 'empty') {
+    @if (companyContext.loading()) {
+    <app-ui-state type="loading" title="Cargando empresas" message="Estamos consultando tus empresas disponibles.">
+    </app-ui-state>
+
+    } @else if (companyContext.error()) {
+    <app-ui-state type="error" title="No se pudieron cargar tus empresas"
+      message="No pudimos verificar tus membresías empresariales. Inténtalo nuevamente.">
+    </app-ui-state>
+    @if (invitationAcceptedPendingSync) {
+    <div class="text-center mt-3">
+      <p role="alert">
+        La invitación fue aceptada, pero no pudimos actualizar
+        tus empresas.
+      </p>
+
+      <button type="button" class="asg-btn asg-btn--primary" [disabled]="companyContext.loading()"
+        (click)="syncAcceptedInvitation()">
+        Reintentar sincronización
+      </button>
+    </div>
+    }
+
+    } @else if (
+    companyContext.memberships().length === 0 &&
+    companyContext.selectedCompanyId() === null
+    ) {
+    <section class="company-onboarding mt-4" aria-labelledby="company-onboarding-title">
+
+      <h3 id="company-onboarding-title" class="fw-bold text-my-purple">
+        Configura tu primera empresa
+      </h3>
+
+      <p class="text-muted">
+        Para comenzar a utilizar MetricASG, crea una empresa
+        o acepta una invitación de una organización existente.
+      </p>
+
+      <div class="company-onboarding__actions">
+
+        <div class="company-onboarding__card">
+          <i class="bi bi-building-add" aria-hidden="true"></i>
+
+          <h4>Crear una empresa</h4>
+
+          <p>
+            Registra tu organización y comienza a gestionar
+            sus evaluaciones ASG.
+          </p>
+
+          <button type="button" class="asg-btn asg-btn--primary" (click)="openCreateCompany()">
+            Crear empresa
+          </button>
+        </div>
+
+        <div class="company-onboarding__card">
+          <i class="bi bi-envelope-check" aria-hidden="true"></i>
+
+          <h4>Aceptar una invitación</h4>
+
+          <p>
+            Si ya recibiste una invitación, podrás incorporarte
+            a la empresa mediante tu token de acceso.
+          </p>
+
+          <div class="company-onboarding__invitation">
+            <form (submit)="$event.preventDefault(); acceptInvitation()" aria-label="Aceptar invitación empresarial">
+              <label for="invitation-token" class="form-label fw-semibold">
+                Token de invitación
+              </label>
+
+              <input id="invitation-token" name="invitationToken" type="text" class="form-control"
+                placeholder="Introduce tu token" autocomplete="off" [value]="invitationToken" [disabled]="
+  acceptingInvitation ||
+  invitationAcceptedPendingSync ||
+  companyContext.loading()
+" [attr.aria-invalid]="invitationError ? 'true' : null" [attr.aria-describedby]="
+        invitationError ? 'invitation-error' : null
+      " (input)="invitationToken = $any($event.target).value" />
+
+              @if (invitationError) {
+              <p id="invitation-error" class="sw-text-error mt-2 mb-0" role="alert">
+                {{ invitationError }}
+              </p>
+              }
+              @if (
+              invitationAcceptedPendingSync &&
+              !companyContext.loading()
+              ) {
+              <button type="button" class="asg-btn mt-2" (click)="syncAcceptedInvitation()">
+                Reintentar sincronización
+              </button>
+              }
+
+              @if (invitationSuccess) {
+              <p class="company-onboarding__success mt-2" role="status">
+                <i class="bi bi-check-circle-fill" aria-hidden="true"></i>
+                Invitación aceptada y empresa sincronizada correctamente.
+              </p>
+              }
+
+              <button type="submit" class="asg-btn asg-btn--primary mt-3" [disabled]="
+  acceptingInvitation ||
+  invitationAcceptedPendingSync ||
+  companyContext.loading() ||
+  !invitationToken.trim()
+">
+                @if (acceptingInvitation) {
+                <span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>
+                Aceptando invitación...
+                } @else if (invitationAcceptedPendingSync) {
+                <span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>
+                Actualizando empresas...
+                } @else {
+                <i class="bi bi-check-circle me-2" aria-hidden="true"></i>
+                Aceptar invitación
+                }
+              </button>
+            </form>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    } @else if (resultsStatus === 'empty') {
     <div class="mt-3">
-      <@if (companyContext.selectedCompanyId()===null) { <app-ui-state type="empty" title="Selecciona una empresa"
-        message="Selecciona o crea una empresa para comenzar a evaluar.">
-        </app-ui-state>
-        } @else {
-        <app-ui-state type="empty" title="Aún no tienes resultados"
-          message="Para comenzar, realiza tu primer autodiagnóstico.">
-        </app-ui-state>
-        }
 
-        <button type="button" class="asg-btn asg-btn--primary mt-3" [disabled]="!canStartEvaluation"
-          [class.text-gray]="!canStartEvaluation" (click)="goEvaluation()">
+      <app-ui-state type="empty" title="Aún no tienes resultados"
+        message="Para comenzar, realiza tu primer autodiagnóstico.">
+      </app-ui-state>
 
-          <i [class]="canStartEvaluation
-      ? 'bi bi-rocket-fill'
-      : 'bi bi-lock-fill'" aria-hidden="true">
-          </i>
+      <button type="button" class="asg-btn asg-btn--primary mt-3" [disabled]="!canStartEvaluation"
+        (click)="goEvaluation()">
 
-          Realizar autodiagnóstico
-        </button>
+        <i [class]="canStartEvaluation
+          ? 'bi bi-rocket-fill'
+          : 'bi bi-lock-fill'" aria-hidden="true">
+        </i>
+
+        Realizar autodiagnóstico
+      </button>
+
     </div>
     }
     @if (results) {

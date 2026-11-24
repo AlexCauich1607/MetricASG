@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, ElementRef, OnInit, ViewChild } from '@angular/core';
 import {
   FormBuilder,
   ReactiveFormsModule,
@@ -27,6 +27,9 @@ import { CompanySizeService } from '../../../services/company-size.service';
   styleUrl: './create-company.component.scss'
 })
 export class CreateCompanyComponent implements OnInit {
+  @ViewChild('companyNameInput')
+  companyNameInput?: ElementRef<HTMLInputElement>;
+
   readonly form;
 
   sectors: CompanySector[] = [];
@@ -83,6 +86,7 @@ export class CreateCompanyComponent implements OnInit {
 
     if (this.form.invalid) {
       this.form.markAllAsTouched();
+      this.companyNameInput?.nativeElement.focus();
       return;
     }
 
@@ -90,6 +94,8 @@ export class CreateCompanyComponent implements OnInit {
 
     if (name.length < 3) {
       this.form.controls.name.setErrors({ minlength: true });
+      this.form.controls.name.markAsTouched();
+      this.companyNameInput?.nativeElement.focus();
       return;
     }
 

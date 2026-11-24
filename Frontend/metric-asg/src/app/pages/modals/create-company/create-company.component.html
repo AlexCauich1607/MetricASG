@@ -1,4 +1,3 @@
-
 <div class="p-4 bg-white">
   <h5 class="modal-title fw-bold text-center text-my-purple mb-3">
     <i class="bi bi-building-add me-2" aria-hidden="true"></i>
@@ -12,14 +11,12 @@
 
   <form [formGroup]="form" (ngSubmit)="save()">
     <div class="mb-3">
-      <label
-        for="company-name"
-        class="form-label fw-bold text-my-purple"
-      >
+      <label for="company-name" class="form-label fw-bold text-my-purple">
         Nombre de la empresa
       </label>
 
       <input
+        #companyNameInput
         id="company-name"
         type="text"
         class="form-control"
@@ -29,92 +26,77 @@
         [attr.aria-invalid]="
           form.controls.name.invalid && form.controls.name.touched
         "
+        [attr.aria-describedby]="
+          form.controls.name.invalid && form.controls.name.touched
+            ? 'company-name-error'
+            : null
+        "
       />
 
       @if (form.controls.name.invalid && form.controls.name.touched) {
-        <p class="sw-text-error mt-1">
-          El nombre debe tener al menos 3 caracteres.
+        <p
+          id="company-name-error"
+          class="sw-text-error mt-1"
+        >
+          El nombre debe contener al menos 3 caracteres válidos.
         </p>
       }
     </div>
 
     <div class="mb-3">
-      <label
-        for="company-sector"
-        class="form-label fw-bold text-my-purple"
-      >
+      <label for="company-sector" class="form-label fw-bold text-my-purple">
         Sector (opcional)
       </label>
 
-      <select
-        id="company-sector"
-        class="form-select"
-        formControlName="sector_id"
-      >
+      <select id="company-sector" class="form-select" formControlName="sector_id">
         <option [ngValue]="null">Sin especificar</option>
 
         @for (sector of sectors; track sector.id) {
-          <option [ngValue]="sector.id">
-            {{ sector.name }}
-          </option>
+        <option [ngValue]="sector.id">
+          {{ sector.name }}
+        </option>
         }
       </select>
     </div>
 
     <div class="mb-3">
-      <label
-        for="company-size"
-        class="form-label fw-bold text-my-purple"
-      >
+      <label for="company-size" class="form-label fw-bold text-my-purple">
         Tamaño (opcional)
       </label>
 
-      <select
-        id="company-size"
-        class="form-select"
-        formControlName="size_id"
-      >
+      <select id="company-size" class="form-select" formControlName="size_id">
         <option [ngValue]="null">Sin especificar</option>
 
         @for (size of sizes; track size.id) {
-          <option [ngValue]="size.id">
-            {{ size.name }}
-          </option>
+        <option [ngValue]="size.id">
+          {{ size.name }}
+        </option>
         }
       </select>
     </div>
 
     @if (loadingCatalogs) {
-      <p class="text-muted small" role="status">
-        Cargando sectores y tamaños empresariales...
-      </p>
+    <p class="text-muted small" role="status">
+      Cargando sectores y tamaños empresariales...
+    </p>
     }
 
     @if (errorMessage) {
-      <div class="alert alert-danger" role="alert">
-        {{ errorMessage }}
-      </div>
+    <div class="alert alert-danger" role="alert">
+      {{ errorMessage }}
+    </div>
     }
 
     <div class="d-flex justify-content-end gap-2 mt-4">
-      <button
-        type="button"
-        class="btn btn-outline-secondary"
-        [disabled]="saving"
-        (click)="close()"
-      >
+      <button type="button" class="btn btn-outline-secondary" [disabled]="saving" (click)="close()">
         Cancelar
       </button>
 
-      <button
-        type="submit"
-        class="btn-my-purple"
-        [disabled]="saving"
-      >
+      <button type="submit" class="btn-my-purple" [disabled]="saving">
         @if (saving) {
-          Guardando...
+        Guardando...
         } @else {
-          Crear empresa
+        Crear empresa
         }
       </button>
     </div>

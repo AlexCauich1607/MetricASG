@@ -10,11 +10,23 @@ import { MatDialog } from '@angular/material/dialog';
 import { AmbitCardComponent } from '../../../shared/ambit-card/ambit-card.component';
 import { BarChartComponent } from '../../../shared/bar-chart/bar-chart.component';
 import { toObservable, takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { EMPTY, switchMap, tap, catchError } from 'rxjs';
+import {
+  EMPTY,
+  switchMap,
+  tap,
+  catchError,
+  finalize
+} from 'rxjs';
 import { CompanyContextService } from '../../../services/company-context.service';
 import { UiStateComponent } from '../../../shared/ui-state/ui-state.component';
 import { CompanyMembershipService } from '../../../services/company-membership.service';
-import { CompanyDetailResponse } from '../../../models/company_membership';
+import {
+  CompanyCreateResponse,
+  CompanyDetailResponse
+} from '../../../models/company_membership';
+
+import { CreateCompanyComponent } from '../../modals/create-company/create-company.component';
+import { CompanyInvitationService } from '../../../services/company-invitation.service';
 
 Chart.register(...registerables);
 
@@ -51,6 +63,12 @@ export class UserHomeComponent {
   company: CompanyDetailResponse | null = null;
   companyLoading = true;
   companyError = false;
+
+  invitationToken = '';
+  acceptingInvitation = false;
+  invitationError = '';
+  invitationSuccess = false;
+  invitationAcceptedPendingSync = false;
 
   get canStartEvaluation(): boolean {
     const company = this.company;
@@ -95,6 +113,7 @@ export class UserHomeComponent {
     public companyContext: CompanyContextService,
     private destroyRef: DestroyRef,
     private companyMembershipService: CompanyMembershipService,
+    private companyInvitationService: CompanyInvitationService,
   ) {
 
     toObservable(this.companyContext.selectedCompanyId)
@@ -298,6 +317,99 @@ export class UserHomeComponent {
     ) {
       this.router.navigate(['/user/evaluation']);
     }
+  }
+
+  openCreateCompany(): void {
+    if (
+      this.companyContext.loading() ||
+      this.companyContext.error() ||
+      this.companyContext.memberships().length > 0 ||
+      this.companyContext.selectedCompanyId() !== null ||
+      this.router.url.split('?')[0].split('#')[0] === '/user/evaluation'
+    ) {
+      return;
+    }
+
+    const dialogRef = this.dialog.open(CreateCompanyComponent, {
+      width: '520px',
+      maxWidth: '95vw',
+      disableClose: true
+    });
+
+    dialogRef.afterClosed().subscribe(
+      (company: CompanyCreateResponse | null | undefined) => {
+        if (company) {
+          this.companyContext.loadMemberships(company.id);
+        }
+      }
+    );
+  }
+
+  acceptInvitation(): void {
+    const token = this.invitationToken.trim();
+
+    if (
+      !token ||
+      this.acceptingInvitation ||
+      this.invitationAcceptedPendingSync ||
+      this.companyContext.loading() ||
+      this.companyContext.error() ||
+      this.companyContext.memberships().length > 0 ||
+      this.companyContext.selectedCompanyId() !== null
+    ) {
+      return;
+    }
+
+    this.acceptingInvitation = true;
+    this.invitationError = '';
+    this.invitationSuccess = false;
+
+    this.companyInvitationService.acceptInvitation({ token })
+      .pipe(
+        finalize(() => {
+          this.acceptingInvitation = false;
+        })
+      )
+      .subscribe({
+        next: () => {
+          this.invitationToken = '';
+          this.invitationAcceptedPendingSync = true;
+          this.syncAcceptedInvitation();
+        },
+        error: () => {
+          this.invitationError =
+            'No fue posible aceptar la invitación. Verifica el token e inténtalo nuevamente.';
+        }
+      });
+  }
+
+  syncAcceptedInvitation(): void {
+    if (
+      !this.invitationAcceptedPendingSync ||
+      this.companyContext.loading()
+    ) {
+      return;
+    }
+
+    this.invitationError = '';
+
+    this.companyContext.refreshMemberships()
+      .subscribe({
+        next: memberships => {
+          if (
+            this.companyContext.error() ||
+            memberships.length === 0 ||
+            this.companyContext.selectedCompanyId() === null
+          ) {
+            this.invitationError =
+              'La invitación fue aceptada, pero no pudimos actualizar tus empresas. Intenta sincronizarlas nuevamente.';
+            return;
+          }
+
+          this.invitationAcceptedPendingSync = false;
+          this.invitationSuccess = true;
+        }
+      });
   }
 
   downloadPdf() {

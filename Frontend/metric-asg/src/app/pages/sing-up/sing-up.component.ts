@@ -67,6 +67,10 @@ export class SingUpComponent {
     this.showPassword = !this.showPassword;
   }
 
+  togglePasswordConfirmation(): void {
+    this.showPassword2 = !this.showPassword2;
+  }
+
   onInput(event: Event) {
     const input = event.target as HTMLInputElement;
     this.hasValue = input.value.length > 0;

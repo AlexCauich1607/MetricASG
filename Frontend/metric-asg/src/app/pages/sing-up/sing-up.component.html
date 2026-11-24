@@ -166,7 +166,7 @@
                         Telefono</label>
                     </div>
                     @if (getValue('phone')!.invalid && (getValue('phone')!.dirty || getValue('phone')!.touched)) {
-                    <div>
+                    a<div>
                       <p id="phone-required-error" class="sw-text-error mb-0 pb-0">*Este campo no puede estar vacio</p>
                     </div>
                     }
@@ -193,12 +193,17 @@
                       <label for="password"><i class="bi bi-lock-fill me-1"></i>
                         Contraseña</label>
 
-                      <button type="button" class="toggle-password" (click)="togglePassword()"
-                        [attr.aria-label]="showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'">
-                        <span class="material-icons">
-                          {{ showPassword ? 'visibility_off' : 'visibility' }}
-                        </span>
-                      </button>
+                      <button
+  type="button"
+  class="toggle-password"
+  (click)="togglePassword()"
+  [attr.aria-label]="showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'"
+  [attr.aria-pressed]="showPassword">
+
+  <span class="material-icons" aria-hidden="true">
+    {{ showPassword ? 'visibility_off' : 'visibility' }}
+  </span>
+</button>
                     </div>
                     @if (getValue('password')!.invalid && (getValue('password')!.dirty ||
                     getValue('password')!.touched)) {
@@ -207,30 +212,41 @@
                         caracteres</p>
                     </div>
                     }
-                    @if (getValue('password')!.value.length > 0) {
+
                     <div>
                       <div class="floating-input password-field">
-                        <input class="color-input-bg" [type]="showPassword ? 'text' : 'password'" id="r_password"
-                          placeholder=" " (input)="onInput($event)" [(ngModel)]="r_password"
-                          [ngModelOptions]="{standalone: true}"
-                          [attr.aria-invalid]="!validatePassword() ? 'true' : null"
-                          [attr.aria-describedby]="!validatePassword() ? 'confirm-password-error' : null" />
+                       <input
+  class="color-input-bg"
+  [type]="showPassword2 ? 'text' : 'password'"
+  id="r_password"
+  placeholder=" "
+  (input)="onInput($event)"
+  [(ngModel)]="r_password"
+  [ngModelOptions]="{standalone: true}"
+  [attr.aria-invalid]="!validatePassword() ? 'true' : null"
+  [attr.aria-describedby]="!validatePassword() ? 'confirm-password-error' : null"
+/>
                         <label for="r_password"><i class="bi bi-lock-fill me-1"></i> Repetir
                           Contraseña</label>
-                        <button type="button" class="toggle-password" (click)="togglePassword()"
-                          [attr.aria-label]="showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'">
-                          <span class="material-icons">
-                            {{ showPassword ? 'visibility_off' : 'visibility' }}
+                        <button type="button" class="toggle-password" (click)="togglePasswordConfirmation()"
+                          [attr.aria-label]="showPassword2
+    ? 'Ocultar confirmación de contraseña'
+    : 'Mostrar confirmación de contraseña'" [attr.aria-pressed]="showPassword2">
+
+                          <span class="material-icons" aria-hidden="true">
+                            {{ showPassword2 ? 'visibility_off' : 'visibility' }}
                           </span>
                         </button>
                       </div>
-                      @if (!validatePassword()) {
+                      @if (getValue('password')!.value.length > 0 &&
+     r_password.length > 0 &&
+     !validatePassword()) {
                       <div>
                         <p id="confirm-password-error" class="sw-text-error mb-0 pb-0">*Las contraseñas no coinciden</p>
                       </div>
                       }
                     </div>
-                    }
+
                     <div class="d-grid my-4">
                       <button type="button" class="asg-btn asg-btn--primary w-100" (click)="register()">
                         <i class="bi bi-person-plus-fill" aria-hidden="true"></i>
