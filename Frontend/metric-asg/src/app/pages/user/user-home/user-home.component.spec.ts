@@ -59,6 +59,7 @@ describe('UserHomeComponent', () => {
     date: '2026-09-15T12:00:00',
     global_score: 8,
     global_maturity_level: 'Intermedio',
+    global_maturity_color: '#eac84f',
     ambits: [
       {
         ambit_id: 1,
@@ -78,6 +79,7 @@ describe('UserHomeComponent', () => {
     date: '2026-10-20T12:00:00',
     global_score: 7,
     global_maturity_level: 'Intermedio',
+    global_maturity_color: '#c28c20',
     ambits: [
       {
         ambit_id: 2,
@@ -291,15 +293,39 @@ describe('UserHomeComponent', () => {
     );
 
     selectedCompanyId.set(3);
+
     TestBed.tick();
     fixture.detectChanges();
 
     expect(component.resultsStatus).toBe('empty');
     expect(component.results).toBeNull();
 
+    const emptyState: HTMLElement =
+      fixture.nativeElement.querySelector('.dashboard-empty');
+
+    expect(emptyState).not.toBeNull();
+
+    expect(emptyState.textContent)
+      .toContain('Aún no hay resultados empresariales');
+
+    expect(emptyState.textContent)
+      .toContain('Primera evaluación pendiente');
+
     expect(
-      fixture.nativeElement.querySelector('.asg-state--empty')
+      emptyState.querySelectorAll('.dashboard-empty__benefit').length
+    ).toBe(3);
+
+    expect(
+      emptyState.querySelector('.dashboard-period__action')
     ).not.toBeNull();
+
+    expect(
+      fixture.nativeElement.querySelector('.dashboard-performance')
+    ).toBeNull();
+
+    expect(
+      fixture.nativeElement.querySelector('.asg-state--error')
+    ).toBeNull();
   });
 
   it('should show error for service failures', async () => {
@@ -632,5 +658,218 @@ describe('UserHomeComponent', () => {
 
     expect(cards[1].textContent).toContain('Ambiental');
     expect(cards[1].textContent).toContain('8.5');
+  });
+  it('should highlight only the global ASG card', () => {
+    selectCompanyWithRole(CompanyRole.COMPANY_ADMIN);
+
+    const featuredCards =
+      fixture.nativeElement.querySelectorAll(
+        '.dashboard-kpi--featured'
+      );
+
+    expect(featuredCards.length).toBe(1);
+
+    expect(featuredCards[0].textContent)
+      .toContain('Nivel ASG global');
+  });
+
+  it('should navigate to results from the featured card', () => {
+    selectCompanyWithRole(CompanyRole.AUDITOR);
+
+    const router = TestBed.inject(Router);
+
+    const navigate = spyOn(router, 'navigate')
+      .and.resolveTo(true);
+
+    const button: HTMLButtonElement =
+      fixture.nativeElement.querySelector(
+        '.dashboard-global-action'
+      );
+
+    expect(button).not.toBeNull();
+
+    button.click();
+
+    expect(navigate).toHaveBeenCalledWith([
+      '/user/results'
+    ]);
+  });
+  it('should render maturity colors received from the evaluation', () => {
+    selectCompanyWithRole(CompanyRole.COMPANY_ADMIN);
+
+    const globalLevel: HTMLElement =
+      fixture.nativeElement.querySelector(
+        '.dashboard-global-card .dashboard-kpi__level'
+      );
+
+    const ambitLevel: HTMLElement =
+      fixture.nativeElement.querySelector(
+        '.dashboard-performance__grid app-ambit-card:not(.dashboard-global-card) .dashboard-kpi__level'
+      );
+
+    expect(globalLevel).not.toBeNull();
+    expect(ambitLevel).not.toBeNull();
+
+    expect(
+      globalLevel.style.getPropertyValue('--maturity-color').trim()
+    ).toBe('#eac84f');
+
+    expect(
+      ambitLevel.style.getPropertyValue('--maturity-color').trim()
+    ).toBe('#15b91d');
+  });
+  it('should update the global maturity color when switching companies', () => {
+    evaluationService.getLastEvaluationResult.and.returnValues(
+      of(companyAResults),
+      of(companyBResults)
+    );
+
+    memberships.set([
+      {
+        membership_id: 1,
+        company_id: 3,
+        company_name: 'Empresa A',
+        role: CompanyRole.COMPANY_ADMIN,
+        joined_at: '2026-11-23T12:00:00'
+      },
+      {
+        membership_id: 2,
+        company_id: 7,
+        company_name: 'Empresa B',
+        role: CompanyRole.COMPANY_ADMIN,
+        joined_at: '2026-11-23T12:00:00'
+      }
+    ]);
+
+    selectedCompanyId.set(3);
+
+    TestBed.tick();
+    fixture.detectChanges();
+
+    const getGlobalLevel = (): HTMLElement =>
+      fixture.nativeElement.querySelector(
+        '.dashboard-global-card .dashboard-kpi__level'
+      );
+
+    expect(
+      getGlobalLevel().style.getPropertyValue('--maturity-color').trim()
+    ).toBe('#eac84f');
+
+    selectedCompanyId.set(7);
+
+    TestBed.tick();
+    fixture.detectChanges();
+
+    expect(
+      getGlobalLevel().style.getPropertyValue('--maturity-color').trim()
+    ).toBe('#c28c20');
+
+    expect(component.results?.evaluation_id)
+      .toBe(20);
+  });
+  it('should support results without a global maturity color', () => {
+    evaluationService.getLastEvaluationResult.and.returnValue(
+      of({
+        ...companyAResults,
+        global_maturity_color: undefined
+      })
+    );
+
+    selectCompanyWithRole(CompanyRole.COMPANY_ADMIN);
+
+    const globalLevel: HTMLElement =
+      fixture.nativeElement.querySelector(
+        '.dashboard-global-card .dashboard-kpi__level'
+      );
+
+    expect(globalLevel).not.toBeNull();
+
+    expect(globalLevel.textContent?.trim())
+      .toBe('Intermedio');
+
+    expect(
+      globalLevel.style.getPropertyValue('--maturity-color').trim()
+    ).toBe('');
+  });
+  it('should display both onboarding options without a company', () => {
+    selectedCompanyId.set(null);
+
+    TestBed.tick();
+    fixture.detectChanges();
+
+    const onboarding: HTMLElement =
+      fixture.nativeElement.querySelector('.company-onboarding');
+
+    expect(onboarding).not.toBeNull();
+
+    expect(
+      onboarding.querySelectorAll('.company-onboarding__card').length
+    ).toBe(2);
+
+    expect(onboarding.textContent)
+      .toContain('Configura tu primera empresa');
+
+    expect(onboarding.textContent)
+      .toContain('Crear una empresa');
+
+    expect(onboarding.textContent)
+      .toContain('Aceptar una invitación');
+
+    expect(
+      fixture.nativeElement.querySelector('.dashboard-empty')
+    ).toBeNull();
+
+    expect(
+      fixture.nativeElement.querySelector('.dashboard-performance')
+    ).toBeNull();
+  });
+  it('should disable invitation submission when the token is empty', () => {
+    selectedCompanyId.set(null);
+    component.invitationToken = '';
+
+    TestBed.tick();
+    fixture.detectChanges();
+
+    const submitButton: HTMLButtonElement =
+      fixture.nativeElement.querySelector(
+        '.company-onboarding__invitation button[type="submit"]'
+      );
+
+    expect(submitButton).not.toBeNull();
+    expect(submitButton.disabled).toBeTrue();
+
+    component.invitationToken = '   ';
+
+    fixture.detectChanges();
+
+    expect(submitButton.disabled).toBeTrue();
+  });
+  it('should enable invitation submission when a token is provided', () => {
+    selectedCompanyId.set(null);
+
+    TestBed.tick();
+    fixture.detectChanges();
+
+    const tokenInput: HTMLInputElement =
+      fixture.nativeElement.querySelector('#invitation-token');
+
+    const submitButton: HTMLButtonElement =
+      fixture.nativeElement.querySelector(
+        '.company-onboarding__invitation button[type="submit"]'
+      );
+
+    expect(tokenInput).not.toBeNull();
+    expect(submitButton).not.toBeNull();
+
+    tokenInput.value = 'example-invitation-token';
+
+    tokenInput.dispatchEvent(new Event('input'));
+
+    fixture.detectChanges();
+
+    expect(component.invitationToken)
+      .toBe('example-invitation-token');
+
+    expect(submitButton.disabled).toBeFalse();
   });
 });

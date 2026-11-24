@@ -1,173 +1,201 @@
 @if (variant === 'dashboard') {
 
-  <article
-    class="dashboard-kpi"
+<article class="dashboard-kpi" [class.dashboard-kpi--featured]="featured"
     [style.--kpi-accent]="color || 'var(--asg-color-brand-primary)'">
 
-    <div class="dashboard-kpi__header">
+    <div class="dashboard-kpi__main">
 
-      <span
-        class="dashboard-kpi__symbol"
-        aria-hidden="true">
+        <div class="dashboard-kpi__content">
 
-        {{ letter }}
+            <div class="dashboard-kpi__header">
 
-      </span>
+                @if (!featured) {
 
-      <h3 class="dashboard-kpi__title">
-        {{ title }}
-      </h3>
+                <span class="dashboard-kpi__symbol" aria-hidden="true">
 
-    </div>
+                    <i [class]="dashboardIcon"></i>
 
-    <div class="dashboard-kpi__value">
+                </span>
 
-      <span class="dashboard-kpi__score">
-        {{ formattedScore }}
-      </span>
+                }
 
-      @if (hasValidScore) {
-        <span class="dashboard-kpi__scale">
-          / 10
-        </span>
-      }
+                <h3 class="dashboard-kpi__title">
+                    {{ title }}
+                </h3>
 
-    </div>
+            </div>
 
-    @if (hasValidScore) {
+            <div class="dashboard-kpi__value">
 
-      <div
-        class="dashboard-kpi__progress"
-        aria-hidden="true">
+                <span class="dashboard-kpi__score">
+                    {{ formattedScore }}
+                </span>
 
-        <div
-          class="dashboard-kpi__progress-fill"
-          [style.width.%]="progressPercentage">
+                @if (hasValidScore) {
+
+                <span class="dashboard-kpi__scale">
+                    / 10
+                </span>
+
+                }
+
+            </div>
+
+            @if (hasValidScore && !featured) {
+
+            <div class="dashboard-kpi__progress" aria-hidden="true">
+
+                <div class="dashboard-kpi__progress-fill" [style.width.%]="progressPercentage">
+                </div>
+
+            </div>
+
+            }
+
+            <div class="dashboard-kpi__maturity">
+
+                <span class="dashboard-kpi__label">
+                    Nivel de madurez
+                </span>
+
+                <span class="dashboard-kpi__level" [style.--maturity-color]="dashboardMaturityColor">
+
+                    <span class="dashboard-kpi__level-dot" aria-hidden="true">
+                    </span>
+
+                    {{ subtitle || 'No disponible' }}
+
+                </span>
+
+            </div>
+
         </div>
 
-      </div>
+        @if (featured && hasValidScore) {
 
-    }
+        <div class="dashboard-kpi__gauge" aria-hidden="true">
+
+            <svg viewBox="0 0 120 120">
+
+                <circle class="dashboard-kpi__gauge-track" cx="60" cy="60" r="50">
+                </circle>
+
+                <circle class="dashboard-kpi__gauge-fill" cx="60" cy="60" r="50" pathLength="100"
+                    [attr.stroke-dasharray]="progressPercentage + ' 100'" transform="rotate(-90 60 60)">
+                </circle>
+
+            </svg>
+
+            <span class="dashboard-kpi__brand-icon" aria-hidden="true">
+            </span>
+
+        </div>
+
+        }
+
+    </div>
+
+    @if (showDelta) {
 
     <div class="dashboard-kpi__footer">
 
-      <div class="dashboard-kpi__maturity">
-
-        <span class="dashboard-kpi__label">
-          Nivel de madurez
-        </span>
-
-        <span class="dashboard-kpi__level">
-
-          @if (maturity_color) {
-            <span
-              class="dashboard-kpi__status"
-              [style.background-color]="maturity_color"
-              aria-hidden="true">
-            </span>
-          }
-
-          {{ subtitle || 'No disponible' }}
-
-        </span>
-
-      </div>
-
-      @if (showDelta) {
-
         <span class="dashboard-kpi__delta">
 
-          @if (delta !== null) {
+            @if (delta !== null) {
 
             {{ delta > 0 ? '+' : '' }}{{ delta.toFixed(1) }}
 
-          } @else {
+            } @else {
 
             Sin comparación
 
-          }
+            }
 
         </span>
 
-      }
+    </div>
+
+    }
+
+    @if (featured) {
+
+    <div class="dashboard-kpi__footer">
+
+        <ng-content select="[dashboard-action]"></ng-content>
 
     </div>
 
-  </article>
+    }
+
+</article>
 
 } @else {
 
-  <div class="m-0 p-0 shadow-sm">
+<div class="m-0 p-0 shadow-sm">
 
-    <div
-      class="sw-bg-blue-light shadow-sm sw-hover-scale rounded p-4"
-      [style.backgroundColor]="color">
+    <div class="sw-bg-blue-light shadow-sm sw-hover-scale rounded p-4" [style.backgroundColor]="color">
 
-      <div class="d-flex justify-content-between align-items-stretch">
+        <div class="d-flex justify-content-between align-items-stretch">
 
-        <p class="text-white sw-fs-7 fw-bold">
+            <p class="text-white sw-fs-7 fw-bold">
 
-          <b
-            class="bg-white me-1 px-1 rounded"
-            [style.color]="color">
+                <b class="bg-white me-1 px-1 rounded" [style.color]="color">
 
-            {{ letter }}
+                    {{ letter }}
 
-          </b>
+                </b>
 
-          {{ title }}
-
-        </p>
-
-        <p class="m-0 p-0 sw-fs-7">
-
-          <b
-            class="m-0 px-1 py-0 sw-fs-7 rounded-5"
-            [style.backgroundColor]="maturity_color"
-            [style.color]="maturity_color">g</b>
-
-        </p>
-
-      </div>
-
-      <div class="d-flex justify-content-end">
-
-        <div class="sw-bg-sm-white text-white p-0 px-3 py-1 rounded text-center">
-
-          <p class="sw-fs-7 m-0 p-0">
-            {{ subtitle }}
-          </p>
-
-          <p class="m-0 fs-3 p-0 fw-bold">
-
-            {{ score !== null ? score.toFixed(1) : 'N/D' }}
-
-          </p>
-
-          @if (showDelta) {
-
-            <p class="m-0 sw-fs-7">
-
-              @if (delta !== null) {
-
-                {{ delta > 0 ? '+' : '' }}{{ delta.toFixed(1) }}
-
-              } @else {
-
-                Sin comparación
-
-              }
+                {{ title }}
 
             </p>
 
-          }
+            <p class="m-0 p-0 sw-fs-7">
+
+                <b class="m-0 px-1 py-0 sw-fs-7 rounded-5" [style.backgroundColor]="maturity_color"
+                    [style.color]="maturity_color">g</b>
+
+            </p>
 
         </div>
 
-      </div>
+        <div class="d-flex justify-content-end">
+
+            <div class="sw-bg-sm-white text-white p-0 px-3 py-1 rounded text-center">
+
+                <p class="sw-fs-7 m-0 p-0">
+                    {{ subtitle }}
+                </p>
+
+                <p class="m-0 fs-3 p-0 fw-bold">
+
+                    {{ score !== null ? score.toFixed(1) : 'N/D' }}
+
+                </p>
+
+                @if (showDelta) {
+
+                <p class="m-0 sw-fs-7">
+
+                    @if (delta !== null) {
+
+                    {{ delta > 0 ? '+' : '' }}{{ delta.toFixed(1) }}
+
+                    } @else {
+
+                    Sin comparación
+
+                    }
+
+                </p>
+
+                }
+
+            </div>
+
+        </div>
 
     </div>
 
-  </div>
+</div>
 
 }

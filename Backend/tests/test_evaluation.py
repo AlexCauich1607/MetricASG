@@ -1709,6 +1709,19 @@ def test_get_results_by_id_returns_completed_evaluation(db_session):
     assert result["evaluation_id"] == submitted["evaluation_id"]
     assert result["global_score"] == 8
     assert result["global_maturity_level"] == "Intermedio"
+    evaluation = db_session.get(
+        Evaluation,
+        submitted["evaluation_id"],
+    )
+
+    global_level = db_session.get(
+        MaturityLevel,
+        evaluation.global_maturity_level_id,
+    )
+
+    assert global_level is not None
+    assert "global_maturity_color" in result
+    assert result["global_maturity_color"] == global_level.color
 
     assert len(result["ambits"]) == 3
     assert all(ambit["score"] == 8 for ambit in result["ambits"])
@@ -1824,6 +1837,19 @@ def test_results_by_id_endpoint_returns_completed_evaluation(
         assert result["evaluation_id"] == submitted["evaluation_id"]
         assert result["global_score"] == 8
         assert result["global_maturity_level"] == "Intermedio"
+        evaluation = db_session.get(
+            Evaluation,
+            submitted["evaluation_id"],
+        )
+
+        global_level = db_session.get(
+            MaturityLevel,
+            evaluation.global_maturity_level_id,
+        )
+
+        assert global_level is not None
+        assert "global_maturity_color" in result
+        assert result["global_maturity_color"] == global_level.color
         assert len(result["ambits"]) == 3
         assert all(
             ambit["score"] == 8
@@ -2705,3 +2731,80 @@ def test_completed_evaluation_blocks_another_company_submission(
 
     assert len(completed) == 1
     assert completed[0].id == first_result["evaluation_id"]
+
+def test_evaluation_results_preserve_configured_global_maturity_color(
+    db_session,
+):
+    data = create_evaluation_data(db_session)
+    service = EvaluationService(db_session)
+
+    submitted = service.submit_evaluation(
+        {"responses": build_responses(data)},
+        data["user"].id,
+    )
+
+    evaluation = db_session.get(
+        Evaluation,
+        submitted["evaluation_id"],
+    )
+
+    global_level = db_session.get(
+        MaturityLevel,
+        evaluation.global_maturity_level_id,
+    )
+
+    assert global_level is not None
+
+    global_level.color = "#123ABC"
+    db_session.flush()
+
+    result = service.get_results_by_id(
+        evaluation.id,
+        data["user"].id,
+    )
+
+    latest_result = service.get_latest_results(
+        user_id=data["user"].id,
+        company_id=evaluation.company_id,
+    )
+
+    assert result["global_maturity_color"] == "#123ABC"
+    assert latest_result["global_maturity_color"] == "#123ABC"
+
+    assert result["global_score"] == evaluation.global_score
+    assert result["global_maturity_level"] == global_level.name
+
+def test_evaluation_results_support_missing_global_maturity_color(
+    db_session,
+):
+    data = create_evaluation_data(db_session)
+    service = EvaluationService(db_session)
+
+    submitted = service.submit_evaluation(
+        {"responses": build_responses(data)},
+        data["user"].id,
+    )
+
+    evaluation = db_session.get(
+        Evaluation,
+        submitted["evaluation_id"],
+    )
+
+    global_level = db_session.get(
+        MaturityLevel,
+        evaluation.global_maturity_level_id,
+    )
+
+    assert global_level is not None
+
+    global_level.color = None
+    db_session.flush()
+
+    result = service.get_results_by_id(
+        evaluation.id,
+        data["user"].id,
+    )
+
+    assert "global_maturity_color" in result
+    assert result["global_maturity_color"] is None
+    assert result["global_maturity_level"] == global_level.name

@@ -739,6 +739,9 @@ class EvaluationService:
             "global_maturity_level": (
                 global_level.name if global_level else None
             ),
+            "global_maturity_color": (
+                global_level.color if global_level else None
+            ),
             "ambits": ambit_results
         }
 

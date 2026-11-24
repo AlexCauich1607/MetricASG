@@ -19,6 +19,8 @@ export class BarChartComponent implements AfterViewInit {
   @Input() scores: number[] = [];
   @Input() colors: string[] = [];
   @Input() bordes: string[] = [];
+  @Input() variant: 'default' | 'dashboard' = 'default';
+
 
   ngAfterViewInit(): void {
     setTimeout(() => this.cargarGrafica(), 0);
@@ -33,6 +35,7 @@ export class BarChartComponent implements AfterViewInit {
 
 
     const ctx = this.chartCanvas.nativeElement.getContext('2d');
+    const isDashboard = this.variant === 'dashboard';
 
     if (!ctx) {
       console.error('Could not get 2d context');
@@ -47,18 +50,28 @@ export class BarChartComponent implements AfterViewInit {
           label: '',
           data: this.scores,
           backgroundColor: this.colors,
-          borderColor: this.bordes,
-          borderWidth: this.bordes.length == 0 ? 0 : 4,
+
+          borderColor: isDashboard
+            ? 'transparent'
+            : this.bordes,
+
+          borderWidth: isDashboard
+            ? 0
+            : this.bordes.length === 0 ? 0 : 4,
+
           borderRadius: {
-            topLeft: 5,
-            topRight: 5,
-            bottomLeft: 5,
-            bottomRight: 5
+            topLeft: isDashboard ? 7 : 5,
+            topRight: isDashboard ? 7 : 5,
+            bottomLeft: isDashboard ? 0 : 5,
+            bottomRight: isDashboard ? 0 : 5
           },
+
           borderSkipped: false,
 
-          barPercentage: 0.5,
-          categoryPercentage: 0.5,
+          barPercentage: isDashboard ? 0.7 : 0.5,
+          categoryPercentage: isDashboard ? 0.7 : 0.5,
+
+          ...(isDashboard ? { maxBarThickness: 64 } : {})
         }]
       },
       options: {
@@ -84,7 +97,7 @@ export class BarChartComponent implements AfterViewInit {
                 const width = context.chart.width;
                 const baseSize = 10;
                 return {
-                  size: Math.max(10, baseSize * (width / 800)), 
+                  size: Math.max(10, baseSize * (width / 800)),
                   weight: 'bold'
                 };
               }
@@ -93,7 +106,95 @@ export class BarChartComponent implements AfterViewInit {
         }
       }
     };
+    if (isDashboard) {
 
+      config.options = {
+
+        responsive: true,
+        maintainAspectRatio: false,
+        animation: false,
+
+        layout: {
+          padding: {
+            top: 12,
+            right: 8,
+            bottom: 0,
+            left: 0
+          }
+        },
+
+        plugins: {
+
+          legend: {
+            display: false
+          },
+
+          tooltip: {
+            backgroundColor: '#00245d',
+            padding: 12,
+            cornerRadius: 8,
+            displayColors: false,
+
+            callbacks: {
+              label: context =>
+                `Puntuación: ${context.parsed.y?.toFixed(1)} / 10`
+            }
+          }
+        },
+
+        scales: {
+
+          y: {
+            min: 0,
+            max: 10,
+            beginAtZero: true,
+
+            border: {
+              display: false
+            },
+
+            grid: {
+              color: '#e4e9ed',
+              drawTicks: false
+            },
+
+            ticks: {
+              stepSize: 2,
+              color: '#595959',
+              padding: 8,
+
+              font: {
+                size: 11
+              }
+            }
+          },
+
+          x: {
+
+            border: {
+              display: false
+            },
+
+            grid: {
+              display: false
+            },
+
+            ticks: {
+              color: '#13243d',
+              padding: 10,
+              maxRotation: 0,
+              minRotation: 0,
+              autoSkip: false,
+
+              font: {
+                size: 11,
+                weight: 500
+              }
+            }
+          }
+        }
+      };
+    }
 
     if (this.chart) {
       this.chart.destroy();

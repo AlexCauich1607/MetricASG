@@ -4,6 +4,7 @@ import {
   ChangeDetectionStrategy
 } from '@angular/core';
 
+
 @Component({
   selector: 'app-ambit-card',
   standalone: true,
@@ -25,6 +26,24 @@ export class AmbitCardComponent {
   @Input() maturity_color: string = '';
 
   @Input() variant: 'default' | 'dashboard' = 'default';
+  @Input() featured = false;
+
+  get dashboardIcon(): string {
+
+    switch (this.letter.trim().toUpperCase()) {
+      case 'A':
+        return 'bi bi-tree';
+
+      case 'S':
+        return 'bi bi-people';
+
+      case 'G':
+        return 'bi bi-bank';
+
+      default:
+        return 'bi bi-bar-chart';
+    }
+  }
 
   get hasValidScore(): boolean {
     return (
@@ -48,5 +67,18 @@ export class AmbitCardComponent {
       100,
       Math.max(0, this.score! * 10)
     );
+  }
+
+  get dashboardMaturityColor(): string | null {
+    const color = this.maturity_color?.trim();
+
+    if (
+      !color ||
+      !/^#[0-9a-f]{6}$/i.test(color)
+    ) {
+      return null;
+    }
+
+    return color;
   }
 }
