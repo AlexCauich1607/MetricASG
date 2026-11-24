@@ -194,14 +194,6 @@ def test_dashboard_excludes_drafts(
         global_score=None,
     )
 
-    other_user_evaluation = Evaluation(
-        user_id=data["user"].id + 999,
-        methodology_id=data["methodology"].id,
-        status=EvaluationStatus.COMPLETED,
-        date=datetime(2026, 6, 15),
-        global_score=9.5,
-    )
-
     db_session.add(draft)
     db_session.flush()
 
@@ -225,7 +217,7 @@ def test_dashboard_endpoint_requires_authentication(client):
     assert response.status_code == 401
 
 
-def test_dashboard_isolates_evaluations_by_user(
+def test_dashboard_isolates_evaluations_by_company(
     db_session,
     dashboard_data,
 ):

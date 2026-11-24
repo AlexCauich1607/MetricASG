@@ -200,7 +200,7 @@ def test_benchmark_accepts_matching_filters(
     assert response.json()["global_average"] == pytest.approx(8.0)
 
 
-def test_benchmark_requires_own_completed_evaluation(
+def test_benchmark_requires_company_completed_evaluation(
     client,
     db_session,
     benchmark_http_data,

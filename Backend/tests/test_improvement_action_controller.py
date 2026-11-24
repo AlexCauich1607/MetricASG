@@ -405,11 +405,25 @@ def test_reject_improvement_action_in_draft_evaluation_http(
         "Improvement actions require a completed evaluation"
     )
 
-    # Comprobar que no se creó ninguna acción.
+    # La consulta del plan de mejora también debe rechazarse
+    # mientras la evaluación permanezca en borrador.
     response = client.get(base)
 
-    assert response.status_code == 200
-    assert response.json() == []
+    assert response.status_code == 409
+    assert response.json()["detail"] == (
+        "Improvement actions require a completed evaluation"
+    )
+
+    # Verificar directamente que no se creó ninguna acción.
+    actions = (
+        db_session.query(ImprovementAction)
+        .filter(
+            ImprovementAction.evaluation_id == evaluation.id,
+        )
+        .all()
+    )
+
+    assert actions == []
 
 
 def test_create_improvement_action_with_indicator_http(
@@ -1071,10 +1085,10 @@ def test_create_improvement_action_enforces_company_roles(
         (CompanyRole.ASG_MANAGER, True, 200),
         (CompanyRole.COLLABORATOR, True, 200),
         (CompanyRole.AUDITOR, True, 200),
-        (CompanyRole.COMPANY_ADMIN, False, 403),
-        (CompanyRole.ASG_MANAGER, False, 403),
-        (CompanyRole.COLLABORATOR, False, 403),
-        (CompanyRole.AUDITOR, False, 403),
+        (CompanyRole.COMPANY_ADMIN, False, 404),
+        (CompanyRole.ASG_MANAGER, False, 404),
+        (CompanyRole.COLLABORATOR, False, 404),
+        (CompanyRole.AUDITOR, False, 404),
     ],
 )
 def test_list_improvement_actions_enforces_membership(
@@ -1112,9 +1126,8 @@ def test_list_improvement_actions_enforces_membership(
         assert response.json() == []
     else:
         assert response.json()["detail"] == (
-            "Active company membership required"
+            "Evaluation not found"
         )
-
 
 @pytest.mark.parametrize(
     "role, expected_status",
@@ -1300,10 +1313,17 @@ def test_improvement_action_reads_require_active_membership(
     # Desactivar la membresía.
     data["membership"].status = CompanyMembershipStatus.INACTIVE
     db_session.commit()
-
     # La membresía inactiva debe impedir ambas consultas.
     detail_response = client.get(f"{base}/{action_id}")
-    assert detail_response.status_code == 403, detail_response.text
+
+    assert detail_response.status_code == 404
+    assert detail_response.json()["detail"] == (
+        "Evaluation not found"
+    )
 
     progress_response = client.get(f"{base}/progress")
-    assert progress_response.status_code == 403, progress_response.text
+
+    assert progress_response.status_code == 404
+    assert progress_response.json()["detail"] == (
+        "Evaluation not found"
+    )

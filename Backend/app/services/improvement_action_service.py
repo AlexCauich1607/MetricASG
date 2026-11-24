@@ -22,6 +22,11 @@ from app.models.improvement_action_request import (
     ImprovementActionUpdate,
 )
 from app.models.indicator_model import Indicator
+from app.models.company_model import Company
+from app.models.company_membership_model import (
+    CompanyMembership,
+    CompanyMembershipStatus,
+)
 from app.services.audit_service import AuditService
 class ImprovementActionService:
     def __init__(self, db: Session):
@@ -31,15 +36,34 @@ class ImprovementActionService:
         self,
         evaluation_id: int,
         user_id: int,
+        *,
+        allowed_roles: tuple[CompanyRole, ...] | None = None,
+        lock: bool = False,
     ) -> Evaluation:
-        evaluation = (
+
+        query = (
             self.db.query(Evaluation)
+            .join(
+                CompanyMembership,
+                CompanyMembership.company_id == Evaluation.company_id,
+            )
+            .join(
+                Company,
+                Company.id == Evaluation.company_id,
+            )
             .filter(
                 Evaluation.id == evaluation_id,
-                Evaluation.user_id == user_id,
+                CompanyMembership.user_id == user_id,
+                CompanyMembership.status
+                == CompanyMembershipStatus.ACTIVE,
+                Company.active.is_(True),
             )
-            .first()
         )
+
+        if lock:
+            query = query.with_for_update(of=Evaluation)
+
+        evaluation = query.first()
 
         if evaluation is None:
             raise HTTPException(
@@ -55,11 +79,17 @@ class ImprovementActionService:
                 detail="Active company membership required",
             )
 
+        roles = (
+            tuple(CompanyRole)
+            if allowed_roles is None
+            else allowed_roles
+        )
+
         require_company_role(
             self.db,
             user,
             evaluation.company_id,
-            *list(CompanyRole),
+            *roles,
         )
 
         return evaluation
@@ -123,35 +153,14 @@ class ImprovementActionService:
         commit: bool = True,
     ) -> ImprovementAction:
         try:
-            evaluation = (
-                self.db.query(Evaluation)
-                .filter(
-                    Evaluation.id == evaluation_id,
-                    Evaluation.user_id == user_id,
-                )
-                .with_for_update()
-                .first()
-            )
-
-            if evaluation is None:
-                raise HTTPException(
-                    status_code=status.HTTP_404_NOT_FOUND,
-                    detail="Evaluation not found",
-                )
-            user = self.db.get(User, user_id)
-
-            if user is None:
-                raise HTTPException(
-                    status_code=status.HTTP_403_FORBIDDEN,
-                    detail="Active company membership required",
-                )
-
-            require_company_role(
-                self.db,
-                user,
-                evaluation.company_id,
-                CompanyRole.COMPANY_ADMIN,
-                CompanyRole.ASG_MANAGER,
+            evaluation = self.get_evaluation_or_error(
+                evaluation_id=evaluation_id,
+                user_id=user_id,
+                allowed_roles=(
+                    CompanyRole.COMPANY_ADMIN,
+                    CompanyRole.ASG_MANAGER,
+                ),
+                lock=True,
             )
 
             self.validate_evaluation_completed(evaluation)
@@ -207,10 +216,12 @@ class ImprovementActionService:
         evaluation_id: int,
         user_id: int,
     ) -> list[ImprovementAction]:
-        self.get_evaluation_or_error(
+        evaluation = self.get_evaluation_or_error(
             evaluation_id=evaluation_id,
             user_id=user_id,
         )
+
+        self.validate_evaluation_completed(evaluation)
 
         return (
             self.db.query(ImprovementAction)
@@ -231,10 +242,12 @@ class ImprovementActionService:
         action_id: int,
         user_id: int,
     ) -> ImprovementAction:
-        self.get_evaluation_or_error(
+        evaluation = self.get_evaluation_or_error(
             evaluation_id=evaluation_id,
             user_id=user_id,
         )
+
+        self.validate_evaluation_completed(evaluation)
 
         action = (
             self.db.query(ImprovementAction)
@@ -262,36 +275,14 @@ class ImprovementActionService:
         payload: ImprovementActionUpdate,
     ) -> ImprovementAction:
         try:
-            evaluation = (
-                self.db.query(Evaluation)
-                .filter(
-                    Evaluation.id == evaluation_id,
-                    Evaluation.user_id == user_id,
-                )
-                .with_for_update()
-                .first()
-            )
-
-            if evaluation is None:
-                raise HTTPException(
-                    status_code=status.HTTP_404_NOT_FOUND,
-                    detail="Evaluation not found",
-                )
-
-            user = self.db.get(User, user_id)
-
-            if user is None:
-                raise HTTPException(
-                    status_code=status.HTTP_403_FORBIDDEN,
-                    detail="Active company membership required",
-                )
-
-            require_company_role(
-                self.db,
-                user,
-                evaluation.company_id,
-                CompanyRole.COMPANY_ADMIN,
-                CompanyRole.ASG_MANAGER,
+            evaluation = self.get_evaluation_or_error(
+                evaluation_id=evaluation_id,
+                user_id=user_id,
+                allowed_roles=(
+                    CompanyRole.COMPANY_ADMIN,
+                    CompanyRole.ASG_MANAGER,
+                ),
+                lock=True,
             )
 
             self.validate_evaluation_completed(evaluation)
@@ -387,36 +378,16 @@ class ImprovementActionService:
         user_id: int,
     ) -> None:
         try:
-            evaluation = (
-                self.db.query(Evaluation)
-                .filter(
-                    Evaluation.id == evaluation_id,
-                    Evaluation.user_id == user_id,
-                )
-                .with_for_update()
-                .first()
+            evaluation = self.get_evaluation_or_error(
+                evaluation_id=evaluation_id,
+                user_id=user_id,
+                allowed_roles=(
+                    CompanyRole.COMPANY_ADMIN,
+                ),
+                lock=True,
             )
 
-            if evaluation is None:
-                raise HTTPException(
-                    status_code=status.HTTP_404_NOT_FOUND,
-                    detail="Evaluation not found",
-                )
-
-            user = self.db.get(User, user_id)
-
-            if user is None:
-                raise HTTPException(
-                    status_code=status.HTTP_403_FORBIDDEN,
-                    detail="Active company membership required",
-                )
-
-            require_company_role(
-                self.db,
-                user,
-                evaluation.company_id,
-                CompanyRole.COMPANY_ADMIN,
-            )
+            self.validate_evaluation_completed(evaluation)
 
             action = (
                 self.db.query(ImprovementAction)

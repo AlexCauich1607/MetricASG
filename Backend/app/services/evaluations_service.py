@@ -633,7 +633,6 @@ class EvaluationService:
         evaluation = (
             self.db.query(Evaluation)
             .filter(
-                Evaluation.user_id == user_id,
                 Evaluation.company_id == resolved_company_id,
                 Evaluation.status == EvaluationStatus.COMPLETED,
             )
@@ -663,7 +662,6 @@ class EvaluationService:
             )
             .filter(
                 Evaluation.id == evaluation_id,
-                Evaluation.user_id == user_id,
                 Evaluation.status == EvaluationStatus.COMPLETED,
                 CompanyMembership.user_id == user_id,
                 CompanyMembership.status == CompanyMembershipStatus.ACTIVE,
@@ -757,7 +755,6 @@ class EvaluationService:
         evaluations = (
             self.db.query(Evaluation)
             .filter(
-                Evaluation.user_id == user_id,
                 Evaluation.company_id == resolved_company_id,
                 Evaluation.status == EvaluationStatus.COMPLETED,
             )
@@ -886,11 +883,19 @@ class EvaluationService:
                 detail="Two different evaluations are required",
             )
 
+        resolved_company_id = self._resolve_company_id(
+            user_id=user_id,
+            company_id=company_id,
+        )
+
         evaluations = (
             self.db.query(Evaluation)
             .filter(
-                Evaluation.id.in_([evaluation_id_1, evaluation_id_2]),
-                Evaluation.user_id == user_id,
+                Evaluation.id.in_([
+                    evaluation_id_1,
+                    evaluation_id_2,
+                ]),
+                Evaluation.company_id == resolved_company_id,
                 Evaluation.status == EvaluationStatus.COMPLETED,
             )
             .all()
@@ -902,22 +907,10 @@ class EvaluationService:
                 detail="One or both evaluations were not found",
             )
 
-        resolved_company_id = self._resolve_company_id(
-            user_id=user_id,
-            company_id=company_id,
-        )
-
         evaluations_by_id = {
             evaluation.id: evaluation
             for evaluation in evaluations
-            if evaluation.company_id == resolved_company_id
         }
-
-        if len(evaluations_by_id) != 2:
-            raise HTTPException(
-                status_code=404,
-                detail="One or both evaluations were not found",
-            )
 
         comparison_data = []
 
@@ -1011,11 +1004,13 @@ class EvaluationService:
                 selectinload(Evaluation.ambit_scores),
             )
             .filter(
-                Evaluation.user_id == user_id,
                 Evaluation.company_id == resolved_company_id,
                 Evaluation.status == EvaluationStatus.COMPLETED,
             )
-            .order_by(Evaluation.date.asc(), Evaluation.id.asc())
+            .order_by(
+                Evaluation.date.asc(),
+                Evaluation.id.asc(),
+            )
             .all()
         )
 

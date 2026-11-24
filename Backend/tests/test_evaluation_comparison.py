@@ -146,7 +146,7 @@ def test_get_comparison_rejects_missing_evaluation(
     assert exc.value.status_code == 404
 
 
-def test_get_comparison_rejects_other_user(
+def test_get_comparison_rejects_user_without_membership(
     db_session,
     comparison_data,
 ):
@@ -159,8 +159,10 @@ def test_get_comparison_rejects_other_user(
             -1,
         )
 
-    assert exc.value.status_code == 404
-
+    assert exc.value.status_code == 403
+    assert exc.value.detail == (
+        "User does not have an active company membership"
+    )
 
 def test_get_comparison_rejects_draft(
     db_session,

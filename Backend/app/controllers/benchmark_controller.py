@@ -78,11 +78,10 @@ class BenchmarkController:
                     detail="Size does not match company",
                 )
 
-            own_evaluation = (
+            company_evaluation = (
                 db.query(Evaluation)
                 .filter(
                     Evaluation.company_id == company_id,
-                    Evaluation.user_id == current_user.id,
                     Evaluation.methodology_id == methodology_id,
                     Evaluation.status == EvaluationStatus.COMPLETED,
                     Evaluation.global_score.isnot(None),
@@ -90,7 +89,7 @@ class BenchmarkController:
                 .first()
             )
 
-            if own_evaluation is None:
+            if company_evaluation is None:
                 raise HTTPException(
                     status_code=404,
                     detail="No eligible evaluation found",
