@@ -2,23 +2,38 @@
   font-size: 1.3rem;
 }
 
-.nav-link {
-  
-  color: #797979;
+.navbar-nav>.nav-item>.nav-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  padding: 0.65rem 0.75rem;
+  border-radius: 0.5rem;
+  color: #526174;
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: background-color 0.2s ease, color 0.2s ease;
+
+  &:hover {
+    background-color: #f0f5ee;
+    color: #00245d;
+  }
+
+  &:focus-visible {
+    outline: 2px solid #00245d;
+    outline-offset: 2px;
+  }
+
+  &.active {
+    background-color: #edf3fa;
+    color: #00245d;
+  }
 }
 
-.nav-link.active {
-  color: #000080;
-}
-
-
-.nav-link:hover {
-  color: #96b572;
- 
-}
 
 .sw-circle {
-    border-radius: 45px;
+  border-radius: 45px;
 }
 
 
@@ -57,19 +72,33 @@
 .notification-menu {
   width: 350px;
   max-width: calc(100vw - 24px);
-  padding: 0;
-  border-radius: 12px;
-  border: 1px solid #e9e9e9;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
   overflow: hidden;
 }
 
-.notification-header {
-  padding: 1rem;
-  border-bottom: 1px solid #eeeeee;
-  color: #000080;
-  font-size: 0.9rem;
+
+/* Encabezados compartidos de los desplegables */
+#mainNavbar .nav-dropdown__header {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  margin: 0 0 0.35rem;
+  padding: 0.65rem 0.75rem 0.75rem;
+  border-bottom: 1px solid var(--nav-border);
+  color: var(--nav-primary);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.035em;
+  line-height: 1.4;
+  text-transform: uppercase;
+
+  .bi {
+    flex-shrink: 0;
+    width: 1.1rem;
+    font-size: 1rem;
+    text-align: center;
+  }
 }
+
 
 .notification-content {
   max-height: 360px;
@@ -79,8 +108,9 @@
 .notification-state {
   padding: 1.5rem 1rem;
   text-align: center;
-  color: #797979;
-  font-size: 0.85rem;
+  color: #526174;
+  font-size: 0.875rem;
+  font-weight: 400;
 }
 
 .notification-item {
@@ -102,16 +132,19 @@
 .notification-item-body {
   flex: 1;
   min-width: 0;
-  font-size: 0.85rem;
+  font-size: 0.875rem;
+  font-weight: 500;
 
   p {
-    color: #797979;
-    font-size: 0.8rem;
-    line-height: 1.4;
+    color: #526174;
+    font-size: 0.875rem;
+    font-weight: 400;
+    line-height: 1.5;
   }
 
   small {
     font-size: 0.75rem;
+    font-weight: 400;
   }
 }
 
@@ -193,11 +226,6 @@
   max-width: min(360px, calc(100vw - 32px));
   max-height: min(420px, 70vh);
   overflow-y: auto;
-  padding: 8px;
-
-  border: 1px solid #d6dfe8;
-  border-radius: var(--asg-radius-card, 12px);
-  box-shadow: 0 8px 24px rgb(0 0 0 / 10%);
 }
 
 .company-context__empty {
@@ -219,11 +247,6 @@
   &:focus-visible {
     outline: 2px solid var(--asg-color-brand-primary, #00245d);
     outline-offset: -2px;
-  }
-
-  &.active {
-    background: var(--asg-color-brand-primary, #00245d);
-    color: #fff;
   }
 }
 
@@ -274,7 +297,7 @@
     gap: 0.15rem;
   }
 
-  .navbar-nav > .nav-item {
+  .navbar-nav>.nav-item {
     margin-left: 0.25rem !important;
     margin-right: 0.25rem !important;
   }
@@ -294,4 +317,195 @@
   opacity: 0.8;
   overflow-wrap: anywhere;
   white-space: normal;
+}
+
+
+/* HU-055: navegación móvil compacta */
+
+@media (max-width: 1199.98px) {
+
+  #mainNavbar {
+    max-height: calc(100dvh - 90px);
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding-block: 0.75rem;
+    overscroll-behavior: contain;
+  }
+
+
+  #mainNavbar>.navbar-nav {
+    align-items: stretch !important;
+    gap: 0.25rem;
+  }
+
+  #mainNavbar>.navbar-nav>.nav-item {
+    width: 100%;
+    margin-inline: 0 !important;
+  }
+
+  #mainNavbar>.navbar-nav>.nav-item>.nav-link {
+    display: flex;
+    justify-content: flex-start;
+    width: 100%;
+    padding: 0.75rem 1rem;
+    text-align: left;
+  }
+
+  #mainNavbar .company-context {
+    width: 100%;
+    max-width: none;
+  }
+}
+
+
+/* HU-055: accesos de notificaciones y perfil en móvil */
+
+@media (max-width: 1199.98px) {
+  #mainNavbar .notification-dropdown {
+    margin-top: 0.75rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid #e2e8f0;
+  }
+
+  #mainNavbar .notification-trigger {
+    justify-content: flex-start !important;
+    gap: 0.75rem;
+    min-height: 44px;
+    padding: 0.75rem 1rem;
+    font-weight: 600;
+  }
+
+  #mainNavbar .notification-mobile-label,
+  #mainNavbar .profile-mobile-label {
+    color: #526174;
+    font-size: 0.875rem;
+    font-weight: 600;
+  }
+
+  #mainNavbar .notification-indicator {
+    top: 0.55rem;
+    left: 1.85rem;
+    right: auto;
+  }
+
+  #mainNavbar .navbar-nav>.nav-item:last-child>button {
+    display: flex !important;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 0.75rem;
+    width: 100%;
+    min-height: 44px;
+    padding: 0.5rem 1rem !important;
+    text-align: left;
+  }
+
+  #mainNavbar .navbar-nav>.nav-item:last-child .sw-circle {
+    flex-shrink: 0;
+  }
+}
+
+
+/* HU-055: sistema visual unificado del navbar */
+
+#mainNavbar {
+  --nav-primary: #00245d;
+  --nav-text: #526174;
+  --nav-border: #d6dfe8;
+  --nav-active: #edf3fa;
+  --nav-hover: #f0f5ee;
+  --nav-radius: 12px;
+  --nav-shadow: 0 8px 24px rgb(0 0 0 / 10%);
+}
+
+/* Superficie compartida de todos los desplegables */
+#mainNavbar .dropdown-menu {
+  padding: 0.5rem;
+  border: 1px solid var(--nav-border);
+  border-radius: var(--nav-radius);
+  background: #fff;
+  box-shadow: var(--nav-shadow);
+}
+
+/* Opciones interactivas */
+#mainNavbar .dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  min-height: 42px;
+  padding: 0.65rem 0.75rem;
+  border-radius: 8px;
+  color: var(--nav-text);
+  font-size: 0.875rem;
+  font-weight: 500;
+  white-space: normal;
+  transition: background-color 0.2s ease, color 0.2s ease;
+
+  &:hover,
+  &:focus-visible {
+    background-color: var(--nav-hover);
+    color: var(--nav-primary);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--nav-primary);
+    outline-offset: -2px;
+  }
+
+  &.active,
+  &[aria-current="true"] {
+    background-color: var(--nav-active);
+    color: var(--nav-primary);
+    font-weight: 600;
+  }
+
+}
+
+/* Iconografía uniforme */
+#mainNavbar .dropdown-item>.bi {
+  flex-shrink: 0;
+  width: 1.1rem;
+  font-size: 1rem;
+  text-align: center;
+}
+
+/* Separadores */
+#mainNavbar .dropdown-divider {
+  margin-block: 0.5rem;
+  border-color: var(--nav-border);
+}
+
+/* HU-055: acciones especiales de los desplegables */
+
+#mainNavbar .company-context__create {
+  color: var(--nav-primary);
+  font-weight: 600;
+
+  &:hover,
+  &:focus-visible {
+    background-color: var(--nav-active);
+    color: var(--nav-primary);
+  }
+
+  &:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+  }
+}
+
+/* Mantener el carácter destructivo de cerrar sesión */
+#mainNavbar .dropdown-item.text-danger {
+  color: #b42318 !important;
+
+  &:hover,
+  &:focus-visible {
+    background-color: #fff1f0;
+    color: #912018 !important;
+  }
+}
+
+/* HU-055: ancho mínimo para menús de navegación y perfil */
+@media (min-width: 1200px) {
+  #mainNavbar .dropdown-menu:not(.company-context__menu):not(.notification-menu) {
+    min-width: 220px;
+  }
 }
