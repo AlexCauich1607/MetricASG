@@ -1,21 +1,51 @@
 <div class="sw-split-ly color-bg content">
-  <div><!--
-    <div class="d-flex align-items-start mb-3">
+  <div>
 
-      <div class="sw-all-center">
-        <img src="assets/logo.png" alt="MetricASG" height="40" width="40" class="me-2">
-        <span class="font-logo text-my-purple fs-4">concamin</span>
+    <header class="dashboard-welcome">
+      <p class="dashboard-welcome__eyebrow">
+        Inicio
+      </p>
+
+      <h1 class="dashboard-welcome__title">
+        @if (user?.name) {
+        ¡Bienvenido, {{ user?.name }} {{ user?.lastname }}!
+        } @else {
+        ¡Bienvenido a MetricASG!
+        }
+      </h1>
+
+      <p class="dashboard-welcome__description">
+        Consulta y da seguimiento al desempeño ASG de tus organizaciones.
+      </p>
+    </header>
+
+    @if (
+    !companyContext.loading() &&
+    !companyContext.error() &&
+    companyContext.selectedMembership(); as membership
+    ) {
+    <section class="asg-card dashboard-company" aria-labelledby="dashboard-company-title">
+
+      <div class="dashboard-company__icon" aria-hidden="true">
+        <i class="bi bi-building"></i>
       </div>
 
+      <div class="dashboard-company__content">
+        <p class="dashboard-company__label">
+          Empresa activa
+        </p>
 
-    </div>-->
-    <div class="d-flex align-items-center mb-4">
-      <img src="assets/logo.png" alt="MetricASG" height="38" class="me-2">
-      <span class="fw-bold text-my-purple font-logo fs-4">MetricASG</span>
-    </div>
-    <h2 class="text-my-purple fw-bold mb-1">!Bienvenido, <b class="text-my-green">{{user?.name}}
-        {{user?.lastname}}</b>!</h2>
+        <h2 id="dashboard-company-title" class="dashboard-company__title">
+          {{ membership.company_name }}
+        </h2>
 
+        <p class="dashboard-company__description">
+          Resumen del desempeño ASG de esta organización.
+        </p>
+      </div>
+
+    </section>
+    }
     @if (resultsStatus === 'loading') {
     <app-ui-state type="loading" title="Cargando resultados"
       message="Estamos consultando la información de tu empresa.">
@@ -173,28 +203,62 @@
     </div>
     }
     @if (results) {
-    <div class="d-flex  align-items-center justify-content-between mt-1 mb-4">
-      <h5 class="text-white fw-bold mt-4 fs-5 bg-my-purple border shadow-sm rounded-5 px-3 py-2"><i
-          class="bi bi-calendar-fill  "></i> Semestre {{mesAnterior}}
-        {{anioAnterior!=anioActual?anioAnterior:""}} - {{mesActual}} {{anioActual}} </h5>
-      <div>
-        <p class="sw-fs-7-5 text-center m-1 p-0">
-          Próximo autodiagnóstico:
-          <b>{{ evaluationDate || 'No programado' }}</b>
+    <section class="asg-card dashboard-period" aria-labelledby="dashboard-period-title">
+
+      <div class="dashboard-period__current">
+
+        <p class="dashboard-period__label">
+          <i class="bi bi-calendar-event" aria-hidden="true"></i>
+          Periodo evaluado
         </p>
 
-        <button type="button" class="btn-my-purple m-0 sw-fs-7 shadow-sm" [disabled]="!canStartEvaluation"
+        <h2 id="dashboard-period-title" class="dashboard-period__title">
+
+          {{ mesAnterior }}
+          {{ anioAnterior !== anioActual ? anioAnterior : '' }}
+          – {{ mesActual }} {{ anioActual }}
+
+        </h2>
+
+        <p class="dashboard-period__description">
+          Semestre correspondiente a la última evaluación.
+        </p>
+
+      </div>
+
+      <div class="dashboard-period__next">
+
+        <p class="dashboard-period__label">
+          Próximo autodiagnóstico
+        </p>
+
+        <p class="dashboard-period__date">
+          @if (companyLoading) {
+          Consultando fecha...
+          } @else if (companyError) {
+          Fecha no disponible
+          } @else if (!company || company.id !== companyContext.selectedCompanyId()) {
+          Fecha no disponible
+          } @else {
+          {{ evaluationDate || 'No programado' }}
+          }
+        </p>
+
+        <button type="button" class="btn-my-purple dashboard-period__action" [disabled]="!canStartEvaluation"
           [class.text-gray]="!canStartEvaluation" (click)="goEvaluation()">
 
           <i [class]="canStartEvaluation
-      ? 'bi bi-rocket-fill'
-      : 'bi bi-lock-fill'">
+            ? 'bi bi-rocket-fill'
+            : 'bi bi-lock-fill'" aria-hidden="true">
           </i>
 
-          ¡Realizar autodiagnóstico!
+          Realizar autodiagnóstico
+
         </button>
+
       </div>
-    </div>
+
+    </section>
     }
 
     <!--<h4 class="sw-gris fw-bold mt-3 mb-3 text-center"><i class="bi bi-clipboard-data"></i> Puntuaciones</h4>-->

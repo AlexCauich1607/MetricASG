@@ -176,3 +176,187 @@
         }
     }
 }
+
+/* =========================================
+   HU-056 / T01
+   Bienvenida y contexto empresarial
+   ========================================= */
+
+.dashboard-welcome {
+    min-width: 0;
+    margin-bottom: var(--asg-space-6);
+
+    &__eyebrow {
+        margin: 0 0 var(--asg-space-2);
+        color: var(--asg-color-text-muted);
+        font-size: var(--asg-font-size-sm);
+        font-weight: var(--asg-font-weight-semibold);
+    }
+
+    &__title {
+        margin: 0 0 var(--asg-space-2);
+        color: var(--asg-color-brand-primary);
+        font-size: var(--asg-font-size-2xl);
+        font-weight: var(--asg-font-weight-bold);
+        line-height: 1.2;
+        overflow-wrap: anywhere;
+    }
+
+    &__description {
+        margin: 0;
+        color: var(--asg-color-text-muted);
+        font-size: var(--asg-font-size-md);
+        line-height: 1.5;
+    }
+}
+
+
+/* Contexto de la empresa seleccionada */
+
+.dashboard-company {
+    display: flex;
+    align-items: center;
+    gap: var(--asg-space-4);
+    margin-bottom: var(--asg-space-6);
+
+    &__icon {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+
+        width: 56px;
+        height: 56px;
+
+        border-radius: var(--asg-radius-card);
+        background-color: var(--asg-color-surface-blue);
+        color: var(--asg-color-brand-primary);
+        font-size: var(--asg-font-size-xl);
+    }
+
+    &__content {
+        flex: 1;
+        min-width: 0;
+    }
+
+    &__label {
+        margin: 0 0 var(--asg-space-1);
+        color: var(--asg-color-text-muted);
+        font-size: var(--asg-font-size-sm);
+        font-weight: var(--asg-font-weight-medium);
+    }
+
+    &__title {
+        margin: 0 0 var(--asg-space-1);
+        color: var(--asg-color-brand-primary);
+        font-size: var(--asg-font-size-xl);
+        font-weight: var(--asg-font-weight-bold);
+        line-height: 1.3;
+        overflow-wrap: anywhere;
+    }
+
+    &__description {
+        margin: 0;
+        color: var(--asg-color-text-muted);
+        font-size: var(--asg-font-size-sm);
+        line-height: 1.5;
+    }
+}
+
+
+/* Periodo y programación de evaluaciones */
+
+.dashboard-period {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, auto);
+    align-items: center;
+    gap: var(--asg-space-6);
+    margin-bottom: var(--asg-space-6);
+
+    &__current,
+    &__next {
+        min-width: 0;
+    }
+
+    &__label {
+        display: flex;
+        align-items: center;
+        gap: var(--asg-space-2);
+
+        margin: 0 0 var(--asg-space-2);
+        color: var(--asg-color-text-muted);
+        font-size: var(--asg-font-size-sm);
+        font-weight: var(--asg-font-weight-medium);
+    }
+
+    &__title {
+        margin: 0 0 var(--asg-space-2);
+        color: var(--asg-color-brand-primary);
+        font-size: var(--asg-font-size-xl);
+        font-weight: var(--asg-font-weight-bold);
+        line-height: 1.3;
+        overflow-wrap: anywhere;
+    }
+
+    &__description {
+        margin: 0;
+        color: var(--asg-color-text-muted);
+        font-size: var(--asg-font-size-sm);
+        line-height: 1.5;
+    }
+
+    &__date {
+        margin: 0 0 var(--asg-space-3);
+        color: var(--asg-color-text-primary);
+        font-size: var(--asg-font-size-lg);
+        font-weight: var(--asg-font-weight-semibold);
+        font-variant-numeric: tabular-nums;
+    }
+
+    &__action {
+        max-width: 100%;
+        white-space: normal;
+    }
+}
+
+
+/* Adaptación responsive de la cabecera */
+
+@media (max-width: 767.98px) {
+
+    .dashboard-welcome {
+
+        &__title {
+            font-size: var(--asg-font-size-xl);
+        }
+    }
+
+    .dashboard-company {
+        align-items: flex-start;
+        gap: var(--asg-space-3);
+
+        &__icon {
+            width: 44px;
+            height: 44px;
+            font-size: var(--asg-font-size-lg);
+        }
+
+        &__title {
+            font-size: var(--asg-font-size-lg);
+        }
+    }
+
+    .dashboard-period {
+        grid-template-columns: minmax(0, 1fr);
+        gap: var(--asg-space-4);
+
+        &__title {
+            font-size: var(--asg-font-size-lg);
+        }
+
+        &__next {
+            padding-top: var(--asg-space-4);
+            border-top: 1px solid var(--bs-border-color);
+        }
+    }
+}

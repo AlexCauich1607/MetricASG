@@ -1,6 +1,11 @@
 
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { signal } from '@angular/core';
+import { computed, signal } from '@angular/core';
+
+import {
+  CompanyRole,
+  UserCompanyMembership
+} from '../../../models/company_membership';
 import { provideRouter } from '@angular/router';
 import { of, Subject, throwError } from 'rxjs';
 
@@ -21,6 +26,9 @@ describe('UserHomeComponent', () => {
   let invitationService: jasmine.SpyObj<CompanyInvitationService>;
   let companyContext: CompanyContextService;
   let selectedCompanyId: ReturnType<typeof signal<number | null>>;
+  let memberships: ReturnType<
+    typeof signal<UserCompanyMembership[]>
+  >;
 
   const companyAResults = {
     evaluation_id: 10,
@@ -52,6 +60,7 @@ describe('UserHomeComponent', () => {
 
   beforeEach(async () => {
     selectedCompanyId = signal<number | null>(null);
+    memberships = signal<UserCompanyMembership[]>([]);
 
     evaluationService = jasmine.createSpyObj<EvaluationService>(
       'EvaluationService',
@@ -90,9 +99,17 @@ describe('UserHomeComponent', () => {
           provide: CompanyContextService,
           useValue: {
             selectedCompanyId,
-            memberships: signal([]),
+            memberships,
             loading: signal(false),
             error: signal(false),
+
+            selectedMembership: computed(() =>
+              memberships().find(
+                membership =>
+                  membership.company_id === selectedCompanyId()
+              ) ?? null
+            ),
+
             refreshMemberships: jasmine.createSpy('refreshMemberships')
           }
         }
@@ -314,5 +331,88 @@ describe('UserHomeComponent', () => {
     expect(component.invitationAcceptedPendingSync).toBeFalse();
     expect(component.invitationSuccess).toBeTrue();
     expect(contextMock.selectedCompanyId()).toBe(15);
+  });
+  it('should display a personal welcome without a selected company', () => {
+    selectedCompanyId.set(null);
+
+    TestBed.tick();
+    fixture.detectChanges();
+
+    const welcome = fixture.nativeElement.querySelector(
+      '.dashboard-welcome__title'
+    );
+
+    const companyHeader = fixture.nativeElement.querySelector(
+      '.dashboard-company'
+    );
+
+    expect(welcome.textContent).toContain('Bienvenido');
+    expect(companyHeader).toBeNull();
+  });
+
+
+  it('should display the selected company name', () => {
+    memberships.set([
+      {
+        membership_id: 1,
+        company_id: 3,
+        company_name: 'Empresa A',
+        role: CompanyRole.COMPANY_ADMIN,
+        joined_at: '2026-11-23T12:00:00'
+      }
+    ]);
+
+    selectedCompanyId.set(3);
+
+    TestBed.tick();
+    fixture.detectChanges();
+
+    const companyTitle = fixture.nativeElement.querySelector(
+      '.dashboard-company__title'
+    );
+
+    expect(companyTitle.textContent.trim()).toBe('Empresa A');
+  });
+
+
+  it('should update the company header when switching companies', () => {
+    memberships.set([
+      {
+        membership_id: 1,
+        company_id: 3,
+        company_name: 'Empresa A',
+        role: CompanyRole.COMPANY_ADMIN,
+        joined_at: '2026-11-23T12:00:00'
+      },
+      {
+        membership_id: 2,
+        company_id: 7,
+        company_name: 'Empresa B',
+        role: CompanyRole.COLLABORATOR,
+        joined_at: '2026-11-23T12:00:00'
+      }
+    ]);
+
+    selectedCompanyId.set(3);
+
+    TestBed.tick();
+    fixture.detectChanges();
+
+    expect(
+      fixture.nativeElement.querySelector(
+        '.dashboard-company__title'
+      ).textContent.trim()
+    ).toBe('Empresa A');
+
+    selectedCompanyId.set(7);
+
+    TestBed.tick();
+    fixture.detectChanges();
+
+    expect(
+      fixture.nativeElement.querySelector(
+        '.dashboard-company__title'
+      ).textContent.trim()
+    ).toBe('Empresa B');
   });
 });
