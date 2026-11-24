@@ -183,22 +183,49 @@
     </section>
 
     } @else if (resultsStatus === 'empty') {
-    <div class="mt-3">
+    <div class="mt-3 dashboard-empty">
 
-      <app-ui-state type="empty" title="Aún no tienes resultados"
-        message="Para comenzar, realiza tu primer autodiagnóstico.">
+      <app-ui-state type="empty" title="Aún no hay resultados empresariales"
+        message="Esta empresa todavía no cuenta con una evaluación ASG completada.">
       </app-ui-state>
 
-      <button type="button" class="asg-btn asg-btn--primary mt-3" [disabled]="!canStartEvaluation"
-        (click)="goEvaluation()">
+      <div class="dashboard-empty__actions">
 
-        <i [class]="canStartEvaluation
-          ? 'bi bi-rocket-fill'
-          : 'bi bi-lock-fill'" aria-hidden="true">
-        </i>
+        <button type="button" class="asg-btn asg-btn--primary dashboard-period__action" [disabled]="!canStartEvaluation"
+          [attr.aria-describedby]="
+        evaluationUnavailableReason
+          ? 'dashboard-empty-reason'
+          : null
+      " (click)="goEvaluation()">
 
-        Realizar autodiagnóstico
-      </button>
+          <i [class]="canStartEvaluation
+          ? 'bi bi-clipboard-check'
+          : 'bi bi-lock'" aria-hidden="true">
+          </i>
+
+          {{ evaluationActionLabel }}
+
+        </button>
+
+        @if (evaluationUnavailableReason) {
+
+        <p id="dashboard-empty-reason" class="dashboard-evaluation-reason">
+
+          {{ evaluationUnavailableReason }}
+
+        </p>
+
+        } @else if (
+        companyContext.selectedMembership()?.role === 'COLLABORATOR'
+        ) {
+
+        <p class="dashboard-evaluation-reason">
+          Puedes preparar tu borrador, pero no enviar la evaluación.
+        </p>
+
+        }
+
+      </div>
 
     </div>
     }
@@ -244,17 +271,39 @@
           }
         </p>
 
-        <button type="button" class="btn-my-purple dashboard-period__action" [disabled]="!canStartEvaluation"
-          [class.text-gray]="!canStartEvaluation" (click)="goEvaluation()">
+        <button type="button" class="asg-btn asg-btn--primary dashboard-period__action" [disabled]="!canStartEvaluation"
+          [attr.aria-describedby]="
+    evaluationUnavailableReason
+      ? 'dashboard-evaluation-reason'
+      : null
+  " (click)="goEvaluation()">
 
           <i [class]="canStartEvaluation
-            ? 'bi bi-rocket-fill'
-            : 'bi bi-lock-fill'" aria-hidden="true">
+      ? 'bi bi-clipboard-check'
+      : 'bi bi-lock'" aria-hidden="true">
           </i>
 
-          Realizar autodiagnóstico
+          {{ evaluationActionLabel }}
 
         </button>
+
+        @if (evaluationUnavailableReason) {
+
+        <p id="dashboard-evaluation-reason" class="dashboard-evaluation-reason">
+
+          {{ evaluationUnavailableReason }}
+
+        </p>
+
+        } @else if (
+        companyContext.selectedMembership()?.role === 'COLLABORATOR'
+        ) {
+
+        <p class="dashboard-evaluation-reason">
+          Puedes preparar tu borrador, pero no enviar la evaluación.
+        </p>
+
+        }
 
       </div>
 
@@ -263,29 +312,39 @@
 
     <!--<h4 class="sw-gris fw-bold mt-3 mb-3 text-center"><i class="bi bi-clipboard-data"></i> Puntuaciones</h4>-->
     @if (results) {
-    <div class="row g-3 mx-0 mb-4 align-items-stretch">
-      <div class="col-6 col-lg-3 mb-3">
-        <div class="sw-bg-blue-light sw-hover-scale border rounded shadow-sm p-4">
-          <div class="d-flex justify-content-between align-items-stretch">
-            <p class="text-my-purple sw-fs-7 fw-bold"><i class="bi bi-globe-americas"></i> Nivel ASG</p>
-          </div>
-          <div class="d-flex justify-content-end">
-            <div class="sw-bg-sm-purple text-my-purple p-0 px-3 py-1 rounded text-center">
-              <p class=" sw-fs-7 m-0 p-0">{{results.global_maturity_level}}
-              </p>
-              <p class="m-0 fs-3 p-0 fw-bold">{{results ? results.global_score.toFixed(1) : 0}}</p>
-            </div>
-          </div>
-        </div>
+
+    <section class="dashboard-performance" aria-labelledby="dashboard-performance-title">
+
+      <header class="dashboard-performance__header">
+
+        <h2 id="dashboard-performance-title">
+          Desempeño ASG
+        </h2>
+
+        <p>
+          Indicadores de la última evaluación.
+        </p>
+
+      </header>
+
+      <div class="dashboard-performance__grid">
+
+        <app-ambit-card variant="dashboard" title="Nivel ASG global" letter="ASG" color="var(--asg-color-brand-primary)"
+          [subtitle]="results.global_maturity_level" [score]="results.global_score">
+        </app-ambit-card>
+
+        @for (ambito of results.ambits; track ambito.ambit_id) {
+
+        <app-ambit-card variant="dashboard" [title]="ambito.ambit_name" [letter]="ambito.letter" [color]="ambito.color"
+          [subtitle]="ambito.maturity_level" [maturity_color]="ambito.maturity_color" [score]="ambito.score">
+        </app-ambit-card>
+
+        }
+
       </div>
-      @for (ambito of results?.ambits; track ambito) {
-      <div class="col-6 col-lg-3">
-        <app-ambit-card class="shadow-sm" [title]="ambito.ambit_name" [letter]="ambito.letter" [color]="ambito.color"
-          [subtitle]="ambito.maturity_level" [maturity_color]="ambito.maturity_color"
-          [score]="ambito.score"></app-ambit-card>
-      </div>
-      }
-    </div>
+
+    </section>
+
     }
 
     @if (results) {
@@ -303,9 +362,20 @@
     </div>
     }
     @if (results) {
-    <div class="d-flex align-items-center justify-content-center mt-4">
-      <button class="btn-my-purple" (click)="downloadPdf()"><i class="bi bi-eye-fill me-1"></i> Ver Resultados</button>
+
+    <div class="dashboard-results-actions">
+
+      <button type="button" class="asg-btn asg-btn--primary" (click)="goToResults()">
+
+        Ver resultados
+
+        <i class="bi bi-arrow-right" aria-hidden="true">
+        </i>
+
+      </button>
+
     </div>
+
     }
   </div>
 </div>

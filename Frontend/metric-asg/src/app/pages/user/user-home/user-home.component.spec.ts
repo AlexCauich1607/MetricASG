@@ -16,8 +16,31 @@ import { UserService } from '../../../services/user.service';
 import { ResultEvaluation } from '../../../models/evaluation_result';
 
 import { CompanyInvitationService } from '../../../services/company-invitation.service';
+import { CompanyMembershipService } from
+  '../../../services/company-membership.service';
+
+import { CompanyDetailResponse } from
+  '../../../models/company_membership';
+
+import { Router } from '@angular/router';
 
 describe('UserHomeComponent', () => {
+  function selectCompanyWithRole(role: CompanyRole): void {
+    memberships.set([
+      {
+        membership_id: 1,
+        company_id: 3,
+        company_name: 'Empresa A',
+        role,
+        joined_at: '2026-11-23T12:00:00'
+      }
+    ]);
+
+    selectedCompanyId.set(3);
+
+    TestBed.tick();
+    fixture.detectChanges();
+  }
   let component: UserHomeComponent;
   let fixture: ComponentFixture<UserHomeComponent>;
 
@@ -29,34 +52,45 @@ describe('UserHomeComponent', () => {
   let memberships: ReturnType<
     typeof signal<UserCompanyMembership[]>
   >;
-
-  const companyAResults = {
+  let companyMembershipService:
+    jasmine.SpyObj<CompanyMembershipService>;
+  const companyAResults: ResultEvaluation = {
     evaluation_id: 10,
     date: '2026-09-15T12:00:00',
     global_score: 8,
+    global_maturity_level: 'Intermedio',
     ambits: [
       {
+        ambit_id: 1,
         ambit_name: 'Ambiental',
         score: 8.5,
+        letter: 'A',
         color: '#00AA00',
-        maturity_color: '#15b91d'
+        maturity_level: 'Avanzado',
+        maturity_color: '#15b91d',
+        feedback: ''
       }
     ]
-  } as ResultEvaluation;
+  };
 
-  const companyBResults = {
+  const companyBResults: ResultEvaluation = {
     evaluation_id: 20,
     date: '2026-10-20T12:00:00',
     global_score: 7,
+    global_maturity_level: 'Intermedio',
     ambits: [
       {
+        ambit_id: 2,
         ambit_name: 'Social',
         score: 7.5,
+        letter: 'S',
         color: '#0000AA',
-        maturity_color: '#eac84f'
+        maturity_level: 'Intermedio',
+        maturity_color: '#eac84f',
+        feedback: ''
       }
     ]
-  } as ResultEvaluation;
+  };
 
   beforeEach(async () => {
     selectedCompanyId = signal<number | null>(null);
@@ -78,6 +112,23 @@ describe('UserHomeComponent', () => {
     invitationService = jasmine.createSpyObj<CompanyInvitationService>(
       'CompanyInvitationService',
       ['acceptInvitation']
+    );
+    companyMembershipService =
+      jasmine.createSpyObj<CompanyMembershipService>(
+        'CompanyMembershipService',
+        ['getCompany']
+      );
+
+    companyMembershipService.getCompany.and.callFake(
+      (companyId: number) => of({
+        id: companyId,
+        name: `Empresa ${companyId}`,
+        sector_id: 1,
+        size_id: 1,
+        active: true,
+        biannual_evaluation: false,
+        next_evaluation: null
+      } as CompanyDetailResponse)
     );
     await TestBed.configureTestingModule({
       imports: [UserHomeComponent],
@@ -112,7 +163,11 @@ describe('UserHomeComponent', () => {
 
             refreshMemberships: jasmine.createSpy('refreshMemberships')
           }
-        }
+        },
+        {
+          provide: CompanyMembershipService,
+          useValue: companyMembershipService
+        },
       ]
     }).compileComponents();
 
@@ -414,5 +469,168 @@ describe('UserHomeComponent', () => {
         '.dashboard-company__title'
       ).textContent.trim()
     ).toBe('Empresa B');
+  });
+  [
+    {
+      role: CompanyRole.COMPANY_ADMIN,
+      allowed: true,
+      label: 'Realizar autodiagnóstico'
+    },
+    {
+      role: CompanyRole.ASG_MANAGER,
+      allowed: true,
+      label: 'Realizar autodiagnóstico'
+    },
+    {
+      role: CompanyRole.COLLABORATOR,
+      allowed: true,
+      label: 'Trabajar en borrador'
+    },
+    {
+      role: CompanyRole.AUDITOR,
+      allowed: false,
+      label: 'Acceso de solo lectura'
+    }
+  ].forEach(({ role, allowed, label }) => {
+
+    it(`should configure evaluation access for ${role}`, () => {
+      selectCompanyWithRole(role);
+
+      expect(component.canStartEvaluation).toBe(allowed);
+      expect(component.evaluationActionLabel).toBe(label);
+
+      const button: HTMLButtonElement =
+        fixture.nativeElement.querySelector(
+          '.dashboard-period__action'
+        );
+
+      expect(button.disabled).toBe(!allowed);
+      expect(button.textContent).toContain(label);
+    });
+
+  });
+
+  it('should block evaluation without a valid membership', () => {
+    selectedCompanyId.set(3);
+
+    TestBed.tick();
+    fixture.detectChanges();
+
+    expect(component.canStartEvaluation).toBeFalse();
+  });
+
+  it('should block evaluation for an inactive company', () => {
+    selectCompanyWithRole(CompanyRole.COMPANY_ADMIN);
+
+    component.company = {
+      ...component.company!,
+      active: false
+    };
+
+    fixture.detectChanges();
+
+    expect(component.canStartEvaluation).toBeFalse();
+  });
+
+  it('should block evaluation before the scheduled date', () => {
+    selectCompanyWithRole(CompanyRole.COMPANY_ADMIN);
+
+    component.company = {
+      ...component.company!,
+      biannual_evaluation: true,
+      next_evaluation: '2099-01-01'
+    };
+
+    fixture.detectChanges();
+
+    expect(component.canStartEvaluation).toBeFalse();
+
+    expect(
+      component.evaluationUnavailableReason
+    ).toContain('aún no está disponible');
+  });
+
+  it('should allow evaluation after the scheduled date', () => {
+    selectCompanyWithRole(CompanyRole.COMPANY_ADMIN);
+
+    component.company = {
+      ...component.company!,
+      biannual_evaluation: true,
+      next_evaluation: '2000-01-01'
+    };
+
+    fixture.detectChanges();
+
+    expect(component.canStartEvaluation).toBeTrue();
+  });
+
+  it('should block evaluation when company context does not match', () => {
+    selectCompanyWithRole(CompanyRole.COMPANY_ADMIN);
+
+    component.company = {
+      ...component.company!,
+      id: 99
+    };
+
+    fixture.detectChanges();
+
+    expect(component.canStartEvaluation).toBeFalse();
+  });
+
+  it('should prevent auditors from navigating to evaluation', () => {
+    selectCompanyWithRole(CompanyRole.AUDITOR);
+
+    const router = TestBed.inject(Router);
+    const navigate = spyOn(router, 'navigate');
+
+    component.goEvaluation();
+
+    expect(navigate).not.toHaveBeenCalled();
+  });
+
+  it('should allow collaborators to navigate to their draft', () => {
+    selectCompanyWithRole(CompanyRole.COLLABORATOR);
+
+    const router = TestBed.inject(Router);
+
+    const navigate = spyOn(router, 'navigate')
+      .and.resolveTo(true);
+
+    component.goEvaluation();
+
+    expect(navigate).toHaveBeenCalledWith([
+      '/user/evaluation'
+    ]);
+  });
+
+  it('should navigate to results for authorized members', () => {
+    selectCompanyWithRole(CompanyRole.AUDITOR);
+
+    const router = TestBed.inject(Router);
+
+    const navigate = spyOn(router, 'navigate')
+      .and.resolveTo(true);
+
+    component.goToResults();
+
+    expect(navigate).toHaveBeenCalledWith([
+      '/user/results'
+    ]);
+  });
+
+  it('should render the global and ambit dashboard cards', () => {
+    selectCompanyWithRole(CompanyRole.COMPANY_ADMIN);
+
+    const cards = fixture.nativeElement.querySelectorAll(
+      '.dashboard-kpi'
+    );
+
+    expect(cards.length).toBe(2);
+
+    expect(cards[0].textContent).toContain('Nivel ASG global');
+    expect(cards[0].textContent).toContain('8.0');
+
+    expect(cards[1].textContent).toContain('Ambiental');
+    expect(cards[1].textContent).toContain('8.5');
   });
 });

@@ -22,7 +22,8 @@ import { UiStateComponent } from '../../../shared/ui-state/ui-state.component';
 import { CompanyMembershipService } from '../../../services/company-membership.service';
 import {
   CompanyCreateResponse,
-  CompanyDetailResponse
+  CompanyDetailResponse,
+  CompanyRole
 } from '../../../models/company_membership';
 
 import { CreateCompanyComponent } from '../../modals/create-company/create-company.component';
@@ -70,35 +71,96 @@ export class UserHomeComponent {
   invitationSuccess = false;
   invitationAcceptedPendingSync = false;
 
-  get canStartEvaluation(): boolean {
+  get hasEvaluationPermission(): boolean {
+    const role =
+      this.companyContext.selectedMembership()?.role;
+
+    return (
+      role === CompanyRole.COMPANY_ADMIN ||
+      role === CompanyRole.ASG_MANAGER ||
+      role === CompanyRole.COLLABORATOR
+    );
+  }
+
+  get evaluationUnavailableReason(): string | null {
     const company = this.company;
+    const selectedCompanyId =
+      this.companyContext.selectedCompanyId();
 
     if (
-      this.companyLoading ||
-      this.companyError ||
-      !company ||
-      !company.active
+      this.companyContext.loading() ||
+      this.companyLoading
     ) {
-      return false;
+      return 'Estamos consultando la disponibilidad.';
+    }
+
+    if (
+      this.companyContext.error() ||
+      this.companyError
+    ) {
+      return 'No fue posible verificar la disponibilidad.';
+    }
+
+    if (
+      selectedCompanyId === null ||
+      !company ||
+      company.id !== selectedCompanyId
+    ) {
+      return 'Selecciona una empresa disponible.';
+    }
+
+    if (!company.active) {
+      return 'Esta empresa no se encuentra activa.';
+    }
+
+    if (!this.hasEvaluationPermission) {
+      return 'Tu rol no permite iniciar un autodiagnóstico.';
     }
 
     if (!company.biannual_evaluation) {
-      return true;
+      return null;
     }
 
     if (!company.next_evaluation) {
-      return false;
+      return 'No existe una fecha de evaluación programada.';
     }
 
-    // Comparación por fecha calendario, sin depender de la hora.
     const today = new Date();
+
     const todayDate = [
       today.getFullYear(),
       String(today.getMonth() + 1).padStart(2, '0'),
       String(today.getDate()).padStart(2, '0')
     ].join('-');
 
-    return company.next_evaluation.slice(0, 10) <= todayDate;
+    if (company.next_evaluation.slice(0, 10) > todayDate) {
+      return 'El siguiente periodo de evaluación aún no está disponible.';
+    }
+
+    return null;
+  }
+
+  get canStartEvaluation(): boolean {
+    return this.evaluationUnavailableReason === null;
+  }
+
+  get evaluationActionLabel(): string {
+    const role =
+      this.companyContext.selectedMembership()?.role;
+
+    if (role === CompanyRole.AUDITOR) {
+      return 'Acceso de solo lectura';
+    }
+
+    if (!this.canStartEvaluation) {
+      return 'Autodiagnóstico no disponible';
+    }
+
+    if (role === CompanyRole.COLLABORATOR) {
+      return 'Trabajar en borrador';
+    }
+
+    return 'Realizar autodiagnóstico';
   }
 
   loadingChart = false;
@@ -412,7 +474,15 @@ export class UserHomeComponent {
       });
   }
 
-  downloadPdf() {
-    this.router.navigate(['/user/results']);
+  goToResults(): void {
+    if (
+      this.results &&
+      this.resultsStatus === 'success' &&
+      this.companyContext.selectedMembership() &&
+      !this.companyContext.loading() &&
+      !this.companyContext.error()
+    ) {
+      this.router.navigate(['/user/results']);
+    }
   }
 }

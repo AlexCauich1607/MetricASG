@@ -360,3 +360,100 @@
         }
     }
 }
+
+/* =========================================
+   HU-056 / T02
+   Tarjetas de desempeño ASG
+   ========================================= */
+
+.dashboard-performance {
+    min-width: 0;
+    margin-bottom: var(--asg-space-6);
+
+    &__header {
+        margin-bottom: var(--asg-space-4);
+
+        h2 {
+            margin: 0 0 var(--asg-space-1);
+            color: var(--asg-color-brand-primary);
+            font-size: var(--asg-font-size-xl);
+            font-weight: var(--asg-font-weight-bold);
+        }
+
+        p {
+            margin: 0;
+            color: var(--asg-color-text-muted);
+            font-size: var(--asg-font-size-sm);
+        }
+    }
+
+    &__grid {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        align-items: stretch;
+        gap: var(--asg-space-4);
+    }
+}
+
+@media (max-width: 1023.98px) {
+    .dashboard-performance__grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 575.98px) {
+    .dashboard-performance__grid {
+        grid-template-columns: minmax(0, 1fr);
+        gap: var(--asg-space-3);
+    }
+}
+
+/* Acciones del dashboard */
+
+.dashboard-period__action {
+    max-width: 100%;
+    min-height: 44px;
+    white-space: normal;
+    text-align: center;
+
+    &:disabled {
+        opacity: 1;
+        background: #e9edf1;
+        border-color: #d9e1e8;
+        color: var(--asg-color-text-muted);
+        cursor: not-allowed;
+    }
+}
+
+.dashboard-evaluation-reason {
+    margin: var(--asg-space-2) 0 0;
+    color: var(--asg-color-text-muted);
+    font-size: var(--asg-font-size-sm);
+    line-height: 1.5;
+    overflow-wrap: anywhere;
+}
+
+.dashboard-empty__actions {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--asg-space-2);
+    margin-top: var(--asg-space-4);
+    text-align: center;
+}
+
+.dashboard-results-actions {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: var(--asg-space-4);
+    margin-bottom: var(--asg-space-4);
+}
+
+@media (max-width: 575.98px) {
+
+    .dashboard-period__action,
+    .dashboard-results-actions .asg-btn {
+        width: 100%;
+        justify-content: center;
+    }
+}
