@@ -73,16 +73,25 @@
   }
 
   &__autosave {
-    display: flex;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: var(--asg-space-2);
+    position: absolute;
 
-    min-width: 0;
-    max-width: 100%;
+    width: 1px;
+    height: 1px;
 
-    font-size: var(--asg-font-size-sm);
-    overflow-wrap: anywhere;
+    overflow: hidden;
+    clip-path: inset(50%);
+
+    &--active {
+      position: static;
+
+      width: auto;
+      height: auto;
+      min-width: 0;
+      max-width: 100%;
+
+      overflow: visible;
+      clip-path: none;
+    }
   }
 }
 
@@ -91,14 +100,7 @@
 .evaluation-progress {
   display: grid;
   gap: var(--asg-space-3);
-
-  min-width: 0;
   padding: var(--asg-space-4);
-
-  background: var(--asg-color-surface-default);
-  border: 1px solid #d9e1e8;
-  border-radius: var(--asg-radius-card);
-  box-shadow: var(--asg-shadow-sm);
 
   &__header {
     display: flex;
@@ -159,16 +161,6 @@
 }
 
 /* Contenedor principal del cuestionario */
-
-.evaluation-question-card {
-  min-width: 0;
-  padding: var(--asg-space-6);
-
-  background: var(--asg-color-surface-default);
-  border: 1px solid #d9e1e8;
-  border-radius: var(--asg-radius-card);
-  box-shadow: var(--asg-shadow-sm);
-}
 
 .evaluation-question-layout {
   min-width: 0;
@@ -378,6 +370,57 @@
   }
 }
 
+/* HU-057 / T03 — Navegación del cuestionario */
+
+.evaluation-navigation {
+  display: grid;
+  gap: var(--asg-space-3);
+  min-width: 0;
+  padding-top: var(--asg-space-4);
+
+  border-top: 1px solid #d9e1e8;
+
+  &__actions {
+    display: flex;
+    align-items: stretch;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    gap: var(--asg-space-3);
+    min-width: 0;
+  }
+
+  &__actions>.asg-btn {
+    min-height: 48px;
+    min-width: 0;
+    max-width: 100%;
+    white-space: normal;
+  }
+
+  &__previous {
+    margin-inline-end: auto;
+  }
+
+  &__notice {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--asg-space-2);
+
+    margin: 0;
+    padding: var(--asg-space-3);
+
+    background: var(--asg-color-surface-muted);
+    border-radius: var(--asg-radius-sm);
+
+    color: var(--asg-color-text-muted);
+    font-size: var(--asg-font-size-sm);
+    overflow-wrap: anywhere;
+
+    i {
+      flex-shrink: 0;
+    }
+  }
+}
+
 /* Responsive */
 
 @media (max-width: 767.98px) {
@@ -387,9 +430,18 @@
   }
 
   .evaluation-header {
-    align-items: flex-start;
-    flex-direction: column;
-    gap: var(--asg-space-3);
+    align-items: center;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: var(--asg-space-2);
+
+    &__identity {
+      flex: 1 1 180px;
+    }
+
+    &__autosave--active {
+      margin-inline-start: auto;
+    }
   }
 
   .evaluation-question-card {
@@ -414,16 +466,13 @@
       display: grid;
       grid-template-columns: repeat(2, minmax(0, 1fr));
       gap: var(--asg-space-2);
-    }
 
-    &__previous,
-    &__next,
-    &__submit {
-      width: 100%;
-      margin: 0;
-      padding-inline: var(--asg-space-2);
-
-      font-size: var(--asg-font-size-sm);
+      >.asg-btn {
+        width: 100%;
+        margin: 0;
+        padding-inline: var(--asg-space-2);
+        font-size: var(--asg-font-size-sm);
+      }
     }
 
     &__next:only-child {
@@ -448,66 +497,4 @@
 
 .sw-gris {
   color: #7c8c6f;
-}
-
-/* HU-057 / T03 — Navegación del cuestionario */
-
-.evaluation-navigation {
-  display: grid;
-  gap: var(--asg-space-3);
-
-  min-width: 0;
-  padding-top: var(--asg-space-4);
-
-  border-top: 1px solid #d9e1e8;
-
-  &__actions {
-    display: flex;
-    align-items: stretch;
-    justify-content: flex-end;
-    flex-wrap: wrap;
-    gap: var(--asg-space-3);
-
-    min-width: 0;
-  }
-
-  &__previous,
-  &__next,
-  &__submit {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: var(--asg-space-2);
-
-    min-height: 48px;
-    min-width: 0;
-    max-width: 100%;
-
-    white-space: normal;
-  }
-
-  &__previous {
-    margin-inline-end: auto;
-  }
-
-  &__notice {
-    display: flex;
-    align-items: flex-start;
-    gap: var(--asg-space-2);
-
-    margin: 0;
-    padding: var(--asg-space-3);
-
-    background: var(--asg-color-surface-muted);
-    border-radius: var(--asg-radius-sm);
-
-    color: var(--asg-color-text-muted);
-    font-size: var(--asg-font-size-sm);
-
-    overflow-wrap: anywhere;
-
-    i {
-      flex-shrink: 0;
-    }
-  }
 }

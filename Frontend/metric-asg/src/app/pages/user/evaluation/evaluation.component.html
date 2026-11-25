@@ -19,54 +19,30 @@
         </p>
 
       </div>
-      <div class="evaluation-header__autosave" role="status" aria-live="polite">
-        @if (
-        hasUnsavedResponses() &&
-        autosaveStatus() === 'idle'
-        ) {
-        <span class="text-warning">
-          <i class="bi bi-exclamation-triangle-fill me-1"></i>
-          Hay respuestas sin guardar.
-          Los cambios pendientes podrían perderse al salir.
-        </span>
-        }
-
-        @switch (autosaveStatus()) {
-        @case ('pending') {
-        <span class="text-secondary">
-          <i class="bi bi-clock"></i>
-          Cambios pendientes de guardar
-        </span>
-        }
-
-        @case ('saving') {
-        <span class="text-secondary">
-          <span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>
-          Guardando respuestas...
-        </span>
-        }
-
-        @case ('saved') {
-        <span class="text-success">
-          <i class="bi bi-check-circle-fill"></i>
-          Respuestas guardadas
-        </span>
-        }
-
-        @case ('error') {
-        <span class="text-danger">
-          <i class="bi bi-exclamation-circle-fill"></i>
-          No se pudieron guardar las respuestas
-        </span>
-
-        <button type="button" class="btn btn-sm btn-outline-danger" (click)="retrySaveDraft()">
-          Reintentar
-        </button>
-        }
-        }
-      </div>
+      <app-evaluation-autosave class="evaluation-header__autosave" [class.evaluation-header__autosave--active]="
+    autosaveStatus() !== 'idle' ||
+    hasUnsavedResponses()
+  " presentation="indicator" [status]="autosaveStatus()" [hasUnsavedResponses]="hasUnsavedResponses()">
+      </app-evaluation-autosave>
     </header>
+    @if (
+    autosaveStatus() === 'error' ||
+    (
+    autosaveStatus() === 'idle' &&
+    hasUnsavedResponses()
+    )
+    ) {
 
+    <app-evaluation-autosave presentation="notice" [status]="autosaveStatus()"
+      [hasUnsavedResponses]="hasUnsavedResponses()" [canRetry]="
+      canEditEvaluation() &&
+      !loading() &&
+      !loadError() &&
+      !submitting()
+    " (retry)="retrySaveDraft()">
+    </app-evaluation-autosave>
+
+    }
     @if (loading()) {
     <div class="d-flex justify-content-center align-items-center py-5">
       <div class="text-center">
@@ -128,7 +104,7 @@
 
     @if (currentAmbit(); as currentAmbit) {
     @if (currentQuestion(); as currentQuestion) {
-    <section class="evaluation-progress" aria-labelledby="evaluation-progress-title">
+    <section class="asg-card evaluation-progress" aria-labelledby="evaluation-progress-title">
 
       <div class="evaluation-progress__header">
 
@@ -161,7 +137,7 @@
       </div>
 
     </section>
-    <div class="evaluation-question-card"
+    <div class="asg-card evaluation-question-card"
       [style.--evaluation-accent]="currentAmbit.color || 'var(--asg-color-brand-primary)'">
 
       <div class="evaluation-question-layout">

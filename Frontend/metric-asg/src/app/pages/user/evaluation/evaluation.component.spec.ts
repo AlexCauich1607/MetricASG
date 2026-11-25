@@ -1936,6 +1936,365 @@ describe('EvaluationComponent', () => {
     // El usuario ya no puede editar.
     expect(component.canEditEvaluation()).toBeFalse();
   });
+  describe('Autosave component integration', () => {
+
+    function query<T extends HTMLElement = HTMLElement>(
+      selector: string
+    ): T | null {
+      return fixture.nativeElement.querySelector(selector);
+    }
+
+    it('should keep the autosave indicator hidden when no changes exist', () => {
+      expect(component.autosaveStatus()).toBe('idle');
+      expect(component.hasUnsavedResponses()).toBeFalse();
+
+      const indicator = query('.evaluation-header__autosave');
+
+      expect(indicator).not.toBeNull();
+
+      expect(
+        indicator?.classList.contains(
+          'evaluation-header__autosave--active'
+        )
+      ).toBeFalse();
+
+      expect(
+        query('.evaluation-autosave__pill')
+      ).toBeNull();
+
+      expect(
+        query('.evaluation-autosave__notice')
+      ).toBeNull();
+
+      expect(
+        query('.evaluation-autosave__status')
+      ).not.toBeNull();
+    });
+
+    it('should update the indicator throughout the autosave lifecycle',
+      fakeAsync(() => {
+
+        const pendingSave = new Subject<{
+          evaluation_id: number;
+          status: string;
+        }>();
+
+        saveDraftSpy.and.returnValue(
+          pendingSave.asObservable()
+        );
+
+        // Mantener una referencia a la región accesible.
+        const liveRegion = query(
+          '.evaluation-autosave__status'
+        );
+
+        // Seleccionar una respuesta.
+        component.selectAnswer(1, 1, 1);
+        fixture.detectChanges();
+
+        expect(component.autosaveStatus()).toBe('pending');
+
+        expect(
+          query('.evaluation-autosave__pill--warning')
+            ?.textContent
+        ).toContain('Pendiente');
+
+        expect(
+          query('.evaluation-header__autosave--active')
+        ).not.toBeNull();
+
+        // Todavía no debe comenzar el guardado.
+        tick(799);
+
+        expect(saveDraftSpy).not.toHaveBeenCalled();
+
+        // Completar el debounce.
+        tick(1);
+        fixture.detectChanges();
+
+        expect(saveDraftSpy).toHaveBeenCalledTimes(1);
+        expect(component.autosaveStatus()).toBe('saving');
+
+        expect(
+          query('.evaluation-autosave__pill--saving')
+            ?.textContent
+        ).toContain('Guardando...');
+
+        expect(
+          query('.evaluation-autosave__pill--saving .spinner-border')
+        ).not.toBeNull();
+
+        // Completar el guardado.
+        pendingSave.next({
+          evaluation_id: 1,
+          status: 'DRAFT'
+        });
+
+        pendingSave.complete();
+
+        fixture.detectChanges();
+
+        expect(component.autosaveStatus()).toBe('saved');
+        expect(component.savedResponses().get(1)).toBe(1);
+        expect(component.hasUnsavedResponses()).toBeFalse();
+
+        expect(
+          query('.evaluation-autosave__pill--saved')
+            ?.textContent
+        ).toContain('Guardado');
+
+        expect(
+          query('.evaluation-autosave__notice')
+        ).toBeNull();
+
+        // La región accesible debe permanecer montada.
+        expect(
+          query('.evaluation-autosave__status')
+        ).toBe(liveRegion);
+
+      })
+    );
+
+    it('should display an autosave error with a single live region',
+      fakeAsync(() => {
+
+        saveDraftSpy.and.returnValue(
+          throwError(() => new Error('Simulated autosave error'))
+        );
+
+        component.selectAnswer(1, 1, 1);
+
+        tick(800);
+        fixture.detectChanges();
+
+        expect(component.autosaveStatus()).toBe('error');
+        expect(component.hasUnsavedResponses()).toBeTrue();
+
+        expect(
+          query('.evaluation-autosave__pill--error')
+            ?.textContent
+        ).toContain('Error al guardar');
+
+        expect(
+          query('.evaluation-autosave__notice--error')
+            ?.textContent
+        ).toContain('No se pudieron guardar las respuestas');
+
+        const retryButton = query<HTMLButtonElement>(
+          '.evaluation-autosave__retry'
+        );
+
+        expect(retryButton).not.toBeNull();
+        expect(retryButton?.disabled).toBeFalse();
+
+        const liveRegions = fixture.nativeElement.querySelectorAll(
+          'app-evaluation-autosave [aria-live]'
+        );
+
+        expect(liveRegions.length).toBe(1);
+        expect(liveRegions[0].getAttribute('role')).toBe('status');
+        expect(liveRegions[0].getAttribute('aria-live')).toBe('polite');
+        expect(liveRegions[0].getAttribute('aria-atomic')).toBe('true');
+
+      })
+    );
+
+    it('should retry a failed autosave through the retry button',
+      fakeAsync(() => {
+
+        const retryRequest = new Subject<{
+          evaluation_id: number;
+          status: string;
+        }>();
+
+        saveDraftSpy.and.returnValues(
+          throwError(() => new Error('Simulated autosave error')),
+          retryRequest.asObservable()
+        );
+
+        const retrySpy = spyOn(
+          component,
+          'retrySaveDraft'
+        ).and.callThrough();
+
+        // Generar un error real mediante el servicio simulado.
+        component.selectAnswer(1, 1, 1);
+
+        tick(800);
+        fixture.detectChanges();
+
+        expect(component.autosaveStatus()).toBe('error');
+        expect(saveDraftSpy).toHaveBeenCalledTimes(1);
+
+        const retryButton = query<HTMLButtonElement>(
+          '.evaluation-autosave__retry'
+        );
+
+        expect(retryButton).not.toBeNull();
+        expect(retryButton?.disabled).toBeFalse();
+
+        // Reintentar mediante la interfaz.
+        retryButton?.click();
+        fixture.detectChanges();
+
+        expect(retrySpy).toHaveBeenCalledTimes(1);
+        expect(saveDraftSpy).toHaveBeenCalledTimes(2);
+        expect(component.autosaveStatus()).toBe('saving');
+
+        expect(
+          saveDraftSpy.calls.mostRecent().args[0]
+        ).toEqual({
+          responses: [
+            {
+              indicator_id: 1,
+              indicator_answer_id: 1
+            }
+          ]
+        });
+
+        expect(
+          query('.evaluation-autosave__pill--saving')
+            ?.textContent
+        ).toContain('Guardando...');
+
+        expect(
+          query('.evaluation-autosave__notice--error')
+        ).toBeNull();
+
+        // Completar el reintento correctamente.
+        retryRequest.next({
+          evaluation_id: 1,
+          status: 'DRAFT'
+        });
+
+        retryRequest.complete();
+
+        fixture.detectChanges();
+
+        expect(component.autosaveStatus()).toBe('saved');
+        expect(component.savedResponses().get(1)).toBe(1);
+        expect(component.hasUnsavedResponses()).toBeFalse();
+
+        expect(
+          query('.evaluation-autosave__pill--saved')
+            ?.textContent
+        ).toContain('Guardado');
+
+        expect(
+          query('.evaluation-autosave__notice')
+        ).toBeNull();
+
+        expect(
+          query('.evaluation-autosave__retry')
+        ).toBeNull();
+
+      })
+    );
+
+    it('should disable retry after edit permissions are revoked',
+      fakeAsync(() => {
+
+        saveDraftSpy.and.returnValue(
+          throwError(() => new Error('Simulated autosave error'))
+        );
+
+        const retrySpy = spyOn(
+          component,
+          'retrySaveDraft'
+        ).and.callThrough();
+
+        component.selectAnswer(1, 1, 1);
+
+        tick(800);
+        fixture.detectChanges();
+
+        expect(component.autosaveStatus()).toBe('error');
+        expect(component.canEditEvaluation()).toBeTrue();
+
+        let retryButton = query<HTMLButtonElement>(
+          '.evaluation-autosave__retry'
+        );
+
+        expect(retryButton).not.toBeNull();
+        expect(retryButton?.disabled).toBeFalse();
+
+        // Revocar permisos de edición.
+        selectedRole.set(CompanyRole.AUDITOR);
+
+        fixture.detectChanges();
+        TestBed.flushEffects();
+        fixture.detectChanges();
+
+        expect(component.canEditEvaluation()).toBeFalse();
+
+        retryButton = query<HTMLButtonElement>(
+          '.evaluation-autosave__retry'
+        );
+
+        expect(retryButton).not.toBeNull();
+        expect(retryButton?.disabled).toBeTrue();
+
+        retryButton?.click();
+
+        expect(retrySpy).not.toHaveBeenCalled();
+        expect(saveDraftSpy).toHaveBeenCalledTimes(1);
+
+        // Las respuestas locales no deben perderse.
+        expect(component.responses().get(1)).toBe(1);
+        expect(component.hasUnsavedResponses()).toBeTrue();
+
+      })
+    );
+
+    it('should synchronize the unsaved indicator and contextual warning', () => {
+
+      component.responses.set(new Map([[1, 1]]));
+      component.savedResponses.set(new Map());
+      component.autosaveStatus.set('idle');
+
+      fixture.detectChanges();
+
+      expect(component.hasUnsavedResponses()).toBeTrue();
+
+      expect(
+        query('.evaluation-autosave__pill--warning')
+          ?.textContent
+      ).toContain('Sin guardar');
+
+      expect(
+        query('.evaluation-autosave__notice--warning')
+          ?.textContent
+      ).toContain('Hay respuestas sin guardar');
+
+      expect(
+        query('.evaluation-autosave__retry')
+      ).toBeNull();
+
+      // Simular que ambas colecciones están sincronizadas.
+      component.savedResponses.set(new Map([[1, 1]]));
+
+      fixture.detectChanges();
+
+      expect(component.hasUnsavedResponses()).toBeFalse();
+
+      expect(
+        query('.evaluation-autosave__pill')
+      ).toBeNull();
+
+      expect(
+        query('.evaluation-autosave__notice')
+      ).toBeNull();
+
+      expect(
+        query('.evaluation-header__autosave--active')
+      ).toBeNull();
+
+      expect(
+        query('.evaluation-autosave__status')
+      ).not.toBeNull();
+    });
+
+  });
   describe('Responsive evaluation navigation', () => {
 
     it('should only display the next button on the first question', () => {

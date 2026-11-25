@@ -21,12 +21,17 @@ import { EvaluationEvidencesComponent } from '../evaluation-evidences/evaluation
 import { CompanyContextService } from '../../../services/company-context.service';
 import { CompanyRole } from '../../../models/company_membership';
 import { toObservable, takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import {
+  EvaluationAutosaveComponent,
+  EvaluationAutosaveStatus
+} from '../evaluation-autosave/evaluation-autosave.component';
 
 @Component({
   selector: 'app-evaluation',
   standalone: true,
   imports: [
-    EvaluationEvidencesComponent
+    EvaluationEvidencesComponent,
+    EvaluationAutosaveComponent
   ],
   templateUrl: './evaluation.component.html',
   changeDetection: ChangeDetectionStrategy.Eager,
@@ -41,9 +46,8 @@ export class EvaluationComponent {
   readonly savedResponses = signal<Map<number, number>>(new Map());
   completadas = signal<Map<number, number>>(new Map());
 
-  readonly autosaveStatus = signal<
-    'idle' | 'pending' | 'saving' | 'saved' | 'error'
-  >('idle');
+  readonly autosaveStatus =
+    signal<EvaluationAutosaveStatus>('idle');
 
   private readonly autosaveChanges$ = new Subject<void>();
   readonly submitting = signal(false);
