@@ -1,0 +1,129 @@
+/* HU-057 / T04 — Autoguardado de evaluación */
+
+:host {
+  display: block;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.evaluation-autosave {
+  &__pill {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--asg-space-2);
+
+    min-height: 30px;
+    max-width: 100%;
+    padding: 6px 12px;
+
+    border-radius: var(--asg-radius-pill);
+
+    font-size: var(--asg-font-size-xs);
+    font-weight: var(--asg-font-weight-semibold);
+    line-height: 1.4;
+
+    overflow-wrap: anywhere;
+
+    > i,
+    > .spinner-border {
+      flex-shrink: 0;
+    }
+
+    > .spinner-border {
+      width: 14px;
+      height: 14px;
+    }
+
+    &--saving {
+      color: var(--asg-color-brand-primary);
+      background: var(--asg-color-surface-blue);
+    }
+
+    &--saved {
+      color: var(--asg-color-action-success);
+      background: #e8f1e3;
+    }
+  }
+
+  &__notice {
+    display: flex;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: var(--asg-space-3);
+
+    min-width: 0;
+    padding: var(--asg-space-4);
+
+    border: 1px solid;
+    border-radius: var(--asg-radius-sm);
+
+    font-size: var(--asg-font-size-sm);
+
+    > i {
+      flex-shrink: 0;
+    }
+
+    &--error {
+      border-color: #f0c5c0;
+    }
+
+    &--warning {
+      border-color: #e8d4a5;
+    }
+  }
+
+  &__pill--warning,
+  &__notice--warning {
+    color: #805600;
+    background: #fff3d6;
+  }
+
+  &__pill--error,
+  &__notice--error {
+    color: #b42318;
+    background: #fff1f0;
+  }
+
+  &__notice-content {
+    flex: 1 1 180px;
+    min-width: 0;
+
+    overflow-wrap: anywhere;
+  }
+
+  &__notice-title {
+    margin: 0 0 var(--asg-space-1);
+    font-weight: var(--asg-font-weight-semibold);
+  }
+
+  &__notice-description {
+    margin: 0;
+    line-height: 1.5;
+  }
+
+  &__retry {
+    max-width: 100%;
+
+    color: #b42318;
+    border-color: #b42318;
+    background: transparent;
+
+    &:hover:not(:disabled) {
+      color: #912018;
+      border-color: #912018;
+      background: #ffe4e1;
+    }
+  }
+}
+
+@media (max-width: 767.98px) {
+  .evaluation-autosave__retry {
+    width: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .evaluation-autosave__pill .spinner-border {
+    animation: none;
+  }
+}

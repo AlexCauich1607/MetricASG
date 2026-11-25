@@ -1,74 +1,51 @@
-<div class="sw-split-ly color-bg">
-  <div>
-    <h2 class="text-my-purple text-center fw-bold mb-2">
-      <i class="bi bi-clipboard-data"></i> Evaluación ASG
-    </h2>
+<div class="evaluation-shell">
+  <div class="container evaluation-container">
 
-    <h6 class="sw-gris text-center mb-4 sw-fs-7">
-      <i class="bi bi-calendar-fill"></i>
-      Semestre {{mesFuturo}} {{anioFuturo != anioActual ? anioFuturo : ""}}
-      - {{mesActual}} {{anioActual}}
-    </h6>
-    <div class="d-flex justify-content-center align-items-center gap-2 mb-3 sw-fs-7" role="status" aria-live="polite">
+    <header class="evaluation-header">
+      <div class="evaluation-header__identity">
+        <p class="evaluation-header__period d-inline-flex align-items-center gap-2">
+          <i class="bi bi-calendar3" aria-hidden="true"></i>
 
-      @if (
-      hasUnsavedResponses() &&
-      autosaveStatus() === 'idle'
-      ) {
-      <span class="text-warning">
-        <i class="bi bi-exclamation-triangle-fill me-1"></i>
-        Hay respuestas sin guardar.
-        Los cambios pendientes podrían perderse al salir.
-      </span>
-      }
-
-      @switch (autosaveStatus()) {
-      @case ('pending') {
-      <span class="text-secondary">
-        <i class="bi bi-clock"></i>
-        Cambios pendientes de guardar
-      </span>
-      }
-
-      @case ('saving') {
-      <span class="text-secondary">
-        <span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>
-        Guardando respuestas...
-      </span>
-      }
-
-      @case ('saved') {
-      <span class="text-success">
-        <i class="bi bi-check-circle-fill"></i>
-        Respuestas guardadas
-      </span>
-      }
-
-      @case ('error') {
-      <span class="text-danger">
-        <i class="bi bi-exclamation-circle-fill"></i>
-        No se pudieron guardar las respuestas
-      </span>
-
-      <button type="button" class="btn btn-sm btn-outline-danger" (click)="retrySaveDraft()">
-        Reintentar
-      </button>
-      }
-      }
-    </div>
-
-    @if (loading()) {
-    <div class="d-flex justify-content-center align-items-center py-5">
-      <div class="text-center">
-        <div class="spinner-border text-my-purple mb-3" role="status">
-          <span class="visually-hidden">Cargando evaluación...</span>
-        </div>
-
-        <p class="sw-gris mb-0">
-          Recuperando evaluación...
+          <span>
+            {{ mesFuturo }}
+            {{ anioFuturo !== anioActual ? anioFuturo : '' }}
+            – {{ mesActual }} {{ anioActual }}
+          </span>
         </p>
+        <h1 class="evaluation-header__title">
+          Evaluación ASG
+        </h1>
+
       </div>
-    </div>
+      <app-evaluation-autosave class="evaluation-header__autosave" [class.evaluation-header__autosave--active]="
+    autosaveStatus() !== 'idle' ||
+    hasUnsavedResponses()
+  " presentation="indicator" [status]="autosaveStatus()" [hasUnsavedResponses]="hasUnsavedResponses()">
+      </app-evaluation-autosave>
+    </header>
+    @if (
+    autosaveStatus() === 'error' ||
+    (
+    autosaveStatus() === 'idle' &&
+    hasUnsavedResponses()
+    )
+    ) {
+
+    <app-evaluation-autosave presentation="notice" [status]="autosaveStatus()"
+      [hasUnsavedResponses]="hasUnsavedResponses()" [canRetry]="
+      canEditEvaluation() &&
+      !loading() &&
+      !loadError() &&
+      !submitting()
+    " (retry)="retrySaveDraft()">
+    </app-evaluation-autosave>
+
+    }
+    @if (loading()) {
+
+    <app-evaluation-skeleton>
+    </app-evaluation-skeleton>
+
     } @else if (loadError()) {
 
     <div class="border rounded p-5 shadow-sm bg-white text-center">
@@ -118,53 +95,129 @@
 
     @if (currentAmbit(); as currentAmbit) {
     @if (currentQuestion(); as currentQuestion) {
+    <section class="asg-card evaluation-progress" aria-labelledby="evaluation-progress-title">
 
-    <div class="border rounded p-5 borde-izq shadow-sm bg-white" [style.--borde-color]="currentAmbit.color">
+      <div class="evaluation-progress__header">
 
-      <div class="d-flex align-items-stretch justify-content-between mb-5">
-        <div>
-          <div>
-            <p class="fw-bold" [style.color]="currentAmbit.color">
-              <b class="text-white px-2 py-1 rounded" [style.backgroundColor]="currentAmbit.color">
-                {{currentAmbit.letter}}
-              </b>
-              {{currentAmbit.name}}
-            </p>
-          </div>
+        <div class="evaluation-progress__information">
 
-          <p class="text-my-purple fs-5">
-            <strong>
-              {{question() + 1}}. {{currentQuestion.question}}
-            </strong>
+          <h2 id="evaluation-progress-title" class="evaluation-progress__title">
+            Progreso de evaluación
+          </h2>
+
+          <p class="evaluation-progress__description">
+            {{ answeredQuestions() }} de
+            {{ totalQuestions() }} preguntas respondidas
           </p>
 
-          @for (
-          answer of currentQuestion.answers;
-          track answer.id;
-          let i = $index
-          ) {
-          <div>
-            <label class="mb-2 py-2 px-3 answer-input" [style.--bg-color]="hexToRgbString(currentAmbit.color)" [class]="
-                      responses().get(currentQuestion.id) === answer.id
-                        ? 'answer-select'
-                        : ''
-                    ">
-              <input type="radio" [disabled]="!canEditEvaluation() || evidenceOperationPending()"
-                [name]="'indicator-' + currentQuestion.id" [checked]="
-                        responses().get(currentQuestion.id) === answer.id
-                      " (change)="
-                        selectAnswer(
-                          currentQuestion.id,
-                          answer.id,
-                          currentAmbit.id
-                        )
-                      " />
+        </div>
 
-              {{answer.text}}
+        <span class="evaluation-progress__percentage">
+          {{ globalProgress() }}%
+        </span>
+
+      </div>
+
+      <div class="evaluation-progress__track" role="progressbar" aria-labelledby="evaluation-progress-title"
+        aria-valuemin="0" aria-valuemax="100" [attr.aria-valuenow]="globalProgress()"
+        [attr.aria-valuetext]="answeredQuestions() + ' de ' + totalQuestions() + ' preguntas respondidas'">
+
+        <div class="evaluation-progress__fill" [style.width.%]="globalProgress()">
+        </div>
+
+      </div>
+
+    </section>
+    <div class="asg-card evaluation-question-card"
+      [style.--evaluation-accent]="currentAmbit.color || 'var(--asg-color-brand-primary)'">
+
+      <div class="evaluation-question-layout">
+        <div class="evaluation-question-content">
+
+          <header class="evaluation-question-header">
+
+            <div class="evaluation-question-header__ambit">
+
+              <span class="evaluation-question-header__icon" aria-hidden="true">
+
+                <i [class]="currentAmbitIcon()"></i>
+
+              </span>
+
+              <span class="evaluation-question-header__name">
+                {{ currentAmbit.name }}
+              </span>
+
+            </div>
+
+            <span class="evaluation-question-header__position">
+              Pregunta {{ currentQuestionNumber() }}
+              de {{ totalQuestions() }}
+            </span>
+
+          </header>
+
+          <h2 id="evaluation-question-title" class="evaluation-question-title">
+
+            {{ currentQuestion.question }}
+
+          </h2>
+
+          <p id="evaluation-question-description" class="evaluation-question-description">
+
+            Selecciona la opción que mejor describa
+            la situación de tu empresa.
+
+          </p>
+
+          <fieldset class="evaluation-answers" aria-labelledby="evaluation-question-title"
+            aria-describedby="evaluation-question-description">
+
+            @for (
+            answer of currentQuestion.answers;
+            track answer.id
+            ) {
+
+            <label class="evaluation-answer" [class.evaluation-answer--selected]="
+          responses().get(currentQuestion.id) === answer.id
+        " [class.evaluation-answer--disabled]="
+  !canEditEvaluation() ||
+  evidenceOperationPending() ||
+  submitting()
+">
+
+              <input class="evaluation-answer__radio" type="radio" [disabled]="
+  !canEditEvaluation() ||
+  evidenceOperationPending() ||
+  submitting()
+" [name]="'indicator-' + currentQuestion.id" [checked]="
+            responses().get(currentQuestion.id) === answer.id
+          " (change)="
+            selectAnswer(
+              currentQuestion.id,
+              answer.id,
+              currentAmbit.id
+            )
+          " />
+
+              <span class="evaluation-answer__text">
+                {{ answer.text }}
+              </span>
+
+              @if (
+              responses().get(currentQuestion.id) === answer.id
+              ) {
+
+              <i class="bi bi-check-lg evaluation-answer__check" aria-hidden="true">
+              </i>
+
+              }
+
             </label>
-          </div>
-          }
 
+            }
+
+          </fieldset>
 
           <app-evaluation-evidences [evaluationId]="evaluationId()" [indicatorId]="currentQuestion.id"
             [canEdit]="canEditCurrentEvidence()" [hasAnswer]="responses().has(currentQuestion.id)"
@@ -173,73 +226,97 @@
 
 
         </div>
-
-        <div class="d-flex align-items-start ms-4">
-          <div class="sw-v-center sw-bg-blue-light py-2 px-3 rounded">
-            <p class="sw-fs-7 mt-1 mb-1 fw-bold">
-              Progreso
-            </p>
-
-            <mat-progress-spinner class="sw-spinner ms-1" mode="determinate" [value]="progreso()" diameter="40"
-              strokeWidth="10" [style.--track-color]="fondo" [style.--mat-progress-spinner-active-indicator-color]="
-                    currentAmbit.color
-                  ">
-            </mat-progress-spinner>
-
-            <p class="sw-fs-7 ms-3 mt-1 mb-0">
-              {{progreso()}}%
-            </p>
-          </div>
-        </div>
       </div>
 
-      <div class="d-flex align-items-stretch justify-content-between">
-
-        @if (ambit() === 0 && question() === 0) {
-        <div></div>
-        }
-
-        @if (ambit() > 0 || question() > 0) {
-        <button class="btn btn-my-purple pe-4" [disabled]="evidenceOperationPending()" (click)="beforeQuestion()">
-          <i class="bi bi-chevron-left"></i>
-          Anterior
-        </button>
-        }
+      <footer class="evaluation-navigation">
 
         @if (
-        ambit() < structure()!.ambits.length - 1 || question() < currentAmbit.indicators.length - 1 ) { <button
-          class="btn btn-my-purple ps-4" [disabled]="evidenceOperationPending()" (click)="nextQuestion()">
-          Siguiente
-          <i class="bi bi-chevron-right"></i>
+        ambit() === structure()!.ambits.length - 1 &&
+        question() === currentAmbit.indicators.length - 1 &&
+        canEditEvaluation() &&
+        !canSubmitEvaluation()
+        ) {
+
+        <p class="evaluation-navigation__notice" role="status">
+
+          <i class="bi bi-info-circle" aria-hidden="true">
+          </i>
+
+          <span>
+            Puedes responder y guardar esta evaluación,
+            pero tu rol empresarial no permite finalizarla.
+          </span>
+
+        </p>
+
+        }
+
+        <div class="evaluation-navigation__actions">
+
+          @if (ambit() > 0 || question() > 0) {
+
+          <button type="button" class="asg-btn asg-btn--secondary evaluation-navigation__previous"
+            [disabled]="evidenceOperationPending() || submitting()" (click)="beforeQuestion()">
+
+            <i class="bi bi-chevron-left" aria-hidden="true">
+            </i>
+
+            Anterior
+
           </button>
+
           }
 
           @if (
-          ambit() === structure()!.ambits.length - 1 &&
-          question() === currentAmbit.indicators.length - 1
-          ) {
+          ambit() < structure()!.ambits.length - 1 || question() < currentAmbit.indicators.length - 1 ) { <button
+            type="button" class="asg-btn asg-btn--primary evaluation-navigation__next"
+            [disabled]="evidenceOperationPending() || submitting()" (click)="nextQuestion()">
 
-          @if (canEditEvaluation() && !canSubmitEvaluation()) {
-          <p class="text-muted sw-fs-7 mb-2" role="status">
-            <i class="bi bi-info-circle me-1"></i>
-            Puedes responder y guardar esta evaluación,
-            pero tu rol empresarial no permite finalizarla.
-          </p>
-          }
+            Siguiente
 
-          <button class="btn btn-my-purple ps-3" (click)="submit()"
-            [disabled]="!canSubmitEvaluation() || loading() || loadError() || submitting()">
-            <i class="bi bi-send-fill"></i>
-            @if (submitting()) {
-            <span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>
-            Enviando evaluación...
-            } @else {
-            Enviar evaluación
+            <i class="bi bi-chevron-right" aria-hidden="true">
+            </i>
+
+            </button>
+
             }
-          </button>
-          }
 
-      </div>
+            @if (
+            ambit() === structure()!.ambits.length - 1 &&
+            question() === currentAmbit.indicators.length - 1
+            ) {
+
+            <button type="button" class="asg-btn asg-btn--primary evaluation-navigation__submit" [disabled]="
+          !canSubmitEvaluation() ||
+          loading() ||
+          loadError() ||
+          submitting() ||
+          evidenceOperationPending()
+        " (click)="submit()">
+
+              @if (submitting()) {
+
+              <span class="spinner-border spinner-border-sm" aria-hidden="true">
+              </span>
+
+              Enviando evaluación...
+
+              } @else {
+
+              <i class="bi bi-send-fill" aria-hidden="true">
+              </i>
+
+              Enviar evaluación
+
+              }
+
+            </button>
+
+            }
+
+        </div>
+
+      </footer>
     </div>
 
     }

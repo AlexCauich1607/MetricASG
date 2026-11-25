@@ -516,9 +516,13 @@ export class EvaluationEvidencesComponent implements OnChanges, OnDestroy {
   }
 
 
-  loadEvidences(): void {
+  loadEvidences(preserveExpanded = false): void {
     const version = ++this.requestVersion;
-    this.isExpanded.set(false);
+
+    if (!preserveExpanded) {
+      this.isExpanded.set(false);
+    }
+
     this.evidences.set([]);
     this.loadError.set(false);
 

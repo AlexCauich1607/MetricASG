@@ -1,5 +1,11 @@
-
-import { ComponentFixture, TestBed } from '@angular/core/testing';
+import {
+  ComponentFixture,
+  TestBed,
+  fakeAsync,
+  flushMicrotasks
+} from '@angular/core/testing';
+import { AuthService } from '../../../services/auth.service';
+import { SessionService } from '../../../shared/class/temporalStorage';
 import { provideHttpClient, withXhr } from '@angular/common/http';
 import { provideRouter, Router } from '@angular/router';
 import { of, Subject, throwError } from 'rxjs';
@@ -25,6 +31,7 @@ describe('UserNavbarComponent', () => {
   let companyContext: jasmine.SpyObj<CompanyContextService>;
   let dialog: jasmine.SpyObj<MatDialog>;
   let dialogClosed$: Subject<any>;
+  let authService: jasmine.SpyObj<AuthService>;
 
   const mockNotifications: ReevaluationNotification[] = [
     {
@@ -48,6 +55,16 @@ describe('UserNavbarComponent', () => {
   ];
 
   beforeEach(async () => {
+
+    authService = jasmine.createSpyObj<AuthService>(
+      'AuthService',
+      ['logout']
+    );
+
+    authService.logout.and.returnValue(
+      of({ success: true })
+    );
+
     notificationService = jasmine.createSpyObj<NotificationService>(
       'NotificationService',
       ['getMyNotifications']
@@ -58,7 +75,7 @@ describe('UserNavbarComponent', () => {
     );
     companyContext = jasmine.createSpyObj<CompanyContextService>(
       'CompanyContextService',
-      ['loadMemberships', 'selectCompany']
+      ['loadMemberships', 'selectCompany', 'clear']
     );
 
     const memberships = signal<UserCompanyMembership[]>([]);
@@ -116,7 +133,11 @@ describe('UserNavbarComponent', () => {
         {
           provide: MatDialog,
           useValue: dialog
-        }
+        },
+        {
+          provide: AuthService,
+          useValue: authService
+        },
       ]
     }).compileComponents();
 
@@ -128,6 +149,277 @@ describe('UserNavbarComponent', () => {
     fixture.detectChanges();
 
     expect(component).toBeTruthy();
+  });
+
+  describe('Protected logout', () => {
+    let router: Router;
+    let navigateSpy: jasmine.Spy;
+    let sessionLogoutSpy: jasmine.Spy;
+
+    beforeEach(() => {
+      router = TestBed.inject(Router);
+
+      navigateSpy = spyOn(router, 'navigate');
+
+      sessionLogoutSpy = spyOn(
+        SessionService,
+        'logout'
+      ).and.stub();
+
+      fixture.detectChanges();
+    });
+
+    it('should preserve the session while navigation authorization is pending', fakeAsync(() => {
+      let resolveNavigation!: (allowed: boolean) => void;
+
+      navigateSpy.and.returnValue(
+        new Promise<boolean>(resolve => {
+          resolveNavigation = resolve;
+        })
+      );
+
+      component.cerrarSesion();
+
+      expect(navigateSpy)
+        .toHaveBeenCalledOnceWith(['/home']);
+
+      expect(authService.logout)
+        .not.toHaveBeenCalled();
+
+      expect(companyContext.clear)
+        .not.toHaveBeenCalled();
+
+      expect(sessionLogoutSpy)
+        .not.toHaveBeenCalled();
+
+      resolveNavigation(false);
+
+      flushMicrotasks();
+    }));
+
+    it('should preserve the session when navigation is rejected', fakeAsync(() => {
+      navigateSpy.and.returnValue(
+        Promise.resolve(false)
+      );
+
+      component.cerrarSesion();
+
+      flushMicrotasks();
+
+      expect(authService.logout)
+        .not.toHaveBeenCalled();
+
+      expect(companyContext.clear)
+        .not.toHaveBeenCalled();
+
+      expect(sessionLogoutSpy)
+        .not.toHaveBeenCalled();
+    }));
+
+    it('should logout only after navigation is authorized', fakeAsync(() => {
+      const pendingLogout = new Subject<{
+        success: boolean;
+      }>();
+
+      authService.logout.and.returnValue(
+        pendingLogout.asObservable()
+      );
+
+      navigateSpy.and.returnValue(
+        Promise.resolve(true)
+      );
+
+      component.cerrarSesion();
+
+      expect(authService.logout)
+        .not.toHaveBeenCalled();
+
+      flushMicrotasks();
+
+      expect(navigateSpy)
+        .toHaveBeenCalledOnceWith(['/home']);
+
+      expect(authService.logout)
+        .toHaveBeenCalledTimes(1);
+
+      expect(companyContext.clear)
+        .not.toHaveBeenCalled();
+
+      expect(sessionLogoutSpy)
+        .not.toHaveBeenCalled();
+
+      pendingLogout.next({ success: true });
+      pendingLogout.complete();
+
+      expect(companyContext.clear)
+        .toHaveBeenCalledTimes(1);
+
+      expect(sessionLogoutSpy)
+        .toHaveBeenCalledTimes(1);
+
+      expect(navigateSpy)
+        .toHaveBeenCalledTimes(1);
+    }));
+
+    it('should preserve the session when navigation fails', fakeAsync(() => {
+      navigateSpy.and.callFake(() =>
+        Promise.reject(
+          new Error('Simulated navigation error')
+        )
+      );
+
+      component.cerrarSesion();
+
+      flushMicrotasks();
+
+      expect(authService.logout)
+        .not.toHaveBeenCalled();
+
+      expect(companyContext.clear)
+        .not.toHaveBeenCalled();
+
+      expect(sessionLogoutSpy)
+        .not.toHaveBeenCalled();
+    }));
+
+    it('should clear the local session when authorized logout fails', fakeAsync(() => {
+      navigateSpy.and.returnValue(
+        Promise.resolve(true)
+      );
+
+      authService.logout.and.returnValue(
+        throwError(() => new Error('Logout error'))
+      );
+
+      component.cerrarSesion();
+
+      expect(authService.logout)
+        .not.toHaveBeenCalled();
+
+      flushMicrotasks();
+
+      expect(authService.logout)
+        .toHaveBeenCalledTimes(1);
+
+      expect(companyContext.clear)
+        .toHaveBeenCalledTimes(1);
+
+      expect(sessionLogoutSpy)
+        .toHaveBeenCalledTimes(1);
+    }));
+
+    it('should prevent duplicate logout requests', fakeAsync(() => {
+      const pendingLogout = new Subject<{
+        success: boolean;
+      }>();
+
+      authService.logout.and.returnValue(
+        pendingLogout.asObservable()
+      );
+
+      navigateSpy.and.returnValue(
+        Promise.resolve(true)
+      );
+
+      component.cerrarSesion();
+      component.cerrarSesion();
+
+      flushMicrotasks();
+
+      component.cerrarSesion();
+
+      expect(navigateSpy)
+        .toHaveBeenCalledTimes(1);
+
+      expect(authService.logout)
+        .toHaveBeenCalledTimes(1);
+
+      pendingLogout.next({ success: true });
+      pendingLogout.complete();
+
+      expect(companyContext.clear)
+        .toHaveBeenCalledTimes(1);
+
+      expect(sessionLogoutSpy)
+        .toHaveBeenCalledTimes(1);
+    }));
+    it('should disable the logout button while navigation is pending', fakeAsync(() => {
+      let resolveNavigation!: (allowed: boolean) => void;
+
+      navigateSpy.and.returnValue(
+        new Promise<boolean>(resolve => {
+          resolveNavigation = resolve;
+        })
+      );
+
+      const logoutButton: HTMLButtonElement =
+        fixture.nativeElement.querySelector(
+          '.user-navbar__logout'
+        );
+
+      expect(logoutButton).not.toBeNull();
+      expect(logoutButton.disabled).toBeFalse();
+
+      component.cerrarSesion();
+      fixture.detectChanges();
+
+      expect(logoutButton.disabled).toBeTrue();
+
+      resolveNavigation(false);
+      flushMicrotasks();
+      fixture.detectChanges();
+
+      expect(logoutButton.disabled).toBeFalse();
+    }));
+    it('should allow retrying logout after navigation is rejected', fakeAsync(() => {
+      navigateSpy.and.returnValues(
+        Promise.resolve(false),
+        Promise.resolve(true)
+      );
+
+      component.cerrarSesion();
+
+      flushMicrotasks();
+
+      expect(component.logoutInProgress).toBeFalse();
+      expect(authService.logout).not.toHaveBeenCalled();
+
+      component.cerrarSesion();
+
+      flushMicrotasks();
+
+      expect(navigateSpy).toHaveBeenCalledTimes(2);
+      expect(authService.logout).toHaveBeenCalledTimes(1);
+      expect(companyContext.clear).toHaveBeenCalledTimes(1);
+      expect(sessionLogoutSpy).toHaveBeenCalledTimes(1);
+      expect(component.logoutInProgress).toBeFalse();
+    }));
+    it('should allow retrying logout after a navigation error', fakeAsync(() => {
+      navigateSpy.and.callFake(() =>
+        Promise.reject(new Error('Navigation error'))
+      );
+
+      component.cerrarSesion();
+
+      flushMicrotasks();
+
+      expect(component.logoutInProgress).toBeFalse();
+      expect(authService.logout).not.toHaveBeenCalled();
+      expect(companyContext.clear).not.toHaveBeenCalled();
+
+      navigateSpy.and.returnValue(
+        Promise.resolve(true)
+      );
+
+      component.cerrarSesion();
+
+      flushMicrotasks();
+
+      expect(navigateSpy).toHaveBeenCalledTimes(2);
+      expect(authService.logout).toHaveBeenCalledTimes(1);
+      expect(sessionLogoutSpy).toHaveBeenCalledTimes(1);
+      expect(component.logoutInProgress).toBeFalse();
+    }));
   });
 
   it('should load notifications on initialization', () => {
@@ -346,6 +638,99 @@ describe('UserNavbarComponent', () => {
     ).toHaveBeenCalledOnceWith(7);
   });
 
+  it('should lock company actions on the evaluation route with query parameters', () => {
+    const router = TestBed.inject(Router);
+
+    spyOnProperty(router, 'url', 'get')
+      .and.returnValue('/user/evaluation?draft=1');
+
+    fixture.detectChanges();
+
+    expect(component.companySelectionLocked).toBeTrue();
+
+    component.selectCompany(7);
+    component.openCreateCompany();
+
+    expect(companyContext.selectCompany)
+      .not.toHaveBeenCalled();
+
+    expect(dialog.open)
+      .not.toHaveBeenCalled();
+  });
+
+  it('should lock company actions on the evaluation route with query parameters and fragments', () => {
+    const router = TestBed.inject(Router);
+
+    spyOnProperty(router, 'url', 'get')
+      .and.returnValue('/user/evaluation?draft=1#question');
+
+    fixture.detectChanges();
+
+    expect(component.companySelectionLocked).toBeTrue();
+
+    const trigger: HTMLButtonElement =
+      fixture.nativeElement.querySelector(
+        '.company-context__trigger'
+      );
+
+    const createButton: HTMLButtonElement =
+      fixture.nativeElement.querySelector(
+        '.company-context__create'
+      );
+
+    expect(trigger.disabled).toBeTrue();
+    expect(createButton.disabled).toBeTrue();
+
+    component.selectCompany(7);
+    component.openCreateCompany();
+
+    expect(companyContext.selectCompany)
+      .not.toHaveBeenCalled();
+
+    expect(dialog.open)
+      .not.toHaveBeenCalled();
+  });
+
+  it('should unlock company actions after leaving the evaluation route', () => {
+    const router = TestBed.inject(Router);
+
+    const urlSpy = spyOnProperty(router, 'url', 'get')
+      .and.returnValue('/user/evaluation');
+
+    fixture.detectChanges();
+
+    const trigger: HTMLButtonElement =
+      fixture.nativeElement.querySelector(
+        '.company-context__trigger'
+      );
+
+    const createButton: HTMLButtonElement =
+      fixture.nativeElement.querySelector(
+        '.company-context__create'
+      );
+
+    expect(component.companySelectionLocked).toBeTrue();
+    expect(trigger.disabled).toBeTrue();
+    expect(createButton.disabled).toBeTrue();
+
+    // Simular la salida de la evaluación.
+    urlSpy.and.returnValue('/user/home');
+
+    fixture.detectChanges();
+
+    expect(component.companySelectionLocked).toBeFalse();
+    expect(trigger.disabled).toBeFalse();
+    expect(createButton.disabled).toBeFalse();
+
+    component.selectCompany(7);
+
+    expect(companyContext.selectCompany)
+      .toHaveBeenCalledOnceWith(7);
+
+    component.openCreateCompany();
+
+    expect(dialog.open).toHaveBeenCalledTimes(1);
+  });
 
   it('should keep company management navigation available when switching company roles', () => {
     const memberships: UserCompanyMembership[] = [

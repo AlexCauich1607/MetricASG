@@ -42,6 +42,83 @@ describe('EvaluationComponent', () => {
       }
     ]
   };
+  const multiAmbitStructure: EvaluationStructure = {
+    ambits: [
+      {
+        id: 1,
+        name: 'Ambiental',
+        color: '#00AA00',
+        letter: 'A',
+        indicators: [
+          {
+            id: 1,
+            question: 'Pregunta ambiental 1',
+            answers: [
+              {
+                id: 1,
+                maturity_level_id: 1,
+                text: 'Respuesta inicial'
+              },
+              {
+                id: 2,
+                maturity_level_id: 2,
+                text: 'Respuesta alternativa'
+              }
+            ]
+          },
+          {
+            id: 2,
+            question: 'Pregunta ambiental 2',
+            answers: [
+              {
+                id: 3,
+                maturity_level_id: 1,
+                text: 'Respuesta ambiental'
+              }
+            ]
+          }
+        ]
+      },
+      {
+        id: 2,
+        name: 'Social',
+        color: '#1565C0',
+        letter: 'S',
+        indicators: [
+          {
+            id: 3,
+            question: 'Pregunta social 1',
+            answers: [
+              {
+                id: 4,
+                maturity_level_id: 1,
+                text: 'Respuesta social'
+              }
+            ]
+          }
+        ]
+      },
+      {
+        id: 3,
+        name: 'Gobernanza',
+        color: '#4823A4',
+        letter: 'G',
+        indicators: [
+          {
+            id: 4,
+            question: 'Pregunta de gobernanza 1',
+            answers: [
+              {
+                id: 5,
+                maturity_level_id: 1,
+                text: 'Respuesta de gobernanza'
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  };
 
   let getDraftSpy: jasmine.Spy;
   let saveDraftSpy: jasmine.Spy;
@@ -101,6 +178,438 @@ describe('EvaluationComponent', () => {
     expect(component).toBeTruthy();
   });
 
+  describe('Global evaluation progress', () => {
+
+    it('should initialize global progress at zero', () => {
+      expect(component.totalQuestions()).toBe(1);
+      expect(component.answeredQuestions()).toBe(0);
+      expect(component.globalProgress()).toBe(0);
+    });
+
+    it('should return zero progress when no structure exists', () => {
+      component.structure.set(null);
+
+      expect(component.totalQuestions()).toBe(0);
+      expect(component.globalProgress()).toBe(0);
+    });
+
+    it('should return zero progress for an empty structure', () => {
+      component.structure.set({ ambits: [] });
+
+      expect(component.totalQuestions()).toBe(0);
+      expect(component.answeredQuestions()).toBe(0);
+      expect(component.globalProgress()).toBe(0);
+    });
+
+    it('should calculate progress across all ambits', fakeAsync(() => {
+      component.structure.set(multiAmbitStructure);
+
+      expect(component.totalQuestions()).toBe(4);
+      expect(component.globalProgress()).toBe(0);
+
+      component.selectAnswer(1, 1, 1);
+
+      expect(component.answeredQuestions()).toBe(1);
+      expect(component.globalProgress()).toBe(25);
+
+      component.selectAnswer(2, 3, 1);
+
+      expect(component.answeredQuestions()).toBe(2);
+      expect(component.globalProgress()).toBe(50);
+
+      component.ambit.set(1);
+      component.question.set(0);
+      component.selectAnswer(3, 4, 2);
+
+      expect(component.answeredQuestions()).toBe(3);
+      expect(component.globalProgress()).toBe(75);
+
+      component.ambit.set(2);
+      component.question.set(0);
+      component.selectAnswer(4, 5, 3);
+
+      expect(component.answeredQuestions()).toBe(4);
+      expect(component.globalProgress()).toBe(100);
+
+      tick(800);
+    }));
+
+    it('should not increase progress when an answer changes', fakeAsync(() => {
+      component.structure.set(multiAmbitStructure);
+
+      component.selectAnswer(1, 1, 1);
+
+      expect(component.answeredQuestions()).toBe(1);
+      expect(component.globalProgress()).toBe(25);
+
+      component.selectAnswer(1, 2, 1);
+
+      expect(component.responses().get(1)).toBe(2);
+      expect(component.answeredQuestions()).toBe(1);
+      expect(component.globalProgress()).toBe(25);
+
+      tick(800);
+    }));
+
+    it('should preserve global progress when changing the current ambit', () => {
+      component.structure.set(multiAmbitStructure);
+
+      component.responses.set(new Map([
+        [1, 1],
+        [2, 3]
+      ]));
+
+      expect(component.globalProgress()).toBe(50);
+
+      component.ambit.set(1);
+      component.question.set(0);
+
+      expect(component.globalProgress()).toBe(50);
+
+      component.ambit.set(2);
+      component.question.set(0);
+
+      expect(component.globalProgress()).toBe(50);
+    });
+
+    it('should not round incomplete progress up to 100 percent', () => {
+      const templateAmbit = multiAmbitStructure.ambits[0];
+      const templateIndicator = templateAmbit.indicators[0];
+
+      const indicators = Array.from(
+        { length: 201 },
+        (_, index) => ({
+          ...templateIndicator,
+          id: index + 1
+        })
+      );
+
+      component.structure.set({
+        ambits: [
+          {
+            ...templateAmbit,
+            indicators
+          }
+        ]
+      });
+
+      component.responses.set(new Map(
+        indicators.slice(0, 200).map(
+          indicator => [indicator.id, 1]
+        )
+      ));
+
+      expect(component.totalQuestions()).toBe(201);
+      expect(component.answeredQuestions()).toBe(200);
+      expect(component.globalProgress()).toBe(99);
+    });
+
+    it('should render the global progress accessibly', () => {
+      component.structure.set(multiAmbitStructure);
+
+      component.responses.set(new Map([
+        [1, 1],
+        [2, 3]
+      ]));
+
+      fixture.detectChanges();
+
+      const progressbar: HTMLElement =
+        fixture.nativeElement.querySelector(
+          '.evaluation-progress__track'
+        );
+
+      expect(progressbar).toBeTruthy();
+      expect(progressbar.getAttribute('role')).toBe('progressbar');
+      expect(progressbar.getAttribute('aria-valuemin')).toBe('0');
+      expect(progressbar.getAttribute('aria-valuemax')).toBe('100');
+      expect(progressbar.getAttribute('aria-valuenow')).toBe('50');
+
+      expect(progressbar.getAttribute('aria-valuetext'))
+        .toBe('2 de 4 preguntas respondidas');
+    });
+
+
+
+  });
+
+  describe('Responsive question presentation', () => {
+
+    it('should initialize the global question number at one', () => {
+      expect(component.currentQuestionNumber()).toBe(1);
+    });
+
+    it('should return zero when no current question exists', () => {
+      component.structure.set(null);
+
+      expect(component.currentQuestionNumber()).toBe(0);
+    });
+
+    it('should return zero for an invalid question index', () => {
+      component.question.set(99);
+
+      expect(component.currentQuestionNumber()).toBe(0);
+    });
+
+    it('should calculate the global question number across ambits', () => {
+      component.structure.set(multiAmbitStructure);
+
+      expect(component.currentQuestionNumber()).toBe(1);
+
+      component.nextQuestion();
+
+      expect(component.currentQuestionNumber()).toBe(2);
+
+      component.nextQuestion();
+
+      expect(component.ambit()).toBe(1);
+      expect(component.question()).toBe(0);
+      expect(component.currentQuestionNumber()).toBe(3);
+
+      component.nextQuestion();
+
+      expect(component.ambit()).toBe(2);
+      expect(component.question()).toBe(0);
+      expect(component.currentQuestionNumber()).toBe(4);
+    });
+
+    it('should update the global question number when navigating backwards', () => {
+      component.structure.set(multiAmbitStructure);
+      component.ambit.set(2);
+      component.question.set(0);
+
+      expect(component.currentQuestionNumber()).toBe(4);
+
+      component.beforeQuestion();
+
+      expect(component.currentQuestionNumber()).toBe(3);
+
+      component.beforeQuestion();
+
+      expect(component.currentQuestionNumber()).toBe(2);
+
+      component.beforeQuestion();
+
+      expect(component.currentQuestionNumber()).toBe(1);
+    });
+
+    it('should keep question position independent from answered progress', () => {
+      component.structure.set(multiAmbitStructure);
+
+      component.nextQuestion();
+      component.nextQuestion();
+
+      expect(component.currentQuestionNumber()).toBe(3);
+      expect(component.answeredQuestions()).toBe(0);
+      expect(component.globalProgress()).toBe(0);
+    });
+    it('should display the corresponding icon for each ambit', () => {
+      component.structure.set(multiAmbitStructure);
+
+      expect(component.currentAmbitIcon()).toBe('bi bi-tree');
+
+      component.ambit.set(1);
+
+      expect(component.currentAmbitIcon()).toBe('bi bi-people');
+
+      component.ambit.set(2);
+
+      expect(component.currentAmbitIcon()).toBe('bi bi-bank');
+    });
+
+    it('should normalize the ambit letter before selecting its icon', () => {
+      component.structure.set({
+        ambits: [
+          {
+            ...multiAmbitStructure.ambits[0],
+            letter: ' a '
+          }
+        ]
+      });
+
+      expect(component.currentAmbitIcon()).toBe('bi bi-tree');
+    });
+
+    it('should use a fallback icon for unknown ambits', () => {
+      component.structure.set({
+        ambits: [
+          {
+            ...multiAmbitStructure.ambits[0],
+            letter: 'X'
+          }
+        ]
+      });
+
+      expect(component.currentAmbitIcon()).toBe('bi bi-bar-chart');
+    });
+
+    it('should use a fallback icon when no ambit exists', () => {
+      component.structure.set(null);
+
+      expect(component.currentAmbitIcon()).toBe('bi bi-bar-chart');
+    });
+    it('should render the current question and its global position', () => {
+      component.structure.set(multiAmbitStructure);
+      component.ambit.set(1);
+      component.question.set(0);
+
+      fixture.detectChanges();
+
+      const position: HTMLElement =
+        fixture.nativeElement.querySelector(
+          '.evaluation-question-header__position'
+        );
+
+      const title: HTMLElement =
+        fixture.nativeElement.querySelector(
+          '.evaluation-question-title'
+        );
+
+      expect(position.textContent?.replace(/\s+/g, ' ').trim())
+        .toBe('Pregunta 3 de 4');
+
+      expect(title.textContent?.trim())
+        .toBe('Pregunta social 1');
+
+      expect(title.tagName).toBe('H2');
+    });
+
+    it('should group native radio inputs accessibly', () => {
+      component.structure.set(multiAmbitStructure);
+
+      fixture.detectChanges();
+
+      const fieldset: HTMLFieldSetElement =
+        fixture.nativeElement.querySelector(
+          '.evaluation-answers'
+        );
+
+      const radios = Array.from(
+        fieldset.querySelectorAll<HTMLInputElement>(
+          'input[type="radio"]'
+        )
+      );
+
+      expect(fieldset.tagName).toBe('FIELDSET');
+
+      expect(fieldset.getAttribute('aria-labelledby'))
+        .toBe('evaluation-question-title');
+
+      expect(fieldset.getAttribute('aria-describedby'))
+        .toBe('evaluation-question-description');
+
+      expect(radios.length).toBe(2);
+
+      radios.forEach(radio => {
+        expect(radio.name).toBe('indicator-1');
+        expect(radio.closest('label')).not.toBeNull();
+      });
+    });
+    it('should update the selected answer through the native radio input',
+      fakeAsync(() => {
+
+        component.structure.set(multiAmbitStructure);
+
+        fixture.detectChanges();
+
+        const radios: NodeListOf<HTMLInputElement> =
+          fixture.nativeElement.querySelectorAll(
+            '.evaluation-answer__radio'
+          );
+
+        radios[0].click();
+
+        fixture.detectChanges();
+
+        expect(component.responses().get(1)).toBe(1);
+        expect(component.answeredQuestions()).toBe(1);
+
+        expect(radios[0].checked).toBeTrue();
+
+        expect(
+          radios[0].closest('label')?.classList.contains(
+            'evaluation-answer--selected'
+          )
+        ).toBeTrue();
+
+        radios[1].click();
+
+        fixture.detectChanges();
+
+        expect(component.responses().get(1)).toBe(2);
+        expect(component.answeredQuestions()).toBe(1);
+
+        expect(radios[0].checked).toBeFalse();
+        expect(radios[1].checked).toBeTrue();
+
+        expect(
+          radios[0].closest('label')?.classList.contains(
+            'evaluation-answer--selected'
+          )
+        ).toBeFalse();
+
+        expect(
+          radios[1].closest('label')?.classList.contains(
+            'evaluation-answer--selected'
+          )
+        ).toBeTrue();
+
+        tick(800);
+      })
+    );
+    it('should disable answer options for read-only roles', () => {
+      component.structure.set(multiAmbitStructure);
+
+      selectedRole.set(CompanyRole.AUDITOR);
+
+      fixture.detectChanges();
+
+      const radios: NodeListOf<HTMLInputElement> =
+        fixture.nativeElement.querySelectorAll(
+          '.evaluation-answer__radio'
+        );
+
+      expect(radios.length).toBe(2);
+
+      radios.forEach(radio => {
+        expect(radio.disabled).toBeTrue();
+
+        expect(
+          radio.closest('label')?.classList.contains(
+            'evaluation-answer--disabled'
+          )
+        ).toBeTrue();
+      });
+    });
+
+    it('should disable answers while an evidence operation is pending', () => {
+      component.structure.set(multiAmbitStructure);
+
+      component.onEvidenceOperationPending(true);
+
+      fixture.detectChanges();
+
+      const radios: NodeListOf<HTMLInputElement> =
+        fixture.nativeElement.querySelectorAll(
+          '.evaluation-answer__radio'
+        );
+
+      expect(radios.length).toBe(2);
+
+      radios.forEach(radio => {
+        expect(radio.disabled).toBeTrue();
+      });
+
+      component.onEvidenceOperationPending(false);
+
+      fixture.detectChanges();
+
+      radios.forEach(radio => {
+        expect(radio.disabled).toBeFalse();
+      });
+    });
+
+  });
 
   [
     {
@@ -406,6 +915,136 @@ describe('EvaluationComponent', () => {
     }, 950);
   });
 
+  it('should prevent evidence editing during final submission', fakeAsync(() => {
+    const pendingSubmission = new Subject<unknown>();
+
+    submitEvaluationSpy.and.returnValue(
+      pendingSubmission.asObservable()
+    );
+
+    spyOn(window, 'confirm').and.returnValue(true);
+
+    component.selectAnswer(1, 1, 1);
+
+    tick(800);
+
+    expect(component.autosaveStatus()).toBe('saved');
+    expect(component.canEditCurrentEvidence()).toBeTrue();
+
+    component.submit();
+
+    expect(component.submitting()).toBeTrue();
+    expect(submitEvaluationSpy).toHaveBeenCalledTimes(1);
+    expect(component.canEditCurrentEvidence()).toBeFalse();
+
+    pendingSubmission.complete();
+  }));
+
+  it('should prevent leaving during final submission', fakeAsync(() => {
+    const pendingSubmission = new Subject<unknown>();
+
+    submitEvaluationSpy.and.returnValue(
+      pendingSubmission.asObservable()
+    );
+
+    const confirmSpy = spyOn(window, 'confirm')
+      .and.returnValue(true);
+
+    component.selectAnswer(1, 1, 1);
+
+    tick(800);
+
+    expect(component.hasUnsavedResponses()).toBeFalse();
+    expect(component.canLeaveEvaluation()).toBeTrue();
+
+    component.submit();
+
+    expect(component.submitting()).toBeTrue();
+
+    confirmSpy.calls.reset();
+
+    expect(component.canLeaveEvaluation()).toBeFalse();
+    expect(confirmSpy).not.toHaveBeenCalled();
+
+    pendingSubmission.complete();
+  }));
+
+  it('should warn before unloading during final submission', fakeAsync(() => {
+    const pendingSubmission = new Subject<unknown>();
+
+    submitEvaluationSpy.and.returnValue(
+      pendingSubmission.asObservable()
+    );
+
+    spyOn(window, 'confirm').and.returnValue(true);
+
+    component.selectAnswer(1, 1, 1);
+
+    tick(800);
+
+    expect(component.hasUnsavedResponses()).toBeFalse();
+    expect(component.autosaveStatus()).toBe('saved');
+
+    component.submit();
+
+    expect(component.submitting()).toBeTrue();
+
+    const event = new Event('beforeunload', {
+      cancelable: true
+    }) as BeforeUnloadEvent;
+
+    component.onBeforeUnload(event);
+
+    expect(event.defaultPrevented).toBeTrue();
+
+    pendingSubmission.complete();
+  }));
+
+  it('should allow leaving and unloading after successful submission', fakeAsync(() => {
+    const pendingSubmission = new Subject<unknown>();
+
+    submitEvaluationSpy.and.returnValue(
+      pendingSubmission.asObservable()
+    );
+
+    const router = TestBed.inject(Router);
+
+    const navigateSpy = spyOn(router, 'navigate')
+      .and.returnValue(Promise.resolve(true));
+
+    const confirmSpy = spyOn(window, 'confirm')
+      .and.returnValue(true);
+
+    component.selectAnswer(1, 1, 1);
+
+    tick(800);
+
+    component.submit();
+
+    expect(component.submitting()).toBeTrue();
+    expect(component.canLeaveEvaluation()).toBeFalse();
+
+    // Simular una respuesta exitosa del backend.
+    pendingSubmission.next({});
+    pendingSubmission.complete();
+
+    expect(navigateSpy)
+      .toHaveBeenCalledOnceWith(['/user/results']);
+
+    confirmSpy.calls.reset();
+
+    expect(component.canLeaveEvaluation()).toBeTrue();
+    expect(confirmSpy).not.toHaveBeenCalled();
+
+    const event = new Event('beforeunload', {
+      cancelable: true
+    }) as BeforeUnloadEvent;
+
+    component.onBeforeUnload(event);
+
+    expect(event.defaultPrevented).toBeFalse();
+  }));
+
   it('should prevent leaving when unsaved changes exist', () => {
     const confirmSpy = spyOn(window, 'confirm').and.returnValue(false);
 
@@ -462,6 +1101,84 @@ describe('EvaluationComponent', () => {
 
       done();
     }, 950);
+  });
+
+  it('should prevent leaving while an evidence operation is pending', () => {
+    const confirmSpy = spyOn(window, 'confirm')
+      .and.returnValue(true);
+
+    component.responses.set(new Map([[1, 1]]));
+    component.savedResponses.set(new Map([[1, 1]]));
+    component.autosaveStatus.set('saved');
+
+    expect(component.hasUnsavedResponses()).toBeFalse();
+    expect(component.canLeaveEvaluation()).toBeTrue();
+
+    component.onEvidenceOperationPending(true);
+
+    expect(component.canLeaveEvaluation()).toBeFalse();
+    expect(confirmSpy).not.toHaveBeenCalled();
+  });
+
+  it('should allow leaving after an evidence operation finishes', () => {
+    const confirmSpy = spyOn(window, 'confirm');
+
+    component.responses.set(new Map([[1, 1]]));
+    component.savedResponses.set(new Map([[1, 1]]));
+    component.autosaveStatus.set('saved');
+
+    component.onEvidenceOperationPending(true);
+
+    expect(component.canLeaveEvaluation()).toBeFalse();
+
+    component.onEvidenceOperationPending(false);
+
+    expect(component.canLeaveEvaluation()).toBeTrue();
+    expect(confirmSpy).not.toHaveBeenCalled();
+  });
+
+  it('should warn before unloading while an evidence operation is pending', () => {
+    component.responses.set(new Map([[1, 1]]));
+    component.savedResponses.set(new Map([[1, 1]]));
+    component.autosaveStatus.set('saved');
+
+    expect(component.hasUnsavedResponses()).toBeFalse();
+
+    component.onEvidenceOperationPending(true);
+
+    const event = new Event('beforeunload', {
+      cancelable: true
+    }) as BeforeUnloadEvent;
+
+    component.onBeforeUnload(event);
+
+    expect(event.defaultPrevented).toBeTrue();
+  });
+
+  it('should allow unloading after an evidence operation finishes', () => {
+    component.responses.set(new Map([[1, 1]]));
+    component.savedResponses.set(new Map([[1, 1]]));
+    component.autosaveStatus.set('saved');
+
+    component.onEvidenceOperationPending(true);
+
+    const pendingEvent = new Event('beforeunload', {
+      cancelable: true
+    }) as BeforeUnloadEvent;
+
+    component.onBeforeUnload(pendingEvent);
+
+    expect(pendingEvent.defaultPrevented).toBeTrue();
+
+    component.onEvidenceOperationPending(false);
+
+    const completedEvent = new Event('beforeunload', {
+      cancelable: true
+    }) as BeforeUnloadEvent;
+
+    component.onBeforeUnload(completedEvent);
+
+    expect(completedEvent.defaultPrevented).toBeFalse();
   });
 
   it('should not start another autosave after component destruction', (done) => {
@@ -564,6 +1281,8 @@ describe('EvaluationComponent', () => {
     expect(component.responses().get(1)).toBe(1);
     expect(component.completadas().get(1)).toBe(1);
     expect(component.progreso()).toBe(100);
+    expect(component.answeredQuestions()).toBe(1);
+    expect(component.globalProgress()).toBe(100);
 
     expect(component.autosaveStatus()).toBe('saved');
 
@@ -580,6 +1299,8 @@ describe('EvaluationComponent', () => {
     expect(component.responses().size).toBe(0);
     expect(component.completadas().size).toBe(0);
     expect(component.progreso()).toBe(0);
+    expect(component.answeredQuestions()).toBe(0);
+    expect(component.globalProgress()).toBe(0);
 
     expect(component.autosaveStatus()).toBe('idle');
 
@@ -633,6 +1354,8 @@ describe('EvaluationComponent', () => {
     expect(component.responses().get(1)).toBe(1);
     expect(component.completadas().get(1)).toBe(1);
     expect(component.progreso()).toBe(100);
+    expect(component.answeredQuestions()).toBe(1);
+    expect(component.globalProgress()).toBe(100);
 
     expect(component.autosaveStatus()).toBe('saved');
     expect(saveDraftSpy).not.toHaveBeenCalled();
@@ -664,6 +1387,8 @@ describe('EvaluationComponent', () => {
     expect(component.responses().size).toBe(0);
     expect(component.completadas().size).toBe(0);
     expect(component.progreso()).toBe(0);
+    expect(component.answeredQuestions()).toBe(0);
+    expect(component.globalProgress()).toBe(0);
 
     expect(saveDraftSpy).not.toHaveBeenCalled();
   });
@@ -752,10 +1477,43 @@ describe('EvaluationComponent', () => {
   });
 
   it('should prevent evaluation submission while an evidence operation is pending', () => {
+    const confirmSpy = spyOn(window, 'confirm')
+      .and.returnValue(false);
+
+    const alertSpy = spyOn(window, 'alert');
+
+    // Preparar una evaluación completamente respondida y guardada.
+    const completedResponses = new Map<number, number>([
+      [1, 1]
+    ]);
+
+    component.responses.set(new Map(completedResponses));
+    component.savedResponses.set(new Map(completedResponses));
+    component.autosaveStatus.set('saved');
+
+    // Verificar que no existan otros motivos para bloquear el envío.
+    expect(component.canSubmitEvaluation()).toBeTrue();
+    expect(component.loading()).toBeFalse();
+    expect(component.loadError()).toBeFalse();
+    expect(component.submitting()).toBeFalse();
+
+    expect(component.totalQuestions()).toBe(1);
+
+    expect(component.responses().size)
+      .toBe(component.totalQuestions());
+
+    expect(component.hasUnsavedResponses()).toBeFalse();
+
+    // Simular una operación de evidencias en curso.
     component.onEvidenceOperationPending(true);
+
+    expect(component.evidenceOperationPending()).toBeTrue();
 
     component.submit();
 
+    // El envío debe bloquearse antes de solicitar confirmación.
+    expect(confirmSpy).not.toHaveBeenCalled();
+    expect(alertSpy).not.toHaveBeenCalled();
     expect(submitEvaluationSpy).not.toHaveBeenCalled();
     expect(component.submitting()).toBeFalse();
   });
@@ -1419,5 +2177,753 @@ describe('EvaluationComponent', () => {
     // El usuario ya no puede editar.
     expect(component.canEditEvaluation()).toBeFalse();
   });
+  describe('Autosave component integration', () => {
 
+    function query<T extends HTMLElement = HTMLElement>(
+      selector: string
+    ): T | null {
+      return fixture.nativeElement.querySelector(selector);
+    }
+
+    it('should keep the autosave indicator hidden when no changes exist', () => {
+      expect(component.autosaveStatus()).toBe('idle');
+      expect(component.hasUnsavedResponses()).toBeFalse();
+
+      const indicator = query('.evaluation-header__autosave');
+
+      expect(indicator).not.toBeNull();
+
+      expect(
+        indicator?.classList.contains(
+          'evaluation-header__autosave--active'
+        )
+      ).toBeFalse();
+
+      expect(
+        query('.evaluation-autosave__pill')
+      ).toBeNull();
+
+      expect(
+        query('.evaluation-autosave__notice')
+      ).toBeNull();
+
+      expect(
+        query('.evaluation-autosave__status')
+      ).not.toBeNull();
+    });
+
+    it('should update the indicator throughout the autosave lifecycle',
+      fakeAsync(() => {
+
+        const pendingSave = new Subject<{
+          evaluation_id: number;
+          status: string;
+        }>();
+
+        saveDraftSpy.and.returnValue(
+          pendingSave.asObservable()
+        );
+
+        // Mantener una referencia a la región accesible.
+        const liveRegion = query(
+          '.evaluation-autosave__status'
+        );
+
+        // Seleccionar una respuesta.
+        component.selectAnswer(1, 1, 1);
+        fixture.detectChanges();
+
+        expect(component.autosaveStatus()).toBe('pending');
+
+        expect(
+          query('.evaluation-autosave__pill--warning')
+            ?.textContent
+        ).toContain('Pendiente');
+
+        expect(
+          query('.evaluation-header__autosave--active')
+        ).not.toBeNull();
+
+        // Todavía no debe comenzar el guardado.
+        tick(799);
+
+        expect(saveDraftSpy).not.toHaveBeenCalled();
+
+        // Completar el debounce.
+        tick(1);
+        fixture.detectChanges();
+
+        expect(saveDraftSpy).toHaveBeenCalledTimes(1);
+        expect(component.autosaveStatus()).toBe('saving');
+
+        expect(
+          query('.evaluation-autosave__pill--saving')
+            ?.textContent
+        ).toContain('Guardando...');
+
+        expect(
+          query('.evaluation-autosave__pill--saving .spinner-border')
+        ).not.toBeNull();
+
+        // Completar el guardado.
+        pendingSave.next({
+          evaluation_id: 1,
+          status: 'DRAFT'
+        });
+
+        pendingSave.complete();
+
+        fixture.detectChanges();
+
+        expect(component.autosaveStatus()).toBe('saved');
+        expect(component.savedResponses().get(1)).toBe(1);
+        expect(component.hasUnsavedResponses()).toBeFalse();
+
+        expect(
+          query('.evaluation-autosave__pill--saved')
+            ?.textContent
+        ).toContain('Guardado');
+
+        expect(
+          query('.evaluation-autosave__notice')
+        ).toBeNull();
+
+        // La región accesible debe permanecer montada.
+        expect(
+          query('.evaluation-autosave__status')
+        ).toBe(liveRegion);
+
+      })
+    );
+
+    it('should display an autosave error with a single live region',
+      fakeAsync(() => {
+
+        saveDraftSpy.and.returnValue(
+          throwError(() => new Error('Simulated autosave error'))
+        );
+
+        component.selectAnswer(1, 1, 1);
+
+        tick(800);
+        fixture.detectChanges();
+
+        expect(component.autosaveStatus()).toBe('error');
+        expect(component.hasUnsavedResponses()).toBeTrue();
+
+        expect(
+          query('.evaluation-autosave__pill--error')
+            ?.textContent
+        ).toContain('Error al guardar');
+
+        expect(
+          query('.evaluation-autosave__notice--error')
+            ?.textContent
+        ).toContain('No se pudieron guardar las respuestas');
+
+        const retryButton = query<HTMLButtonElement>(
+          '.evaluation-autosave__retry'
+        );
+
+        expect(retryButton).not.toBeNull();
+        expect(retryButton?.disabled).toBeFalse();
+
+        const liveRegions = fixture.nativeElement.querySelectorAll(
+          'app-evaluation-autosave [aria-live]'
+        );
+
+        expect(liveRegions.length).toBe(1);
+        expect(liveRegions[0].getAttribute('role')).toBe('status');
+        expect(liveRegions[0].getAttribute('aria-live')).toBe('polite');
+        expect(liveRegions[0].getAttribute('aria-atomic')).toBe('true');
+
+      })
+    );
+
+    it('should retry a failed autosave through the retry button',
+      fakeAsync(() => {
+
+        const retryRequest = new Subject<{
+          evaluation_id: number;
+          status: string;
+        }>();
+
+        saveDraftSpy.and.returnValues(
+          throwError(() => new Error('Simulated autosave error')),
+          retryRequest.asObservable()
+        );
+
+        const retrySpy = spyOn(
+          component,
+          'retrySaveDraft'
+        ).and.callThrough();
+
+        // Generar un error real mediante el servicio simulado.
+        component.selectAnswer(1, 1, 1);
+
+        tick(800);
+        fixture.detectChanges();
+
+        expect(component.autosaveStatus()).toBe('error');
+        expect(saveDraftSpy).toHaveBeenCalledTimes(1);
+
+        const retryButton = query<HTMLButtonElement>(
+          '.evaluation-autosave__retry'
+        );
+
+        expect(retryButton).not.toBeNull();
+        expect(retryButton?.disabled).toBeFalse();
+
+        // Reintentar mediante la interfaz.
+        retryButton?.click();
+        fixture.detectChanges();
+
+        expect(retrySpy).toHaveBeenCalledTimes(1);
+        expect(saveDraftSpy).toHaveBeenCalledTimes(2);
+        expect(component.autosaveStatus()).toBe('saving');
+
+        expect(
+          saveDraftSpy.calls.mostRecent().args[0]
+        ).toEqual({
+          responses: [
+            {
+              indicator_id: 1,
+              indicator_answer_id: 1
+            }
+          ]
+        });
+
+        expect(
+          query('.evaluation-autosave__pill--saving')
+            ?.textContent
+        ).toContain('Guardando...');
+
+        expect(
+          query('.evaluation-autosave__notice--error')
+        ).toBeNull();
+
+        // Completar el reintento correctamente.
+        retryRequest.next({
+          evaluation_id: 1,
+          status: 'DRAFT'
+        });
+
+        retryRequest.complete();
+
+        fixture.detectChanges();
+
+        expect(component.autosaveStatus()).toBe('saved');
+        expect(component.savedResponses().get(1)).toBe(1);
+        expect(component.hasUnsavedResponses()).toBeFalse();
+
+        expect(
+          query('.evaluation-autosave__pill--saved')
+            ?.textContent
+        ).toContain('Guardado');
+
+        expect(
+          query('.evaluation-autosave__notice')
+        ).toBeNull();
+
+        expect(
+          query('.evaluation-autosave__retry')
+        ).toBeNull();
+
+      })
+    );
+
+    it('should disable retry after edit permissions are revoked',
+      fakeAsync(() => {
+
+        saveDraftSpy.and.returnValue(
+          throwError(() => new Error('Simulated autosave error'))
+        );
+
+        const retrySpy = spyOn(
+          component,
+          'retrySaveDraft'
+        ).and.callThrough();
+
+        component.selectAnswer(1, 1, 1);
+
+        tick(800);
+        fixture.detectChanges();
+
+        expect(component.autosaveStatus()).toBe('error');
+        expect(component.canEditEvaluation()).toBeTrue();
+
+        let retryButton = query<HTMLButtonElement>(
+          '.evaluation-autosave__retry'
+        );
+
+        expect(retryButton).not.toBeNull();
+        expect(retryButton?.disabled).toBeFalse();
+
+        // Revocar permisos de edición.
+        selectedRole.set(CompanyRole.AUDITOR);
+
+        fixture.detectChanges();
+        TestBed.flushEffects();
+        fixture.detectChanges();
+
+        expect(component.canEditEvaluation()).toBeFalse();
+
+        retryButton = query<HTMLButtonElement>(
+          '.evaluation-autosave__retry'
+        );
+
+        expect(retryButton).not.toBeNull();
+        expect(retryButton?.disabled).toBeTrue();
+
+        retryButton?.click();
+
+        expect(retrySpy).not.toHaveBeenCalled();
+        expect(saveDraftSpy).toHaveBeenCalledTimes(1);
+
+        // Las respuestas locales no deben perderse.
+        expect(component.responses().get(1)).toBe(1);
+        expect(component.hasUnsavedResponses()).toBeTrue();
+
+      })
+    );
+
+    it('should synchronize the unsaved indicator and contextual warning', () => {
+
+      component.responses.set(new Map([[1, 1]]));
+      component.savedResponses.set(new Map());
+      component.autosaveStatus.set('idle');
+
+      fixture.detectChanges();
+
+      expect(component.hasUnsavedResponses()).toBeTrue();
+
+      expect(
+        query('.evaluation-autosave__pill--warning')
+          ?.textContent
+      ).toContain('Sin guardar');
+
+      expect(
+        query('.evaluation-autosave__notice--warning')
+          ?.textContent
+      ).toContain('Hay respuestas sin guardar');
+
+      expect(
+        query('.evaluation-autosave__retry')
+      ).toBeNull();
+
+      // Simular que ambas colecciones están sincronizadas.
+      component.savedResponses.set(new Map([[1, 1]]));
+
+      fixture.detectChanges();
+
+      expect(component.hasUnsavedResponses()).toBeFalse();
+
+      expect(
+        query('.evaluation-autosave__pill')
+      ).toBeNull();
+
+      expect(
+        query('.evaluation-autosave__notice')
+      ).toBeNull();
+
+      expect(
+        query('.evaluation-header__autosave--active')
+      ).toBeNull();
+
+      expect(
+        query('.evaluation-autosave__status')
+      ).not.toBeNull();
+    });
+
+  });
+  describe('Responsive evaluation navigation', () => {
+
+    it('should only display the next button on the first question', () => {
+      component.structure.set(multiAmbitStructure);
+
+      fixture.detectChanges();
+
+      expect(
+        fixture.nativeElement.querySelector(
+          '.evaluation-navigation__previous'
+        )
+      ).toBeNull();
+
+      expect(
+        fixture.nativeElement.querySelector(
+          '.evaluation-navigation__next'
+        )
+      ).not.toBeNull();
+
+      expect(
+        fixture.nativeElement.querySelector(
+          '.evaluation-navigation__submit'
+        )
+      ).toBeNull();
+    });
+
+    it('should display previous and next buttons on intermediate questions', () => {
+      component.structure.set(multiAmbitStructure);
+      component.question.set(1);
+
+      fixture.detectChanges();
+
+      expect(
+        fixture.nativeElement.querySelector(
+          '.evaluation-navigation__previous'
+        )
+      ).not.toBeNull();
+
+      expect(
+        fixture.nativeElement.querySelector(
+          '.evaluation-navigation__next'
+        )
+      ).not.toBeNull();
+    });
+
+    it('should display the submit button on the final question', () => {
+      component.structure.set(multiAmbitStructure);
+      component.ambit.set(2);
+      component.question.set(0);
+
+      fixture.detectChanges();
+
+      expect(
+        fixture.nativeElement.querySelector(
+          '.evaluation-navigation__previous'
+        )
+      ).not.toBeNull();
+
+      expect(
+        fixture.nativeElement.querySelector(
+          '.evaluation-navigation__next'
+        )
+      ).toBeNull();
+
+      expect(
+        fixture.nativeElement.querySelector(
+          '.evaluation-navigation__submit'
+        )
+      ).not.toBeNull();
+    });
+
+    it('should navigate through the new next and previous buttons', () => {
+      component.structure.set(multiAmbitStructure);
+
+      fixture.detectChanges();
+
+      const next: HTMLButtonElement =
+        fixture.nativeElement.querySelector(
+          '.evaluation-navigation__next'
+        );
+
+      next.click();
+      fixture.detectChanges();
+
+      expect(component.currentQuestionNumber()).toBe(2);
+
+      const previous: HTMLButtonElement =
+        fixture.nativeElement.querySelector(
+          '.evaluation-navigation__previous'
+        );
+
+      previous.click();
+      fixture.detectChanges();
+
+      expect(component.currentQuestionNumber()).toBe(1);
+    });
+
+    it('should disable navigation during pending evidence operations', () => {
+      component.structure.set(multiAmbitStructure);
+      component.question.set(1);
+
+      fixture.detectChanges();
+
+      component.onEvidenceOperationPending(true);
+      fixture.detectChanges();
+
+      const previous: HTMLButtonElement =
+        fixture.nativeElement.querySelector(
+          '.evaluation-navigation__previous'
+        );
+
+      const next: HTMLButtonElement =
+        fixture.nativeElement.querySelector(
+          '.evaluation-navigation__next'
+        );
+
+      expect(previous.disabled).toBeTrue();
+      expect(next.disabled).toBeTrue();
+
+      component.onEvidenceOperationPending(false);
+      fixture.detectChanges();
+
+      expect(previous.disabled).toBeFalse();
+      expect(next.disabled).toBeFalse();
+    });
+
+    it('should disable the submit button during pending evidence operations', () => {
+      component.structure.set(multiAmbitStructure);
+      component.ambit.set(2);
+      component.question.set(0);
+
+      fixture.detectChanges();
+
+      const submit: HTMLButtonElement =
+        fixture.nativeElement.querySelector(
+          '.evaluation-navigation__submit'
+        );
+
+      expect(submit).not.toBeNull();
+
+      // Estado inicial: no existen operaciones pendientes.
+      expect(component.canSubmitEvaluation()).toBeTrue();
+      expect(component.evidenceOperationPending()).toBeFalse();
+      expect(submit.disabled).toBeFalse();
+
+      // Iniciar una operación de evidencias.
+      component.onEvidenceOperationPending(true);
+
+      fixture.detectChanges();
+
+      expect(component.evidenceOperationPending()).toBeTrue();
+      expect(submit.disabled).toBeTrue();
+
+      // Finalizar la operación de evidencias.
+      component.onEvidenceOperationPending(false);
+
+      fixture.detectChanges();
+
+      expect(component.evidenceOperationPending()).toBeFalse();
+      expect(submit.disabled).toBeFalse();
+    });
+    it('should disable answer and navigation controls during final submission', () => {
+      component.structure.set(multiAmbitStructure);
+      component.ambit.set(0);
+      component.question.set(1);
+
+      fixture.detectChanges();
+
+      const radios: NodeListOf<HTMLInputElement> =
+        fixture.nativeElement.querySelectorAll(
+          '.evaluation-answer__radio'
+        );
+
+      const previous: HTMLButtonElement =
+        fixture.nativeElement.querySelector(
+          '.evaluation-navigation__previous'
+        );
+
+      const next: HTMLButtonElement =
+        fixture.nativeElement.querySelector(
+          '.evaluation-navigation__next'
+        );
+
+      expect(radios.length).toBeGreaterThan(0);
+      expect(previous).not.toBeNull();
+      expect(next).not.toBeNull();
+
+      // Verificar que los controles comienzan habilitados.
+      radios.forEach(radio => {
+        expect(radio.disabled).toBeFalse();
+      });
+
+      expect(previous.disabled).toBeFalse();
+      expect(next.disabled).toBeFalse();
+
+      // Simular el estado visual de finalización.
+      component.submitting.set(true);
+
+      fixture.detectChanges();
+
+      radios.forEach(radio => {
+        expect(radio.disabled).toBeTrue();
+      });
+
+      expect(previous.disabled).toBeTrue();
+      expect(next.disabled).toBeTrue();
+
+      // Simular la recuperación después de un envío fallido.
+      component.submitting.set(false);
+
+      fixture.detectChanges();
+
+      radios.forEach(radio => {
+        expect(radio.disabled).toBeFalse();
+      });
+
+      expect(previous.disabled).toBeFalse();
+      expect(next.disabled).toBeFalse();
+    });
+    it('should prevent internal question navigation during final submission', () => {
+      component.structure.set(multiAmbitStructure);
+      component.ambit.set(0);
+      component.question.set(1);
+
+      fixture.detectChanges();
+
+      // Verificar la posición inicial.
+      expect(component.currentQuestionNumber()).toBe(2);
+      expect(component.evidenceOperationPending()).toBeFalse();
+
+      // Simular el estado de envío.
+      component.submitting.set(true);
+
+      // Intentar avanzar directamente.
+      component.nextQuestion();
+
+      expect(component.ambit()).toBe(0);
+      expect(component.question()).toBe(1);
+      expect(component.currentQuestionNumber()).toBe(2);
+
+      // Restablecer la posición para comprobar el retroceso
+      // de manera independiente.
+      component.ambit.set(0);
+      component.question.set(1);
+
+      component.beforeQuestion();
+
+      expect(component.ambit()).toBe(0);
+      expect(component.question()).toBe(1);
+      expect(component.currentQuestionNumber()).toBe(2);
+
+      // Simular la recuperación del estado de envío.
+      component.ambit.set(0);
+      component.question.set(1);
+      component.submitting.set(false);
+
+      component.nextQuestion();
+
+      expect(component.currentQuestionNumber()).toBe(3);
+
+      component.beforeQuestion();
+
+      expect(component.currentQuestionNumber()).toBe(2);
+    });
+
+  });
+  it('should display the skeleton while loading the evaluation', () => {
+    component.loading.set(true);
+
+    fixture.detectChanges();
+
+    const element: HTMLElement = fixture.nativeElement;
+
+    expect(
+      element.querySelector('app-evaluation-skeleton')
+    ).not.toBeNull();
+
+    expect(
+      element.querySelector('.evaluation-question-card')
+    ).toBeNull();
+
+    expect(
+      element.querySelector('.evaluation-progress')
+    ).toBeNull();
+  });
+  it('should preserve the evaluation header while loading', () => {
+    component.loading.set(true);
+
+    fixture.detectChanges();
+
+    const element: HTMLElement = fixture.nativeElement;
+
+    expect(
+      element.querySelector('.evaluation-header__title')
+        ?.textContent
+    ).toContain('Evaluación ASG');
+
+    expect(
+      element.querySelector('.evaluation-header__period')
+    ).not.toBeNull();
+
+    expect(
+      element.querySelector('app-evaluation-skeleton')
+    ).not.toBeNull();
+  });
+  it('should replace the skeleton with the questionnaire after loading', () => {
+    component.loading.set(true);
+
+    fixture.detectChanges();
+
+    const element: HTMLElement = fixture.nativeElement;
+
+    expect(
+      element.querySelector('app-evaluation-skeleton')
+    ).not.toBeNull();
+
+    component.loading.set(false);
+
+    fixture.detectChanges();
+
+    expect(
+      element.querySelector('app-evaluation-skeleton')
+    ).toBeNull();
+
+    expect(
+      element.querySelector('.evaluation-progress')
+    ).not.toBeNull();
+
+    expect(
+      element.querySelector('.evaluation-question-card')
+    ).not.toBeNull();
+  });
+  it('should replace the skeleton with the error state when loading fails', () => {
+    component.loading.set(true);
+
+    fixture.detectChanges();
+
+    const element: HTMLElement = fixture.nativeElement;
+
+    expect(
+      element.querySelector('app-evaluation-skeleton')
+    ).not.toBeNull();
+
+    component.loadError.set(true);
+    component.loading.set(false);
+
+    fixture.detectChanges();
+
+    expect(
+      element.querySelector('app-evaluation-skeleton')
+    ).toBeNull();
+
+    expect(
+      element.querySelector('.evaluation-question-card')
+    ).toBeNull();
+
+    expect(element.textContent)
+      .toContain('No se pudo recuperar la evaluación');
+
+    expect(element.textContent)
+      .toContain('Reintentar');
+  });
+  it('should display the skeleton again when loading is retried', () => {
+    component.loading.set(false);
+    component.loadError.set(true);
+
+    fixture.detectChanges();
+
+    const element: HTMLElement = fixture.nativeElement;
+
+    expect(
+      element.querySelector('app-evaluation-skeleton')
+    ).toBeNull();
+
+    component.loading.set(true);
+    component.loadError.set(false);
+
+    fixture.detectChanges();
+
+    expect(
+      element.querySelector('app-evaluation-skeleton')
+    ).not.toBeNull();
+
+    expect(element.textContent)
+      .not.toContain('No se pudo recuperar la evaluación');
+
+    expect(
+      element.querySelector('.evaluation-question-card')
+    ).toBeNull();
+  });
 });

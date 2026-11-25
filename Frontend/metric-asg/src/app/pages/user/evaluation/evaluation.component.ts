@@ -9,7 +9,6 @@ import {
   Injector,
   inject
 } from '@angular/core';
-import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { EvaluationService } from '../../../services/evaluation.service';
 import {
   EvaluationAmbit,
@@ -22,13 +21,20 @@ import { EvaluationEvidencesComponent } from '../evaluation-evidences/evaluation
 import { CompanyContextService } from '../../../services/company-context.service';
 import { CompanyRole } from '../../../models/company_membership';
 import { toObservable, takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import {
+  EvaluationAutosaveComponent,
+  EvaluationAutosaveStatus
+} from '../evaluation-autosave/evaluation-autosave.component';
+import { EvaluationSkeletonComponent } from
+  '../evaluation-skeleton/evaluation-skeleton.component';
 
 @Component({
   selector: 'app-evaluation',
   standalone: true,
   imports: [
-    MatProgressSpinnerModule,
-    EvaluationEvidencesComponent
+    EvaluationEvidencesComponent,
+    EvaluationAutosaveComponent,
+    EvaluationSkeletonComponent
   ],
   templateUrl: './evaluation.component.html',
   changeDetection: ChangeDetectionStrategy.Eager,
@@ -43,9 +49,8 @@ export class EvaluationComponent {
   readonly savedResponses = signal<Map<number, number>>(new Map());
   completadas = signal<Map<number, number>>(new Map());
 
-  readonly autosaveStatus = signal<
-    'idle' | 'pending' | 'saving' | 'saved' | 'error'
-  >('idle');
+  readonly autosaveStatus =
+    signal<EvaluationAutosaveStatus>('idle');
 
   private readonly autosaveChanges$ = new Subject<void>();
   readonly submitting = signal(false);
@@ -77,6 +82,44 @@ export class EvaluationComponent {
   readonly currentQuestion = computed<EvaluationIndicator | null>(() => {
     const ambit = this.currentAmbit();
     return ambit?.indicators[this.question()] ?? null;
+  });
+
+  readonly currentQuestionNumber = computed(() => {
+    const structure = this.structure();
+
+    if (!structure || !this.currentQuestion()) {
+      return 0;
+    }
+
+    const previousQuestions = structure.ambits
+      .slice(0, this.ambit())
+      .reduce(
+        (total, ambit) => total + ambit.indicators.length,
+        0
+      );
+
+    return previousQuestions + this.question() + 1;
+  });
+
+  readonly currentAmbitIcon = computed(() => {
+    const letter = this.currentAmbit()
+      ?.letter
+      ?.trim()
+      .toUpperCase();
+
+    switch (letter) {
+      case 'A':
+        return 'bi bi-tree';
+
+      case 'S':
+        return 'bi bi-people';
+
+      case 'G':
+        return 'bi bi-bank';
+
+      default:
+        return 'bi bi-bar-chart';
+    }
   });
 
   readonly progreso = computed(() => {
@@ -135,6 +178,22 @@ export class EvaluationComponent {
     );
   });
 
+  readonly answeredQuestions = computed(() => {
+    return this.responses().size;
+  });
+
+  readonly globalProgress = computed(() => {
+    const total = this.totalQuestions();
+
+    if (total === 0) {
+      return 0;
+    }
+
+    return Math.min(
+      100,
+      Math.floor((this.answeredQuestions() / total) * 100)
+    );
+  });
 
   readonly canEditEvaluation = computed(() => {
     const role = this.companyContext.selectedRole();
@@ -450,12 +509,14 @@ export class EvaluationComponent {
       return true;
     }
 
-    if (this.finalizing) {
+    if (
+      this.finalizing ||
+      this.evidenceOperationPending()
+    ) {
       return false;
     }
 
     const status = this.autosaveStatus();
-
 
     if (
       this.hasUnsavedResponses() ||
@@ -463,7 +524,6 @@ export class EvaluationComponent {
       status === 'saving' ||
       status === 'error'
     ) {
-
       return confirm(
         'Hay respuestas que todavía no se han guardado. ' +
         '¿Desea abandonar la evaluación?'
@@ -477,24 +537,27 @@ export class EvaluationComponent {
   onBeforeUnload(event: BeforeUnloadEvent): void {
     const status = this.autosaveStatus();
 
-
     if (
       !this.evaluationSubmitted &&
       (
         this.finalizing ||
+        this.evidenceOperationPending() ||
         this.hasUnsavedResponses() ||
         status === 'pending' ||
         status === 'saving' ||
         status === 'error'
       )
     ) {
-
       event.preventDefault();
       event.returnValue = '';
     }
   }
+
   nextQuestion(): void {
-    if (this.evidenceOperationPending()) {
+    if (
+      this.evidenceOperationPending() ||
+      this.submitting()
+    ) {
       return;
     }
     const currentAmbit = this.currentAmbit();
@@ -549,7 +612,10 @@ export class EvaluationComponent {
   }
 
   beforeQuestion(): void {
-    if (this.evidenceOperationPending()) {
+    if (
+      this.evidenceOperationPending() ||
+      this.submitting()
+    ) {
       return;
     }
     const currentAmbit = this.currentAmbit();
@@ -691,7 +757,8 @@ export class EvaluationComponent {
       this.finalizing ||
       this.submitting() ||
       this.loading() ||
-      this.loadError()
+      this.loadError() ||
+      this.evidenceOperationPending()
     ) {
       return;
     }
@@ -738,23 +805,4 @@ export class EvaluationComponent {
     return { r, g, b };
   }
 
-  hexToRgbString(hex: string): string {
-    hex = hex.replace('#', '');
-
-    if (hex.length === 3) {
-      hex =
-        hex[0] +
-        hex[0] +
-        hex[1] +
-        hex[1] +
-        hex[2] +
-        hex[2];
-    }
-
-    const r = parseInt(hex.substring(0, 2), 16);
-    const g = parseInt(hex.substring(2, 4), 16);
-    const b = parseInt(hex.substring(4, 6), 16);
-
-    return `${r}, ${g}, ${b}`;
-  }
 }

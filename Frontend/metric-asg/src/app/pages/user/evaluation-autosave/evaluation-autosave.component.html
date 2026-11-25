@@ -1,0 +1,159 @@
+@if (presentation() === 'indicator') {
+
+  <div
+    class="evaluation-autosave__status"
+    [class.visually-hidden]="!showIndicator()"
+    role="status"
+    aria-live="polite"
+    aria-atomic="true">
+
+    @if (showUnsavedWarning()) {
+
+      <span class="evaluation-autosave__pill evaluation-autosave__pill--warning">
+
+        <i class="bi bi-exclamation-triangle-fill"
+          aria-hidden="true">
+        </i>
+
+        Sin guardar
+
+      </span>
+
+      <span class="visually-hidden">
+        Hay respuestas sin guardar.
+        Los cambios pendientes podrían perderse al salir.
+      </span>
+
+    }
+
+    @switch (status()) {
+
+      @case ('pending') {
+
+        <span class="evaluation-autosave__pill evaluation-autosave__pill--warning">
+
+          <i class="bi bi-clock"
+            aria-hidden="true">
+          </i>
+
+          Pendiente
+
+        </span>
+
+      }
+
+      @case ('saving') {
+
+        <span class="evaluation-autosave__pill evaluation-autosave__pill--saving">
+
+          <span
+            class="spinner-border spinner-border-sm"
+            aria-hidden="true">
+          </span>
+
+          Guardando...
+
+        </span>
+
+      }
+
+      @case ('saved') {
+
+        <span class="evaluation-autosave__pill evaluation-autosave__pill--saved">
+
+          <i class="bi bi-check-circle-fill"
+            aria-hidden="true">
+          </i>
+
+          Guardado
+
+        </span>
+
+      }
+
+      @case ('error') {
+
+        <span class="evaluation-autosave__pill evaluation-autosave__pill--error">
+
+          <i class="bi bi-exclamation-circle-fill"
+            aria-hidden="true">
+          </i>
+
+          Error al guardar
+
+        </span>
+
+        <span class="visually-hidden">
+          No se pudieron guardar las respuestas.
+          Comprueba tu conexión.
+        </span>
+
+      }
+
+    }
+
+  </div>
+
+} @else if (showNotice()) {
+
+  @if (status() === 'error') {
+
+    <div class="evaluation-autosave__notice evaluation-autosave__notice--error">
+
+      <i class="bi bi-exclamation-circle-fill"
+        aria-hidden="true">
+      </i>
+
+      <div class="evaluation-autosave__notice-content">
+
+        <p class="evaluation-autosave__notice-title">
+          No se pudieron guardar las respuestas
+        </p>
+
+        <p class="evaluation-autosave__notice-description">
+          Comprueba tu conexión e inténtalo nuevamente.
+        </p>
+
+      </div>
+
+      <button
+        type="button"
+        class="asg-btn asg-btn--secondary evaluation-autosave__retry"
+        [disabled]="!canRetry()"
+        (click)="requestRetry()">
+
+        <i class="bi bi-arrow-clockwise"
+          aria-hidden="true">
+        </i>
+
+        Reintentar
+
+      </button>
+
+    </div>
+
+  } @else if (showUnsavedWarning()) {
+
+    <div class="evaluation-autosave__notice evaluation-autosave__notice--warning">
+
+      <i class="bi bi-exclamation-triangle-fill"
+        aria-hidden="true">
+      </i>
+
+      <div class="evaluation-autosave__notice-content">
+
+        <p class="evaluation-autosave__notice-title">
+          Hay respuestas sin guardar.
+        </p>
+
+        <p class="evaluation-autosave__notice-description">
+          Los cambios pendientes podrían perderse al salir.
+        </p>
+
+      </div>
+
+    </div>
+
+  }
+
+}

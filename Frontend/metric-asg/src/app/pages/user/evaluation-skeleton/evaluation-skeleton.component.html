@@ -1,0 +1,123 @@
+<section class="evaluation-skeleton-loading">
+
+  <p
+    class="visually-hidden"
+    role="status"
+    aria-live="polite"
+    aria-atomic="true">
+    Cargando evaluación ASG. Recuperando preguntas y respuestas guardadas.
+  </p>
+
+  <div
+    class="evaluation-skeleton-layout"
+    aria-hidden="true">
+
+    <!-- Progreso global -->
+
+    <div class="asg-card evaluation-skeleton-progress">
+
+      <div class="evaluation-skeleton-progress__header">
+
+        <div class="evaluation-skeleton-progress__information">
+
+          <span class="skeleton skeleton--progress-title"></span>
+
+          <span class="skeleton skeleton--progress-description"></span>
+
+        </div>
+
+        <span class="skeleton skeleton--percentage"></span>
+
+      </div>
+
+      <span class="skeleton skeleton--progress-track"></span>
+
+    </div>
+
+    <!-- Tarjeta de pregunta -->
+
+    <div class="asg-card evaluation-skeleton-question">
+
+      <!-- Ámbito y posición -->
+
+      <div class="evaluation-skeleton-question__header">
+
+        <div class="evaluation-skeleton-question__ambit">
+
+          <span class="skeleton skeleton--ambit-icon"></span>
+
+          <span class="skeleton skeleton--ambit-name"></span>
+
+        </div>
+
+        <span class="skeleton skeleton--question-position"></span>
+
+      </div>
+
+      <!-- Pregunta y descripción -->
+
+      <div class="evaluation-skeleton-question__content">
+
+        <span class="skeleton skeleton--question-title"></span>
+
+        <span class="skeleton skeleton--question-description"></span>
+
+      </div>
+
+      <!-- Opciones de respuesta -->
+
+      <div class="evaluation-skeleton-answers">
+
+        @for (answer of answers; track answer) {
+
+          <div class="evaluation-skeleton-answer">
+
+            <span class="skeleton skeleton--radio"></span>
+
+            <div class="evaluation-skeleton-answer__content">
+
+              <span class="skeleton skeleton--answer-text"></span>
+
+              <span class="skeleton skeleton--answer-continuation"></span>
+
+            </div>
+
+          </div>
+
+        }
+
+      </div>
+
+      <!-- Evidencias -->
+
+      <div class="evaluation-skeleton-evidences">
+
+        <span class="skeleton skeleton--evidence-icon"></span>
+
+        <div class="evaluation-skeleton-evidences__content">
+
+          <span class="skeleton skeleton--evidence-title"></span>
+
+          <span class="skeleton skeleton--evidence-description"></span>
+
+        </div>
+
+        <span class="skeleton skeleton--evidence-toggle"></span>
+
+      </div>
+
+      <!-- Navegación -->
+
+      <div class="evaluation-skeleton-navigation">
+
+        <span class="skeleton skeleton--button"></span>
+
+        <span class="skeleton skeleton--button"></span>
+
+      </div>
+
+    </div>
+
+  </div>
+
+</section>
