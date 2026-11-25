@@ -3,13 +3,8 @@
 
     <header class="evaluation-header">
       <div class="evaluation-header__identity">
-
-        <h1 class="evaluation-header__title">
-          Evaluación ASG
-        </h1>
-
-        <p class="evaluation-header__period">
-          <i class="bi bi-calendar3" aria-hidden="true"></i>
+        <p class="evaluation-header__period d-inline-flex align-items-center gap-2">
+           <i class="bi bi-calendar3" aria-hidden="true"></i>
 
           <span>
             {{ mesFuturo }}
@@ -17,6 +12,9 @@
             – {{ mesActual }} {{ anioActual }}
           </span>
         </p>
+        <h1 class="evaluation-header__title">
+          Evaluación ASG
+        </h1>
 
       </div>
       <app-evaluation-autosave class="evaluation-header__autosave" [class.evaluation-header__autosave--active]="
@@ -190,12 +188,16 @@
             <label class="evaluation-answer" [class.evaluation-answer--selected]="
           responses().get(currentQuestion.id) === answer.id
         " [class.evaluation-answer--disabled]="
-          !canEditEvaluation() || evidenceOperationPending()
-        ">
+  !canEditEvaluation() ||
+  evidenceOperationPending() ||
+  submitting()
+">
 
               <input class="evaluation-answer__radio" type="radio" [disabled]="
-            !canEditEvaluation() || evidenceOperationPending()
-          " [name]="'indicator-' + currentQuestion.id" [checked]="
+  !canEditEvaluation() ||
+  evidenceOperationPending() ||
+  submitting()
+" [name]="'indicator-' + currentQuestion.id" [checked]="
             responses().get(currentQuestion.id) === answer.id
           " (change)="
             selectAnswer(
@@ -261,7 +263,7 @@
           @if (ambit() > 0 || question() > 0) {
 
           <button type="button" class="asg-btn asg-btn--secondary evaluation-navigation__previous"
-            [disabled]="evidenceOperationPending()" (click)="beforeQuestion()">
+            [disabled]="evidenceOperationPending() || submitting()" (click)="beforeQuestion()">
 
             <i class="bi bi-chevron-left" aria-hidden="true">
             </i>
@@ -275,7 +277,7 @@
           @if (
           ambit() < structure()!.ambits.length - 1 || question() < currentAmbit.indicators.length - 1 ) { <button
             type="button" class="asg-btn asg-btn--primary evaluation-navigation__next"
-            [disabled]="evidenceOperationPending()" (click)="nextQuestion()">
+            [disabled]="evidenceOperationPending() || submitting()" (click)="nextQuestion()">
 
             Siguiente
 

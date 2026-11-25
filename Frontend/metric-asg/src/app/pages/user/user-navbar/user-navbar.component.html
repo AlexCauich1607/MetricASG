@@ -254,7 +254,8 @@
           <i class="bi bi-gear" aria-hidden="true"></i>
           Configuración
         </button>
-        <button class="dropdown-item" (click)="cerrarSesion()">
+        <button type="button" class="dropdown-item user-navbar__logout" [disabled]="logoutInProgress"
+          (click)="cerrarSesion()">
           <i class="bi bi-box-arrow-right" aria-hidden="true"></i>
           Cerrar sesión
         </button>

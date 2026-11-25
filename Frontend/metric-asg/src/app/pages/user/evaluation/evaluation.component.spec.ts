@@ -915,6 +915,136 @@ describe('EvaluationComponent', () => {
     }, 950);
   });
 
+  it('should prevent evidence editing during final submission', fakeAsync(() => {
+    const pendingSubmission = new Subject<unknown>();
+
+    submitEvaluationSpy.and.returnValue(
+      pendingSubmission.asObservable()
+    );
+
+    spyOn(window, 'confirm').and.returnValue(true);
+
+    component.selectAnswer(1, 1, 1);
+
+    tick(800);
+
+    expect(component.autosaveStatus()).toBe('saved');
+    expect(component.canEditCurrentEvidence()).toBeTrue();
+
+    component.submit();
+
+    expect(component.submitting()).toBeTrue();
+    expect(submitEvaluationSpy).toHaveBeenCalledTimes(1);
+    expect(component.canEditCurrentEvidence()).toBeFalse();
+
+    pendingSubmission.complete();
+  }));
+
+  it('should prevent leaving during final submission', fakeAsync(() => {
+    const pendingSubmission = new Subject<unknown>();
+
+    submitEvaluationSpy.and.returnValue(
+      pendingSubmission.asObservable()
+    );
+
+    const confirmSpy = spyOn(window, 'confirm')
+      .and.returnValue(true);
+
+    component.selectAnswer(1, 1, 1);
+
+    tick(800);
+
+    expect(component.hasUnsavedResponses()).toBeFalse();
+    expect(component.canLeaveEvaluation()).toBeTrue();
+
+    component.submit();
+
+    expect(component.submitting()).toBeTrue();
+
+    confirmSpy.calls.reset();
+
+    expect(component.canLeaveEvaluation()).toBeFalse();
+    expect(confirmSpy).not.toHaveBeenCalled();
+
+    pendingSubmission.complete();
+  }));
+
+  it('should warn before unloading during final submission', fakeAsync(() => {
+    const pendingSubmission = new Subject<unknown>();
+
+    submitEvaluationSpy.and.returnValue(
+      pendingSubmission.asObservable()
+    );
+
+    spyOn(window, 'confirm').and.returnValue(true);
+
+    component.selectAnswer(1, 1, 1);
+
+    tick(800);
+
+    expect(component.hasUnsavedResponses()).toBeFalse();
+    expect(component.autosaveStatus()).toBe('saved');
+
+    component.submit();
+
+    expect(component.submitting()).toBeTrue();
+
+    const event = new Event('beforeunload', {
+      cancelable: true
+    }) as BeforeUnloadEvent;
+
+    component.onBeforeUnload(event);
+
+    expect(event.defaultPrevented).toBeTrue();
+
+    pendingSubmission.complete();
+  }));
+
+  it('should allow leaving and unloading after successful submission', fakeAsync(() => {
+    const pendingSubmission = new Subject<unknown>();
+
+    submitEvaluationSpy.and.returnValue(
+      pendingSubmission.asObservable()
+    );
+
+    const router = TestBed.inject(Router);
+
+    const navigateSpy = spyOn(router, 'navigate')
+      .and.returnValue(Promise.resolve(true));
+
+    const confirmSpy = spyOn(window, 'confirm')
+      .and.returnValue(true);
+
+    component.selectAnswer(1, 1, 1);
+
+    tick(800);
+
+    component.submit();
+
+    expect(component.submitting()).toBeTrue();
+    expect(component.canLeaveEvaluation()).toBeFalse();
+
+    // Simular una respuesta exitosa del backend.
+    pendingSubmission.next({});
+    pendingSubmission.complete();
+
+    expect(navigateSpy)
+      .toHaveBeenCalledOnceWith(['/user/results']);
+
+    confirmSpy.calls.reset();
+
+    expect(component.canLeaveEvaluation()).toBeTrue();
+    expect(confirmSpy).not.toHaveBeenCalled();
+
+    const event = new Event('beforeunload', {
+      cancelable: true
+    }) as BeforeUnloadEvent;
+
+    component.onBeforeUnload(event);
+
+    expect(event.defaultPrevented).toBeFalse();
+  }));
+
   it('should prevent leaving when unsaved changes exist', () => {
     const confirmSpy = spyOn(window, 'confirm').and.returnValue(false);
 
@@ -971,6 +1101,84 @@ describe('EvaluationComponent', () => {
 
       done();
     }, 950);
+  });
+
+  it('should prevent leaving while an evidence operation is pending', () => {
+    const confirmSpy = spyOn(window, 'confirm')
+      .and.returnValue(true);
+
+    component.responses.set(new Map([[1, 1]]));
+    component.savedResponses.set(new Map([[1, 1]]));
+    component.autosaveStatus.set('saved');
+
+    expect(component.hasUnsavedResponses()).toBeFalse();
+    expect(component.canLeaveEvaluation()).toBeTrue();
+
+    component.onEvidenceOperationPending(true);
+
+    expect(component.canLeaveEvaluation()).toBeFalse();
+    expect(confirmSpy).not.toHaveBeenCalled();
+  });
+
+  it('should allow leaving after an evidence operation finishes', () => {
+    const confirmSpy = spyOn(window, 'confirm');
+
+    component.responses.set(new Map([[1, 1]]));
+    component.savedResponses.set(new Map([[1, 1]]));
+    component.autosaveStatus.set('saved');
+
+    component.onEvidenceOperationPending(true);
+
+    expect(component.canLeaveEvaluation()).toBeFalse();
+
+    component.onEvidenceOperationPending(false);
+
+    expect(component.canLeaveEvaluation()).toBeTrue();
+    expect(confirmSpy).not.toHaveBeenCalled();
+  });
+
+  it('should warn before unloading while an evidence operation is pending', () => {
+    component.responses.set(new Map([[1, 1]]));
+    component.savedResponses.set(new Map([[1, 1]]));
+    component.autosaveStatus.set('saved');
+
+    expect(component.hasUnsavedResponses()).toBeFalse();
+
+    component.onEvidenceOperationPending(true);
+
+    const event = new Event('beforeunload', {
+      cancelable: true
+    }) as BeforeUnloadEvent;
+
+    component.onBeforeUnload(event);
+
+    expect(event.defaultPrevented).toBeTrue();
+  });
+
+  it('should allow unloading after an evidence operation finishes', () => {
+    component.responses.set(new Map([[1, 1]]));
+    component.savedResponses.set(new Map([[1, 1]]));
+    component.autosaveStatus.set('saved');
+
+    component.onEvidenceOperationPending(true);
+
+    const pendingEvent = new Event('beforeunload', {
+      cancelable: true
+    }) as BeforeUnloadEvent;
+
+    component.onBeforeUnload(pendingEvent);
+
+    expect(pendingEvent.defaultPrevented).toBeTrue();
+
+    component.onEvidenceOperationPending(false);
+
+    const completedEvent = new Event('beforeunload', {
+      cancelable: true
+    }) as BeforeUnloadEvent;
+
+    component.onBeforeUnload(completedEvent);
+
+    expect(completedEvent.defaultPrevented).toBeFalse();
   });
 
   it('should not start another autosave after component destruction', (done) => {
@@ -1269,10 +1477,43 @@ describe('EvaluationComponent', () => {
   });
 
   it('should prevent evaluation submission while an evidence operation is pending', () => {
+    const confirmSpy = spyOn(window, 'confirm')
+      .and.returnValue(false);
+
+    const alertSpy = spyOn(window, 'alert');
+
+    // Preparar una evaluación completamente respondida y guardada.
+    const completedResponses = new Map<number, number>([
+      [1, 1]
+    ]);
+
+    component.responses.set(new Map(completedResponses));
+    component.savedResponses.set(new Map(completedResponses));
+    component.autosaveStatus.set('saved');
+
+    // Verificar que no existan otros motivos para bloquear el envío.
+    expect(component.canSubmitEvaluation()).toBeTrue();
+    expect(component.loading()).toBeFalse();
+    expect(component.loadError()).toBeFalse();
+    expect(component.submitting()).toBeFalse();
+
+    expect(component.totalQuestions()).toBe(1);
+
+    expect(component.responses().size)
+      .toBe(component.totalQuestions());
+
+    expect(component.hasUnsavedResponses()).toBeFalse();
+
+    // Simular una operación de evidencias en curso.
     component.onEvidenceOperationPending(true);
+
+    expect(component.evidenceOperationPending()).toBeTrue();
 
     component.submit();
 
+    // El envío debe bloquearse antes de solicitar confirmación.
+    expect(confirmSpy).not.toHaveBeenCalled();
+    expect(alertSpy).not.toHaveBeenCalled();
     expect(submitEvaluationSpy).not.toHaveBeenCalled();
     expect(component.submitting()).toBeFalse();
   });
@@ -2428,15 +2669,136 @@ describe('EvaluationComponent', () => {
 
       fixture.detectChanges();
 
-      component.onEvidenceOperationPending(true);
-      fixture.detectChanges();
-
       const submit: HTMLButtonElement =
         fixture.nativeElement.querySelector(
           '.evaluation-navigation__submit'
         );
 
+      expect(submit).not.toBeNull();
+
+      // Estado inicial: no existen operaciones pendientes.
+      expect(component.canSubmitEvaluation()).toBeTrue();
+      expect(component.evidenceOperationPending()).toBeFalse();
+      expect(submit.disabled).toBeFalse();
+
+      // Iniciar una operación de evidencias.
+      component.onEvidenceOperationPending(true);
+
+      fixture.detectChanges();
+
+      expect(component.evidenceOperationPending()).toBeTrue();
       expect(submit.disabled).toBeTrue();
+
+      // Finalizar la operación de evidencias.
+      component.onEvidenceOperationPending(false);
+
+      fixture.detectChanges();
+
+      expect(component.evidenceOperationPending()).toBeFalse();
+      expect(submit.disabled).toBeFalse();
+    });
+    it('should disable answer and navigation controls during final submission', () => {
+      component.structure.set(multiAmbitStructure);
+      component.ambit.set(0);
+      component.question.set(1);
+
+      fixture.detectChanges();
+
+      const radios: NodeListOf<HTMLInputElement> =
+        fixture.nativeElement.querySelectorAll(
+          '.evaluation-answer__radio'
+        );
+
+      const previous: HTMLButtonElement =
+        fixture.nativeElement.querySelector(
+          '.evaluation-navigation__previous'
+        );
+
+      const next: HTMLButtonElement =
+        fixture.nativeElement.querySelector(
+          '.evaluation-navigation__next'
+        );
+
+      expect(radios.length).toBeGreaterThan(0);
+      expect(previous).not.toBeNull();
+      expect(next).not.toBeNull();
+
+      // Verificar que los controles comienzan habilitados.
+      radios.forEach(radio => {
+        expect(radio.disabled).toBeFalse();
+      });
+
+      expect(previous.disabled).toBeFalse();
+      expect(next.disabled).toBeFalse();
+
+      // Simular el estado visual de finalización.
+      component.submitting.set(true);
+
+      fixture.detectChanges();
+
+      radios.forEach(radio => {
+        expect(radio.disabled).toBeTrue();
+      });
+
+      expect(previous.disabled).toBeTrue();
+      expect(next.disabled).toBeTrue();
+
+      // Simular la recuperación después de un envío fallido.
+      component.submitting.set(false);
+
+      fixture.detectChanges();
+
+      radios.forEach(radio => {
+        expect(radio.disabled).toBeFalse();
+      });
+
+      expect(previous.disabled).toBeFalse();
+      expect(next.disabled).toBeFalse();
+    });
+    it('should prevent internal question navigation during final submission', () => {
+      component.structure.set(multiAmbitStructure);
+      component.ambit.set(0);
+      component.question.set(1);
+
+      fixture.detectChanges();
+
+      // Verificar la posición inicial.
+      expect(component.currentQuestionNumber()).toBe(2);
+      expect(component.evidenceOperationPending()).toBeFalse();
+
+      // Simular el estado de envío.
+      component.submitting.set(true);
+
+      // Intentar avanzar directamente.
+      component.nextQuestion();
+
+      expect(component.ambit()).toBe(0);
+      expect(component.question()).toBe(1);
+      expect(component.currentQuestionNumber()).toBe(2);
+
+      // Restablecer la posición para comprobar el retroceso
+      // de manera independiente.
+      component.ambit.set(0);
+      component.question.set(1);
+
+      component.beforeQuestion();
+
+      expect(component.ambit()).toBe(0);
+      expect(component.question()).toBe(1);
+      expect(component.currentQuestionNumber()).toBe(2);
+
+      // Simular la recuperación del estado de envío.
+      component.ambit.set(0);
+      component.question.set(1);
+      component.submitting.set(false);
+
+      component.nextQuestion();
+
+      expect(component.currentQuestionNumber()).toBe(3);
+
+      component.beforeQuestion();
+
+      expect(component.currentQuestionNumber()).toBe(2);
     });
 
   });

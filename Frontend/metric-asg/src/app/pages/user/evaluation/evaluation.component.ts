@@ -506,12 +506,14 @@ export class EvaluationComponent {
       return true;
     }
 
-    if (this.finalizing) {
+    if (
+      this.finalizing ||
+      this.evidenceOperationPending()
+    ) {
       return false;
     }
 
     const status = this.autosaveStatus();
-
 
     if (
       this.hasUnsavedResponses() ||
@@ -519,7 +521,6 @@ export class EvaluationComponent {
       status === 'saving' ||
       status === 'error'
     ) {
-
       return confirm(
         'Hay respuestas que todavía no se han guardado. ' +
         '¿Desea abandonar la evaluación?'
@@ -533,24 +534,27 @@ export class EvaluationComponent {
   onBeforeUnload(event: BeforeUnloadEvent): void {
     const status = this.autosaveStatus();
 
-
     if (
       !this.evaluationSubmitted &&
       (
         this.finalizing ||
+        this.evidenceOperationPending() ||
         this.hasUnsavedResponses() ||
         status === 'pending' ||
         status === 'saving' ||
         status === 'error'
       )
     ) {
-
       event.preventDefault();
       event.returnValue = '';
     }
   }
+
   nextQuestion(): void {
-    if (this.evidenceOperationPending()) {
+    if (
+      this.evidenceOperationPending() ||
+      this.submitting()
+    ) {
       return;
     }
     const currentAmbit = this.currentAmbit();
@@ -605,7 +609,10 @@ export class EvaluationComponent {
   }
 
   beforeQuestion(): void {
-    if (this.evidenceOperationPending()) {
+    if (
+      this.evidenceOperationPending() ||
+      this.submitting()
+    ) {
       return;
     }
     const currentAmbit = this.currentAmbit();
@@ -747,7 +754,8 @@ export class EvaluationComponent {
       this.finalizing ||
       this.submitting() ||
       this.loading() ||
-      this.loadError()
+      this.loadError() ||
+      this.evidenceOperationPending()
     ) {
       return;
     }

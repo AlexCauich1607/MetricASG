@@ -9,13 +9,16 @@ import {
   BehaviorSubject,
   catchError,
   filter,
+  finalize,
   Observable,
   switchMap,
   take,
   throwError
 } from 'rxjs';
+
 import { SessionService } from '../../shared/class/temporalStorage';
 import { AuthService } from '../../services/auth.service';
+import { LogoutStateService } from '../../services/logout-state.service';
 
 let isRefreshing = false;
 let refreshSubject = new BehaviorSubject<string | null>(null);
@@ -25,6 +28,9 @@ export const authInterceptor: HttpInterceptorFn = (
   next: HttpHandlerFn
 ): Observable<HttpEvent<unknown>> => {
   const auth = inject(AuthService);
+  const logoutState = inject(LogoutStateService);
+
+  const requestGeneration = logoutState.generation;
 
   if (req.url.endsWith('/refresh-token')) {
     return next(req);
@@ -42,8 +48,19 @@ export const authInterceptor: HttpInterceptorFn = (
 
   return next(req).pipe(
     catchError(err => {
-      if (err.status === 401) {
-        return handle401(req, next, auth);
+      if (
+        err.status === 401 &&
+        !req.url.endsWith('/logout') &&
+        !logoutState.isLoggingOut() &&
+        requestGeneration === logoutState.generation
+      ) {
+        return handle401(
+          req,
+          next,
+          auth,
+          logoutState,
+          requestGeneration
+        );
       }
 
       return throwError(() => err);
@@ -54,17 +71,45 @@ export const authInterceptor: HttpInterceptorFn = (
 function handle401(
   req: HttpRequest<unknown>,
   next: HttpHandlerFn,
-  auth: AuthService
+  auth: AuthService,
+  logoutState: LogoutStateService,
+  requestGeneration: number
 ): Observable<HttpEvent<unknown>> {
+  const isRequestInvalidated = (): boolean =>
+    logoutState.isLoggingOut() ||
+    requestGeneration !== logoutState.generation;
+
+  if (isRequestInvalidated()) {
+    return throwError(
+      () => new Error('Session invalidated by logout')
+    );
+  }
+
   if (!isRefreshing) {
     isRefreshing = true;
-    refreshSubject.next(null);
+
+    const currentRefreshSubject =
+      new BehaviorSubject<string | null>(null);
+
+    refreshSubject = currentRefreshSubject;
+
+    let refreshSettled = false;
 
     return auth.refreshToken().pipe(
       switchMap(res => {
+        if (isRequestInvalidated()) {
+          return throwError(
+            () => new Error('Session invalidated by logout')
+          );
+        }
+
         SessionService.setSessionItem('token', res.token);
-        refreshSubject.next(res.token);
+
+        refreshSettled = true;
         isRefreshing = false;
+
+        currentRefreshSubject.next(res.token);
+        currentRefreshSubject.complete();
 
         return next(
           req.clone({
@@ -75,11 +120,24 @@ function handle401(
         );
       }),
       catchError(err => {
-        isRefreshing = false;
-        refreshSubject.error(err);
-        refreshSubject = new BehaviorSubject<string | null>(null);
+        if (!refreshSettled) {
+          refreshSettled = true;
+          isRefreshing = false;
+
+          currentRefreshSubject.error(err);
+        }
 
         return throwError(() => err);
+      }),
+      finalize(() => {
+        if (!refreshSettled) {
+          refreshSettled = true;
+          isRefreshing = false;
+
+          currentRefreshSubject.error(
+            new Error('Token refresh cancelled')
+          );
+        }
       })
     );
   }
@@ -87,14 +145,20 @@ function handle401(
   return refreshSubject.pipe(
     filter(token => token !== null),
     take(1),
-    switchMap(token =>
-      next(
+    switchMap(token => {
+      if (isRequestInvalidated()) {
+        return throwError(
+          () => new Error('Session invalidated by logout')
+        );
+      }
+
+      return next(
         req.clone({
           setHeaders: {
             Authorization: `Bearer ${token}`
           }
         })
-      )
-    )
+      );
+    })
   );
 }

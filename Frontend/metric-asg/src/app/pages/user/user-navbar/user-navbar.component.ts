@@ -33,6 +33,7 @@ import {
   ViewChild
 } from '@angular/core';
 
+import { LogoutStateService } from '../../../services/logout-state.service';
 
 @Component({
   selector: 'app-user-navbar',
@@ -53,12 +54,17 @@ export class UserNavbarComponent implements OnInit {
   notificationsLoading = false;
   notificationsError = false;
 
+  get logoutInProgress(): boolean {
+    return this.logoutState.inProgress();
+  }
+
   constructor(
     private router: Router,
     private dialog: MatDialog,
     private authService: AuthService,
     private notificationService: NotificationService,
-    public companyContext: CompanyContextService
+    public companyContext: CompanyContextService,
+    private logoutState: LogoutStateService
   ) { }
 
   ngOnInit(): void {
@@ -163,19 +169,40 @@ export class UserNavbarComponent implements OnInit {
     return `${day}/${month}/${year}`;
   }
 
+
   cerrarSesion(): void {
-    this.authService.logout()
-      .pipe(
-        finalize(() => {
-          this.companyContext.clear();
-          SessionService.logout();
-          this.router.navigate(['/home']);
-        })
-      )
-      .subscribe({
-        error: () => { }
+    if (!this.logoutState.beginAuthorization()) {
+      return;
+    }
+
+    this.router.navigate(['/home'])
+      .then(navigationAllowed => {
+        if (!navigationAllowed) {
+          this.logoutState.cancelAuthorization();
+          return;
+        }
+
+        if (!this.logoutState.authorizeLogout()) {
+          return;
+        }
+
+        this.authService.logout()
+          .pipe(
+            finalize(() => {
+              this.companyContext.clear();
+              SessionService.logout();
+              this.logoutState.finishLogout();
+            })
+          )
+          .subscribe({
+            error: () => { }
+          });
+      })
+      .catch(() => {
+        this.logoutState.cancelAuthorization();
       });
   }
+
   selectCompany(companyId: number): void {
     if (this.companySelectionLocked) {
       return;
