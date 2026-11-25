@@ -257,53 +257,95 @@
         </div>
       </div>
 
-      <div class="d-flex align-items-stretch justify-content-between">
-
-        @if (ambit() === 0 && question() === 0) {
-        <div></div>
-        }
-
-        @if (ambit() > 0 || question() > 0) {
-        <button class="btn btn-my-purple pe-4" [disabled]="evidenceOperationPending()" (click)="beforeQuestion()">
-          <i class="bi bi-chevron-left"></i>
-          Anterior
-        </button>
-        }
+      <footer class="evaluation-navigation">
 
         @if (
-        ambit() < structure()!.ambits.length - 1 || question() < currentAmbit.indicators.length - 1 ) { <button
-          class="btn btn-my-purple ps-4" [disabled]="evidenceOperationPending()" (click)="nextQuestion()">
-          Siguiente
-          <i class="bi bi-chevron-right"></i>
+        ambit() === structure()!.ambits.length - 1 &&
+        question() === currentAmbit.indicators.length - 1 &&
+        canEditEvaluation() &&
+        !canSubmitEvaluation()
+        ) {
+
+        <p class="evaluation-navigation__notice" role="status">
+
+          <i class="bi bi-info-circle" aria-hidden="true">
+          </i>
+
+          <span>
+            Puedes responder y guardar esta evaluación,
+            pero tu rol empresarial no permite finalizarla.
+          </span>
+
+        </p>
+
+        }
+
+        <div class="evaluation-navigation__actions">
+
+          @if (ambit() > 0 || question() > 0) {
+
+          <button type="button" class="asg-btn asg-btn--secondary evaluation-navigation__previous"
+            [disabled]="evidenceOperationPending()" (click)="beforeQuestion()">
+
+            <i class="bi bi-chevron-left" aria-hidden="true">
+            </i>
+
+            Anterior
+
           </button>
+
           }
 
           @if (
-          ambit() === structure()!.ambits.length - 1 &&
-          question() === currentAmbit.indicators.length - 1
-          ) {
+          ambit() < structure()!.ambits.length - 1 || question() < currentAmbit.indicators.length - 1 ) { <button
+            type="button" class="asg-btn asg-btn--primary evaluation-navigation__next"
+            [disabled]="evidenceOperationPending()" (click)="nextQuestion()">
 
-          @if (canEditEvaluation() && !canSubmitEvaluation()) {
-          <p class="text-muted sw-fs-7 mb-2" role="status">
-            <i class="bi bi-info-circle me-1"></i>
-            Puedes responder y guardar esta evaluación,
-            pero tu rol empresarial no permite finalizarla.
-          </p>
-          }
+            Siguiente
 
-          <button class="btn btn-my-purple ps-3" (click)="submit()"
-            [disabled]="!canSubmitEvaluation() || loading() || loadError() || submitting()">
-            <i class="bi bi-send-fill"></i>
-            @if (submitting()) {
-            <span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>
-            Enviando evaluación...
-            } @else {
-            Enviar evaluación
+            <i class="bi bi-chevron-right" aria-hidden="true">
+            </i>
+
+            </button>
+
             }
-          </button>
-          }
 
-      </div>
+            @if (
+            ambit() === structure()!.ambits.length - 1 &&
+            question() === currentAmbit.indicators.length - 1
+            ) {
+
+            <button type="button" class="asg-btn asg-btn--primary evaluation-navigation__submit" [disabled]="
+          !canSubmitEvaluation() ||
+          loading() ||
+          loadError() ||
+          submitting() ||
+          evidenceOperationPending()
+        " (click)="submit()">
+
+              @if (submitting()) {
+
+              <span class="spinner-border spinner-border-sm" aria-hidden="true">
+              </span>
+
+              Enviando evaluación...
+
+              } @else {
+
+              <i class="bi bi-send-fill" aria-hidden="true">
+              </i>
+
+              Enviar evaluación
+
+              }
+
+            </button>
+
+            }
+
+        </div>
+
+      </footer>
     </div>
 
     }

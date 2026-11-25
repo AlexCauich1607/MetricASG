@@ -1,17 +1,28 @@
-<section class="mt-4 border-top pt-3">
-  <div class="d-flex justify-content-between align-items-center">
+<section class="evaluation-evidences" aria-labelledby="evaluation-evidences-title">
 
-    <div>
-      <h6 class="text-my-purple fw-bold mb-1">
-        <i class="bi bi-paperclip me-2"></i>
-        Evidencias
-      </h6>
-      <span class="text-muted small">
-        Opcional · {{ evidences().length }} / {{ maxEvidences }}
+  <header class="evidence-header">
+
+    <div class="evidence-header__identity">
+
+      <span class="evidence-header__icon" aria-hidden="true">
+        <i class="bi bi-paperclip"></i>
       </span>
+
+      <div class="evidence-header__information">
+
+        <h3 id="evaluation-evidences-title" class="evidence-header__title">
+          Evidencias de la respuesta
+        </h3>
+
+        <p class="evidence-header__description">
+          Opcional · {{ evidences().length }} de {{ maxEvidences }} evidencias
+        </p>
+
+      </div>
+
     </div>
 
-    <button type="button" class="btn btn-sm btn-outline-secondary" [disabled]="
+    <button type="button" class="btn btn-outline-secondary evidence-button" [disabled]="
         !hasAnswer ||
         !canEdit ||
         saving() ||
@@ -21,228 +32,402 @@
 
       {{ isExpanded() ? 'Ocultar' : 'Mostrar' }}
 
-      <i class="bi ms-2" [class.bi-chevron-up]="isExpanded()" [class.bi-chevron-down]="!isExpanded()">
+      <i class="bi" aria-hidden="true" [class.bi-chevron-up]="isExpanded()" [class.bi-chevron-down]="!isExpanded()">
       </i>
+
     </button>
-  </div>
+
+  </header>
 
   @if (!hasAnswer) {
-  <p class="text-muted small mt-2 mb-0">
+
+  <p class="evidence-notice" role="status">
+    <i class="bi bi-info-circle" aria-hidden="true"></i>
     Selecciona una respuesta para habilitar las evidencias.
   </p>
+
   }
 
   @if (hasAnswer && !canEdit) {
-  <p class="text-muted small mt-2 mb-0">
-    Las evidencias estarán disponibles cuando se guarde la respuesta.
+
+  <p class="evidence-notice" role="status">
+    <i class="bi bi-info-circle" aria-hidden="true"></i>
+    Las evidencias requieren una respuesta guardada
+    y permisos de edición.
   </p>
+
   }
 
- @if (isExpanded() && hasAnswer && canEdit) {
-  <div id="evaluation-evidence-content" class="mt-3">
+  <div id="evaluation-evidence-content" class="evidence-panel" [hidden]="!isExpanded() || !hasAnswer || !canEdit">
 
-    <span class="badge text-bg-light border">
-      {{ evidences().length }} / 5
-    </span>
-  </div>
+    @if (isExpanded() && hasAnswer && canEdit) {
 
-  @if (evaluationId === null) {
-  <p class="text-muted small mb-0">
-    Las evidencias estarán disponibles después de guardar la evaluación.
-  </p>
-  } @else if (loading()) {
-  <p class="text-muted small mb-0" role="status">
-    Cargando evidencias...
-  </p>
-  } @else if (loadError()) {
-  <div class="d-flex align-items-center gap-2">
-    <p class="text-danger small mb-0">
-      No se pudieron cargar las evidencias.
+    @if (evaluationId === null) {
+
+    <p class="evidence-notice">
+      Las evidencias estarán disponibles después
+      de guardar la evaluación.
     </p>
 
-    <button type="button" class="btn btn-sm btn-outline-secondary" (click)="loadEvidences()">
-      Reintentar
-    </button>
-  </div>
-  } @else if (evidences().length === 0) {
-  <p class="text-muted small mb-0">
-    Este indicador todavía no tiene evidencias registradas.
-  </p>
-  } @else {
-  <div class="d-flex flex-column gap-2">
-    @for (evidence of evidences(); track evidence.id) {
-    <div class="border rounded p-3 bg-light">
-      @switch (evidence.type) {
-      @case ('COMMENT') {
-      <p class="fw-semibold small mb-1">
-        <i class="bi bi-chat-left-text me-2"></i>
-        Comentario
-      </p>
+    } @else if (loading()) {
 
-      <p class="mb-0 evidence-content">
-        {{ evidence.content }}
-      </p>
-      }
-
-      @case ('URL') {
-      <p class="fw-semibold small mb-1">
-        <i class="bi bi-link-45deg me-2"></i>
-        Enlace
-      </p>
-
-      <a [href]="evidence.content" target="_blank" rel="noopener noreferrer">
-        {{ evidence.content }}
-      </a>
-      }
-
-
-      @case ('FILE') {
-      <p class="fw-semibold small mb-1">
-        <i class="bi bi-file-earmark me-2"></i>
-        Archivo adjunto
-      </p>
-
-      <p class="mb-2">
-        {{ evidence.original_filename }}
-      </p>
-
-      <button type="button" class="btn btn-sm btn-outline-secondary" [disabled]="downloadingId() !== null"
-        (click)="downloadEvidence(evidence)">
-        @if (downloadingId() === evidence.id) {
-        <span class="spinner-border spinner-border-sm me-1" aria-hidden="true">
-        </span>
-        Descargando...
-        } @else {
-        <i class="bi bi-download me-1"></i>
-        Descargar
-        }
-      </button>
-      }
-
-      }
-
-      @if (!readonly && canEdit) {
-      <div class="d-flex justify-content-end mt-2">
-        <button type="button" class="btn btn-sm btn-outline-danger"
-          [disabled]="deletingId() !== null || saving() || uploading()" (click)="deleteEvidence(evidence)">
-          @if (deletingId() === evidence.id) {
-          <span class="spinner-border spinner-border-sm me-1" aria-hidden="true">
-          </span>
-          Eliminando...
-          } @else {
-          <i class="bi bi-trash me-1"></i>
-          Eliminar
-          }
-        </button>
-      </div>
-      }
-    </div>
-    }
-  </div>
-  }
-
-  @if (deleteError(); as error) {
-  <p class="text-danger small mt-2" role="alert">
-    {{ error }}
-  </p>
-  }
-
-  @if (downloadError(); as error) {
-  <p class="text-danger small mt-2" role="alert">
-    {{ error }}
-  </p>
-  }
-
-  @if (!readonly && canEdit && evaluationId !== null) {
-  <div class="mt-3">
-    <h6 class="fw-semibold small mb-2">
-      Agregar evidencia
-    </h6>
-
-    <div class="d-flex gap-2 mb-3">
-      <button type="button" class="btn btn-sm" [class.btn-my-purple]="evidenceType() === 'COMMENT'"
-        [class.btn-outline-secondary]="evidenceType() !== 'COMMENT'"
-        [disabled]="saving() || uploading() || deletingId() !== null" (click)="setEvidenceType('COMMENT')">
-        Comentario
-      </button>
-
-      <button type="button" class="btn btn-sm" [class.btn-my-purple]="evidenceType() === 'URL'"
-        [class.btn-outline-secondary]="evidenceType() !== 'URL'"
-        [disabled]="saving() || uploading() || deletingId() !== null" (click)="setEvidenceType('URL')">
-        Enlace
-      </button>
-    </div>
-
-    @if (evidenceType() === 'COMMENT') {
-    <textarea #commentInput class="form-control mb-2" rows="3" maxlength="2000"
-      placeholder="Escribe un comentario que respalde tu respuesta" [value]="evidenceContent()"
-      [disabled]="!canCreate || deletingId() !== null" (input)="setEvidenceContent(commentInput.value)">
-        </textarea>
-    } @else {
-    <input #urlInput type="url" class="form-control mb-2" maxlength="2048" placeholder="https://ejemplo.com/evidencia"
-      [value]="evidenceContent()" [disabled]="!canCreate || deletingId() !== null"
-      (input)="setEvidenceContent(urlInput.value)" />
-    }
-
-    @if (saveError(); as error) {
-    <p class="text-danger small" role="alert">
-      {{ error }}
-    </p>
-    }
-
-    <button type="button" class="btn btn-my-purple btn-sm" [disabled]="
-          !canCreate ||
-          deletingId() !== null ||
-          !evidenceContent().trim()
-        " (click)="createEvidence()">
-      @if (saving()) {
-      Guardando...
-      } @else {
-      Agregar evidencia
-      }
-
-    </button>
-  </div>
-
-  <!-- Formulario para adjuntar archivos -->
-  <div class="mt-3 pt-3 border-top">
-    <h6 class="fw-semibold small mb-2">
-      Adjuntar archivo
-    </h6>
-
-    <input #fileInput type="file" class="form-control" aria-label="Seleccionar archivo de evidencia"
-      accept=".pdf,.png,.jpg,.jpeg,application/pdf,image/png,image/jpeg" [disabled]="!canCreate"
-      (change)="selectFile($event)" />
-
-    <div class="form-text">
-      Formatos permitidos: PDF, PNG y JPEG.
-      Tamaño máximo: 10 MB.
-    </div>
-
-    @if (selectedFile(); as file) {
-    <p class="small text-muted mt-2 mb-0">
-      Archivo seleccionado: {{ file.name }}
-    </p>
-    }
-
-    @if (uploadError(); as error) {
-    <p class="text-danger small mt-2" role="alert">
-      {{ error }}
-    </p>
-    }
-
-    <button type="button" class="btn btn-outline-secondary btn-sm mt-3" [disabled]="!canCreate || !selectedFile()"
-      (click)="uploadEvidence(); fileInput.value = ''">
-      @if (uploading()) {
-      <span class="spinner-border spinner-border-sm me-1" aria-hidden="true">
+    <p class="evidence-notice" role="status">
+      <span class="spinner-border spinner-border-sm" aria-hidden="true">
       </span>
-      Subiendo...
-      } @else {
-      <i class="bi bi-upload me-1"></i>
-      Subir archivo
+      Cargando evidencias...
+    </p>
+
+    } @else if (loadError()) {
+
+    <div class="evidence-load-error">
+
+      <p class="text-danger mb-0" role="alert">
+        No se pudieron cargar las evidencias.
+      </p>
+
+      <button type="button" class="btn btn-outline-secondary evidence-button" (click)="loadEvidences(true)">
+
+        <i class="bi bi-arrow-clockwise" aria-hidden="true"></i>
+        Reintentar
+
+      </button>
+
+    </div>
+
+    } @else if (evidences().length === 0) {
+
+    <div class="evidence-empty">
+
+      <i class="bi bi-folder2-open" aria-hidden="true"></i>
+
+      <p class="mb-0">
+        Este indicador todavía no tiene evidencias registradas.
+      </p>
+
+    </div>
+
+    } @else {
+
+    <div class="evidence-list">
+
+      @for (evidence of evidences(); track evidence.id) {
+
+      <article class="evidence-item">
+
+        @switch (evidence.type) {
+
+        @case ('COMMENT') {
+
+        <h4 class="evidence-item__title">
+          <i class="bi bi-chat-left-text" aria-hidden="true">
+          </i>
+          Comentario
+        </h4>
+
+        <p class="evidence-content">
+          {{ evidence.content }}
+        </p>
+
+        }
+
+        @case ('URL') {
+
+        <h4 class="evidence-item__title">
+          <i class="bi bi-link-45deg" aria-hidden="true">
+          </i>
+          Enlace
+        </h4>
+
+        <a class="evidence-item__link" [href]="evidence.content" target="_blank" rel="noopener noreferrer">
+
+          {{ evidence.content }}
+
+          <i class="bi bi-box-arrow-up-right" aria-hidden="true">
+          </i>
+
+        </a>
+
+        }
+
+        @case ('FILE') {
+
+        <h4 class="evidence-item__title">
+          <i class="bi bi-file-earmark-text" aria-hidden="true">
+          </i>
+          Archivo adjunto
+        </h4>
+
+        <p class="evidence-item__filename">
+          {{ evidence.original_filename }}
+        </p>
+
+        }
+
+        }
+
+        <div class="evidence-item__actions">
+
+          @if (evidence.type === 'FILE') {
+
+          <button type="button" class="btn btn-outline-secondary evidence-button" [disabled]="downloadingId() !== null"
+            (click)="downloadEvidence(evidence)">
+
+            @if (downloadingId() === evidence.id) {
+
+            <span class="spinner-border spinner-border-sm" aria-hidden="true">
+            </span>
+            Descargando...
+
+            } @else {
+
+            <i class="bi bi-download" aria-hidden="true">
+            </i>
+            Descargar
+
+            }
+
+          </button>
+
+          }
+
+          @if (!readonly && canEdit) {
+
+          <button type="button" class="btn btn-outline-danger evidence-button" [disabled]="
+                      deletingId() !== null ||
+                      saving() ||
+                      uploading()
+                    " (click)="deleteEvidence(evidence)">
+
+            @if (deletingId() === evidence.id) {
+
+            <span class="spinner-border spinner-border-sm" aria-hidden="true">
+            </span>
+            Eliminando...
+
+            } @else {
+
+            <i class="bi bi-trash" aria-hidden="true">
+            </i>
+            Eliminar
+
+            }
+
+          </button>
+
+          }
+
+        </div>
+
+      </article>
+
       }
-    </button>
+
+    </div>
+
+    }
+
+    @if (deleteError(); as error) {
+
+    <p class="evidence-error" role="alert">
+      {{ error }}
+    </p>
+
+    }
+
+    @if (downloadError(); as error) {
+
+    <p class="evidence-error" role="alert">
+      {{ error }}
+    </p>
+
+    }
+
+    @if (!readonly && canEdit && evaluationId !== null) {
+
+    @if (evidences().length >= maxEvidences) {
+
+    <p class="evidence-notice" role="status">
+      <i class="bi bi-info-circle" aria-hidden="true"></i>
+      Has alcanzado el límite de evidencias de este indicador.
+    </p>
+
+    }
+
+    <div class="evidence-form">
+
+      <h4 class="evidence-form__title">
+        Agregar evidencia
+      </h4>
+
+      <div class="evidence-type-selector" role="group" aria-label="Tipo de evidencia">
+
+        <button type="button" class="asg-btn evidence-button" [class.asg-btn--primary]="evidenceType() === 'COMMENT'"
+          [class.asg-btn--secondary]="evidenceType() !== 'COMMENT'" [class.btn-my-purple]="evidenceType() === 'COMMENT'"
+          [class.btn-outline-secondary]="evidenceType() !== 'COMMENT'"
+          [attr.aria-pressed]="evidenceType() === 'COMMENT'"
+          [disabled]="saving() || uploading() || deletingId() !== null" (click)="setEvidenceType('COMMENT')">
+
+          <i class="bi bi-chat-left-text" aria-hidden="true"></i>
+          Comentario
+
+        </button>
+
+        <button type="button" class="asg-btn evidence-button" [class.asg-btn--primary]="evidenceType() === 'URL'"
+          [class.asg-btn--secondary]="evidenceType() !== 'URL'" [class.btn-my-purple]="evidenceType() === 'URL'"
+          [class.btn-outline-secondary]="evidenceType() !== 'URL'" [attr.aria-pressed]="evidenceType() === 'URL'"
+          [disabled]="saving() || uploading() || deletingId() !== null" (click)="setEvidenceType('URL')">
+
+          <i class="bi bi-link-45deg" aria-hidden="true"></i>
+          Enlace
+
+        </button>
+
+      </div>
+
+      @if (evidenceType() === 'COMMENT') {
+
+      <label for="evidence-comment" class="evidence-form__label">
+        Comentario de respaldo
+      </label>
+
+      <textarea #commentInput id="evidence-comment" class="form-control" rows="3" maxlength="2000"
+        placeholder="Escribe un comentario que respalde tu respuesta" aria-describedby="evidence-comment-help"
+        [value]="evidenceContent()" [disabled]="!canCreate || deletingId() !== null"
+        (input)="setEvidenceContent(commentInput.value)">
+            </textarea>
+
+      <p id="evidence-comment-help" class="evidence-form__help">
+        Máximo 2000 caracteres.
+      </p>
+
+      } @else {
+
+      <label for="evidence-url" class="evidence-form__label">
+        Enlace de respaldo
+      </label>
+
+      <input #urlInput id="evidence-url" type="url" class="form-control" maxlength="2048"
+        placeholder="https://ejemplo.com/evidencia" aria-describedby="evidence-url-help" [value]="evidenceContent()"
+        [disabled]="!canCreate || deletingId() !== null" (input)="setEvidenceContent(urlInput.value)" />
+
+      <p id="evidence-url-help" class="evidence-form__help">
+        Introduce un enlace HTTPS válido.
+      </p>
+
+      }
+
+      @if (saveError(); as error) {
+
+      <p class="evidence-error" role="alert">
+        {{ error }}
+      </p>
+
+      }
+
+      <div class="evidence-form__actions">
+
+        <button type="button" class="btn btn-my-purple evidence-button" [disabled]="
+                !canCreate ||
+                deletingId() !== null ||
+                !evidenceContent().trim()
+              " (click)="createEvidence()">
+
+          @if (saving()) {
+
+          <span class="spinner-border spinner-border-sm" aria-hidden="true">
+          </span>
+          Guardando...
+
+          } @else {
+
+          <i class="bi bi-plus-lg" aria-hidden="true"></i>
+          Agregar evidencia
+
+          }
+
+        </button>
+
+      </div>
+
+    </div>
+
+    <div class="evidence-upload">
+
+      <span class="evidence-upload__icon" aria-hidden="true">
+        <i class="bi bi-cloud-arrow-up"></i>
+      </span>
+
+      <h4 class="evidence-form__title">
+        Adjuntar archivo
+      </h4>
+
+      <p id="evidence-file-help" class="evidence-form__help">
+        PDF, PNG o JPEG · Máximo 10 MB
+      </p>
+
+      <input #fileInput id="evidence-file" type="file" class="visually-hidden evidence-upload__input"
+        aria-describedby="evidence-file-help" accept=".pdf,.png,.jpg,.jpeg,application/pdf,image/png,image/jpeg"
+        [disabled]="!canCreate" (change)="selectFile($event)" />
+
+      <label for="evidence-file" class="asg-btn asg-btn--primary evidence-button evidence-upload__picker"
+        [class.evidence-upload__picker--disabled]="!canCreate">
+
+        <i class="bi bi-folder2-open" aria-hidden="true"></i>
+        Seleccionar archivo
+
+      </label>
+
+      @if (selectedFile(); as file) {
+
+      <p class="evidence-upload__filename" role="status">
+
+        <i class="bi bi-file-earmark-check" aria-hidden="true">
+        </i>
+
+        {{ file.name }}
+
+      </p>
+
+      } @else {
+
+      <p class="evidence-form__help" role="status">
+        Ningún archivo seleccionado
+      </p>
+
+      }
+
+      @if (uploadError(); as error) {
+
+      <p class="evidence-error" role="alert">
+        {{ error }}
+      </p>
+
+      }
+
+      <button type="button" class="btn btn-outline-secondary evidence-button" [disabled]="!canCreate || !selectedFile()"
+        (click)="uploadEvidence(); fileInput.value = ''">
+
+        @if (uploading()) {
+
+        <span class="spinner-border spinner-border-sm" aria-hidden="true">
+        </span>
+        Subiendo...
+
+        } @else {
+
+        <i class="bi bi-upload" aria-hidden="true"></i>
+        Subir archivo
+
+        }
+
+      </button>
+
+    </div>
+
+    }
+
+    }
+
   </div>
-  }
-  }
+
 </section>

@@ -408,6 +408,32 @@
     gap: var(--asg-space-2);
     padding: var(--asg-space-3);
   }
+
+  .evaluation-navigation {
+    &__actions {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: var(--asg-space-2);
+    }
+
+    &__previous,
+    &__next,
+    &__submit {
+      width: 100%;
+      margin: 0;
+      padding-inline: var(--asg-space-2);
+
+      font-size: var(--asg-font-size-sm);
+    }
+
+    &__next:only-child {
+      grid-column: 2;
+    }
+
+    &__submit {
+      grid-column: 1 / -1;
+    }
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -422,4 +448,66 @@
 
 .sw-gris {
   color: #7c8c6f;
+}
+
+/* HU-057 / T03 — Navegación del cuestionario */
+
+.evaluation-navigation {
+  display: grid;
+  gap: var(--asg-space-3);
+
+  min-width: 0;
+  padding-top: var(--asg-space-4);
+
+  border-top: 1px solid #d9e1e8;
+
+  &__actions {
+    display: flex;
+    align-items: stretch;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    gap: var(--asg-space-3);
+
+    min-width: 0;
+  }
+
+  &__previous,
+  &__next,
+  &__submit {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--asg-space-2);
+
+    min-height: 48px;
+    min-width: 0;
+    max-width: 100%;
+
+    white-space: normal;
+  }
+
+  &__previous {
+    margin-inline-end: auto;
+  }
+
+  &__notice {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--asg-space-2);
+
+    margin: 0;
+    padding: var(--asg-space-3);
+
+    background: var(--asg-color-surface-muted);
+    border-radius: var(--asg-radius-sm);
+
+    color: var(--asg-color-text-muted);
+    font-size: var(--asg-font-size-sm);
+
+    overflow-wrap: anywhere;
+
+    i {
+      flex-shrink: 0;
+    }
+  }
 }

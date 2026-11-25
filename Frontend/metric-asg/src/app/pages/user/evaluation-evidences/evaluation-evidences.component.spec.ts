@@ -964,5 +964,224 @@ describe('EvaluationEvidencesComponent', () => {
         // La respuesta no debe modificar las evidencias.
         expect(component.evidences()).toEqual(evidencesBeforeDestroy);
     });
+    describe('Responsive evidence presentation', () => {
 
+        function enableEvidencePanel(): void {
+            fixture.componentRef.setInput('hasAnswer', true);
+            fixture.componentRef.setInput('canEdit', true);
+
+            fixture.detectChanges();
+        }
+
+        it('should associate the toggle with the complete evidence panel', () => {
+            enableEvidencePanel();
+
+            const toggle: HTMLButtonElement =
+                fixture.nativeElement.querySelector(
+                    '[aria-controls="evaluation-evidence-content"]'
+                );
+
+            const panel: HTMLElement =
+                fixture.nativeElement.querySelector(
+                    '#evaluation-evidence-content'
+                );
+
+            expect(toggle).not.toBeNull();
+            expect(panel).not.toBeNull();
+
+            expect(toggle.getAttribute('aria-expanded'))
+                .toBe('false');
+
+            expect(panel.hidden).toBeTrue();
+
+            toggle.click();
+            fixture.detectChanges();
+
+            expect(toggle.getAttribute('aria-expanded'))
+                .toBe('true');
+
+            expect(panel.hidden).toBeFalse();
+
+            expect(panel.querySelector('.evidence-form'))
+                .not.toBeNull();
+
+            expect(panel.querySelector('.evidence-upload'))
+                .not.toBeNull();
+        });
+
+        it('should disable expansion when the question has no answer', () => {
+            fixture.componentRef.setInput('hasAnswer', false);
+            fixture.componentRef.setInput('canEdit', true);
+
+            fixture.detectChanges();
+
+            const toggle: HTMLButtonElement =
+                fixture.nativeElement.querySelector(
+                    '[aria-controls="evaluation-evidence-content"]'
+                );
+
+            expect(toggle.disabled).toBeTrue();
+        });
+
+        it('should provide an accessible label for the comment field', () => {
+            enableEvidencePanel();
+
+            component.toggleExpanded();
+            fixture.detectChanges();
+
+            const field: HTMLTextAreaElement =
+                fixture.nativeElement.querySelector(
+                    '#evidence-comment'
+                );
+
+            const label: HTMLLabelElement =
+                fixture.nativeElement.querySelector(
+                    'label[for="evidence-comment"]'
+                );
+
+            expect(field).not.toBeNull();
+            expect(label).not.toBeNull();
+
+            expect(label.control).toBe(field);
+
+            expect(field.maxLength).toBe(2000);
+        });
+
+        it('should update the pressed state when changing evidence type', () => {
+            enableEvidencePanel();
+
+            component.toggleExpanded();
+            fixture.detectChanges();
+
+            const buttons: NodeListOf<HTMLButtonElement> =
+                fixture.nativeElement.querySelectorAll(
+                    '.evidence-type-selector button'
+                );
+
+            expect(buttons[0].getAttribute('aria-pressed'))
+                .toBe('true');
+
+            expect(buttons[1].getAttribute('aria-pressed'))
+                .toBe('false');
+
+            buttons[1].click();
+            fixture.detectChanges();
+
+            expect(component.evidenceType()).toBe('URL');
+
+            expect(buttons[0].getAttribute('aria-pressed'))
+                .toBe('false');
+
+            expect(buttons[1].getAttribute('aria-pressed'))
+                .toBe('true');
+
+            const field: HTMLInputElement =
+                fixture.nativeElement.querySelector('#evidence-url');
+
+            expect(field).not.toBeNull();
+            expect(field.type).toBe('url');
+            expect(field.maxLength).toBe(2048);
+        });
+
+        it('should preserve the native file input and its accessible label', () => {
+            enableEvidencePanel();
+
+            component.toggleExpanded();
+            fixture.detectChanges();
+
+            const input: HTMLInputElement =
+                fixture.nativeElement.querySelector('#evidence-file');
+
+            const picker: HTMLLabelElement =
+                fixture.nativeElement.querySelector(
+                    '.evidence-upload__picker'
+                );
+
+            expect(input).not.toBeNull();
+            expect(input.type).toBe('file');
+
+            expect(picker.control).toBe(input);
+
+            expect(input.getAttribute('aria-describedby'))
+                .toBe('evidence-file-help');
+
+            expect(input.accept).toContain('application/pdf');
+            expect(input.accept).toContain('image/png');
+            expect(input.accept).toContain('image/jpeg');
+        });
+
+        it('should keep the panel expanded when retrying a failed request', () => {
+            enableEvidencePanel();
+
+            getEvidencesSpy.and.returnValue(
+                throwError(() => new Error('Load failed'))
+            );
+
+            component.loadEvidences();
+            component.toggleExpanded();
+
+            fixture.detectChanges();
+
+            expect(component.loadError()).toBeTrue();
+            expect(component.isExpanded()).toBeTrue();
+
+            getEvidencesSpy.and.returnValue(of([mockEvidence]));
+
+            const retry: HTMLButtonElement =
+                fixture.nativeElement.querySelector(
+                    '.evidence-load-error button'
+                );
+
+            expect(retry).not.toBeNull();
+
+            retry.click();
+            fixture.detectChanges();
+
+            expect(component.loadError()).toBeFalse();
+            expect(component.isExpanded()).toBeTrue();
+            expect(component.evidences()).toEqual([mockEvidence]);
+        });
+
+        it('should collapse the evidence panel when changing indicators', () => {
+            enableEvidencePanel();
+
+            component.toggleExpanded();
+
+            expect(component.isExpanded()).toBeTrue();
+
+            fixture.componentRef.setInput('indicatorId', 6);
+            fixture.detectChanges();
+
+            expect(component.isExpanded()).toBeFalse();
+        });
+
+        it('should display the evidence limit and disable creation controls', () => {
+            enableEvidencePanel();
+
+            component.evidences.set(
+                Array.from({ length: 5 }, (_, index) => ({
+                    ...mockEvidence,
+                    id: index + 1
+                }))
+            );
+
+            component.toggleExpanded();
+
+            fixture.detectChanges();
+
+            const input: HTMLInputElement =
+                fixture.nativeElement.querySelector('#evidence-file');
+
+            const textarea: HTMLTextAreaElement =
+                fixture.nativeElement.querySelector('#evidence-comment');
+
+            expect(component.canCreate).toBeFalse();
+            expect(input.disabled).toBeTrue();
+            expect(textarea.disabled).toBeTrue();
+
+            expect(fixture.nativeElement.textContent)
+                .toContain('Has alcanzado el límite de evidencias');
+        });
+
+    });
 });

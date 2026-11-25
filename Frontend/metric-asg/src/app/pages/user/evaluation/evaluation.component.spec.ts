@@ -1936,5 +1936,149 @@ describe('EvaluationComponent', () => {
     // El usuario ya no puede editar.
     expect(component.canEditEvaluation()).toBeFalse();
   });
+  describe('Responsive evaluation navigation', () => {
 
+    it('should only display the next button on the first question', () => {
+      component.structure.set(multiAmbitStructure);
+
+      fixture.detectChanges();
+
+      expect(
+        fixture.nativeElement.querySelector(
+          '.evaluation-navigation__previous'
+        )
+      ).toBeNull();
+
+      expect(
+        fixture.nativeElement.querySelector(
+          '.evaluation-navigation__next'
+        )
+      ).not.toBeNull();
+
+      expect(
+        fixture.nativeElement.querySelector(
+          '.evaluation-navigation__submit'
+        )
+      ).toBeNull();
+    });
+
+    it('should display previous and next buttons on intermediate questions', () => {
+      component.structure.set(multiAmbitStructure);
+      component.question.set(1);
+
+      fixture.detectChanges();
+
+      expect(
+        fixture.nativeElement.querySelector(
+          '.evaluation-navigation__previous'
+        )
+      ).not.toBeNull();
+
+      expect(
+        fixture.nativeElement.querySelector(
+          '.evaluation-navigation__next'
+        )
+      ).not.toBeNull();
+    });
+
+    it('should display the submit button on the final question', () => {
+      component.structure.set(multiAmbitStructure);
+      component.ambit.set(2);
+      component.question.set(0);
+
+      fixture.detectChanges();
+
+      expect(
+        fixture.nativeElement.querySelector(
+          '.evaluation-navigation__previous'
+        )
+      ).not.toBeNull();
+
+      expect(
+        fixture.nativeElement.querySelector(
+          '.evaluation-navigation__next'
+        )
+      ).toBeNull();
+
+      expect(
+        fixture.nativeElement.querySelector(
+          '.evaluation-navigation__submit'
+        )
+      ).not.toBeNull();
+    });
+
+    it('should navigate through the new next and previous buttons', () => {
+      component.structure.set(multiAmbitStructure);
+
+      fixture.detectChanges();
+
+      const next: HTMLButtonElement =
+        fixture.nativeElement.querySelector(
+          '.evaluation-navigation__next'
+        );
+
+      next.click();
+      fixture.detectChanges();
+
+      expect(component.currentQuestionNumber()).toBe(2);
+
+      const previous: HTMLButtonElement =
+        fixture.nativeElement.querySelector(
+          '.evaluation-navigation__previous'
+        );
+
+      previous.click();
+      fixture.detectChanges();
+
+      expect(component.currentQuestionNumber()).toBe(1);
+    });
+
+    it('should disable navigation during pending evidence operations', () => {
+      component.structure.set(multiAmbitStructure);
+      component.question.set(1);
+
+      fixture.detectChanges();
+
+      component.onEvidenceOperationPending(true);
+      fixture.detectChanges();
+
+      const previous: HTMLButtonElement =
+        fixture.nativeElement.querySelector(
+          '.evaluation-navigation__previous'
+        );
+
+      const next: HTMLButtonElement =
+        fixture.nativeElement.querySelector(
+          '.evaluation-navigation__next'
+        );
+
+      expect(previous.disabled).toBeTrue();
+      expect(next.disabled).toBeTrue();
+
+      component.onEvidenceOperationPending(false);
+      fixture.detectChanges();
+
+      expect(previous.disabled).toBeFalse();
+      expect(next.disabled).toBeFalse();
+    });
+
+    it('should disable the submit button during pending evidence operations', () => {
+      component.structure.set(multiAmbitStructure);
+      component.ambit.set(2);
+      component.question.set(0);
+
+      fixture.detectChanges();
+
+      component.onEvidenceOperationPending(true);
+      fixture.detectChanges();
+
+      const submit: HTMLButtonElement =
+        fixture.nativeElement.querySelector(
+          '.evaluation-navigation__submit'
+        );
+
+      expect(submit.disabled).toBeTrue();
+    });
+
+  });
 });
