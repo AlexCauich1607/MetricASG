@@ -329,8 +329,287 @@ describe('EvaluationComponent', () => {
         .toBe('2 de 4 preguntas respondidas');
     });
 
+
+
   });
 
+  describe('Responsive question presentation', () => {
+
+    it('should initialize the global question number at one', () => {
+      expect(component.currentQuestionNumber()).toBe(1);
+    });
+
+    it('should return zero when no current question exists', () => {
+      component.structure.set(null);
+
+      expect(component.currentQuestionNumber()).toBe(0);
+    });
+
+    it('should return zero for an invalid question index', () => {
+      component.question.set(99);
+
+      expect(component.currentQuestionNumber()).toBe(0);
+    });
+
+    it('should calculate the global question number across ambits', () => {
+      component.structure.set(multiAmbitStructure);
+
+      expect(component.currentQuestionNumber()).toBe(1);
+
+      component.nextQuestion();
+
+      expect(component.currentQuestionNumber()).toBe(2);
+
+      component.nextQuestion();
+
+      expect(component.ambit()).toBe(1);
+      expect(component.question()).toBe(0);
+      expect(component.currentQuestionNumber()).toBe(3);
+
+      component.nextQuestion();
+
+      expect(component.ambit()).toBe(2);
+      expect(component.question()).toBe(0);
+      expect(component.currentQuestionNumber()).toBe(4);
+    });
+
+    it('should update the global question number when navigating backwards', () => {
+      component.structure.set(multiAmbitStructure);
+      component.ambit.set(2);
+      component.question.set(0);
+
+      expect(component.currentQuestionNumber()).toBe(4);
+
+      component.beforeQuestion();
+
+      expect(component.currentQuestionNumber()).toBe(3);
+
+      component.beforeQuestion();
+
+      expect(component.currentQuestionNumber()).toBe(2);
+
+      component.beforeQuestion();
+
+      expect(component.currentQuestionNumber()).toBe(1);
+    });
+
+    it('should keep question position independent from answered progress', () => {
+      component.structure.set(multiAmbitStructure);
+
+      component.nextQuestion();
+      component.nextQuestion();
+
+      expect(component.currentQuestionNumber()).toBe(3);
+      expect(component.answeredQuestions()).toBe(0);
+      expect(component.globalProgress()).toBe(0);
+    });
+    it('should display the corresponding icon for each ambit', () => {
+      component.structure.set(multiAmbitStructure);
+
+      expect(component.currentAmbitIcon()).toBe('bi bi-tree');
+
+      component.ambit.set(1);
+
+      expect(component.currentAmbitIcon()).toBe('bi bi-people');
+
+      component.ambit.set(2);
+
+      expect(component.currentAmbitIcon()).toBe('bi bi-bank');
+    });
+
+    it('should normalize the ambit letter before selecting its icon', () => {
+      component.structure.set({
+        ambits: [
+          {
+            ...multiAmbitStructure.ambits[0],
+            letter: ' a '
+          }
+        ]
+      });
+
+      expect(component.currentAmbitIcon()).toBe('bi bi-tree');
+    });
+
+    it('should use a fallback icon for unknown ambits', () => {
+      component.structure.set({
+        ambits: [
+          {
+            ...multiAmbitStructure.ambits[0],
+            letter: 'X'
+          }
+        ]
+      });
+
+      expect(component.currentAmbitIcon()).toBe('bi bi-bar-chart');
+    });
+
+    it('should use a fallback icon when no ambit exists', () => {
+      component.structure.set(null);
+
+      expect(component.currentAmbitIcon()).toBe('bi bi-bar-chart');
+    });
+    it('should render the current question and its global position', () => {
+      component.structure.set(multiAmbitStructure);
+      component.ambit.set(1);
+      component.question.set(0);
+
+      fixture.detectChanges();
+
+      const position: HTMLElement =
+        fixture.nativeElement.querySelector(
+          '.evaluation-question-header__position'
+        );
+
+      const title: HTMLElement =
+        fixture.nativeElement.querySelector(
+          '.evaluation-question-title'
+        );
+
+      expect(position.textContent?.replace(/\s+/g, ' ').trim())
+        .toBe('Pregunta 3 de 4');
+
+      expect(title.textContent?.trim())
+        .toBe('Pregunta social 1');
+
+      expect(title.tagName).toBe('H2');
+    });
+
+    it('should group native radio inputs accessibly', () => {
+      component.structure.set(multiAmbitStructure);
+
+      fixture.detectChanges();
+
+      const fieldset: HTMLFieldSetElement =
+        fixture.nativeElement.querySelector(
+          '.evaluation-answers'
+        );
+
+      const radios = Array.from(
+        fieldset.querySelectorAll<HTMLInputElement>(
+          'input[type="radio"]'
+        )
+      );
+
+      expect(fieldset.tagName).toBe('FIELDSET');
+
+      expect(fieldset.getAttribute('aria-labelledby'))
+        .toBe('evaluation-question-title');
+
+      expect(fieldset.getAttribute('aria-describedby'))
+        .toBe('evaluation-question-description');
+
+      expect(radios.length).toBe(2);
+
+      radios.forEach(radio => {
+        expect(radio.name).toBe('indicator-1');
+        expect(radio.closest('label')).not.toBeNull();
+      });
+    });
+    it('should update the selected answer through the native radio input',
+      fakeAsync(() => {
+
+        component.structure.set(multiAmbitStructure);
+
+        fixture.detectChanges();
+
+        const radios: NodeListOf<HTMLInputElement> =
+          fixture.nativeElement.querySelectorAll(
+            '.evaluation-answer__radio'
+          );
+
+        radios[0].click();
+
+        fixture.detectChanges();
+
+        expect(component.responses().get(1)).toBe(1);
+        expect(component.answeredQuestions()).toBe(1);
+
+        expect(radios[0].checked).toBeTrue();
+
+        expect(
+          radios[0].closest('label')?.classList.contains(
+            'evaluation-answer--selected'
+          )
+        ).toBeTrue();
+
+        radios[1].click();
+
+        fixture.detectChanges();
+
+        expect(component.responses().get(1)).toBe(2);
+        expect(component.answeredQuestions()).toBe(1);
+
+        expect(radios[0].checked).toBeFalse();
+        expect(radios[1].checked).toBeTrue();
+
+        expect(
+          radios[0].closest('label')?.classList.contains(
+            'evaluation-answer--selected'
+          )
+        ).toBeFalse();
+
+        expect(
+          radios[1].closest('label')?.classList.contains(
+            'evaluation-answer--selected'
+          )
+        ).toBeTrue();
+
+        tick(800);
+      })
+    );
+    it('should disable answer options for read-only roles', () => {
+      component.structure.set(multiAmbitStructure);
+
+      selectedRole.set(CompanyRole.AUDITOR);
+
+      fixture.detectChanges();
+
+      const radios: NodeListOf<HTMLInputElement> =
+        fixture.nativeElement.querySelectorAll(
+          '.evaluation-answer__radio'
+        );
+
+      expect(radios.length).toBe(2);
+
+      radios.forEach(radio => {
+        expect(radio.disabled).toBeTrue();
+
+        expect(
+          radio.closest('label')?.classList.contains(
+            'evaluation-answer--disabled'
+          )
+        ).toBeTrue();
+      });
+    });
+
+    it('should disable answers while an evidence operation is pending', () => {
+      component.structure.set(multiAmbitStructure);
+
+      component.onEvidenceOperationPending(true);
+
+      fixture.detectChanges();
+
+      const radios: NodeListOf<HTMLInputElement> =
+        fixture.nativeElement.querySelectorAll(
+          '.evaluation-answer__radio'
+        );
+
+      expect(radios.length).toBe(2);
+
+      radios.forEach(radio => {
+        expect(radio.disabled).toBeTrue();
+      });
+
+      component.onEvidenceOperationPending(false);
+
+      fixture.detectChanges();
+
+      radios.forEach(radio => {
+        expect(radio.disabled).toBeFalse();
+      });
+    });
+
+  });
 
   [
     {

@@ -77,6 +77,44 @@ export class EvaluationComponent {
     return ambit?.indicators[this.question()] ?? null;
   });
 
+  readonly currentQuestionNumber = computed(() => {
+    const structure = this.structure();
+
+    if (!structure || !this.currentQuestion()) {
+      return 0;
+    }
+
+    const previousQuestions = structure.ambits
+      .slice(0, this.ambit())
+      .reduce(
+        (total, ambit) => total + ambit.indicators.length,
+        0
+      );
+
+    return previousQuestions + this.question() + 1;
+  });
+
+  readonly currentAmbitIcon = computed(() => {
+    const letter = this.currentAmbit()
+      ?.letter
+      ?.trim()
+      .toUpperCase();
+
+    switch (letter) {
+      case 'A':
+        return 'bi bi-tree';
+
+      case 'S':
+        return 'bi bi-people';
+
+      case 'G':
+        return 'bi bi-bank';
+
+      default:
+        return 'bi bi-bar-chart';
+    }
+  });
+
   readonly progreso = computed(() => {
     const ambit = this.currentAmbit();
 
@@ -752,23 +790,4 @@ export class EvaluationComponent {
     return { r, g, b };
   }
 
-  hexToRgbString(hex: string): string {
-    hex = hex.replace('#', '');
-
-    if (hex.length === 3) {
-      hex =
-        hex[0] +
-        hex[0] +
-        hex[1] +
-        hex[1] +
-        hex[2] +
-        hex[2];
-    }
-
-    const r = parseInt(hex.substring(0, 2), 16);
-    const g = parseInt(hex.substring(2, 4), 16);
-    const b = parseInt(hex.substring(4, 6), 16);
-
-    return `${r}, ${g}, ${b}`;
-  }
 }
