@@ -42,6 +42,83 @@ describe('EvaluationComponent', () => {
       }
     ]
   };
+  const multiAmbitStructure: EvaluationStructure = {
+    ambits: [
+      {
+        id: 1,
+        name: 'Ambiental',
+        color: '#00AA00',
+        letter: 'A',
+        indicators: [
+          {
+            id: 1,
+            question: 'Pregunta ambiental 1',
+            answers: [
+              {
+                id: 1,
+                maturity_level_id: 1,
+                text: 'Respuesta inicial'
+              },
+              {
+                id: 2,
+                maturity_level_id: 2,
+                text: 'Respuesta alternativa'
+              }
+            ]
+          },
+          {
+            id: 2,
+            question: 'Pregunta ambiental 2',
+            answers: [
+              {
+                id: 3,
+                maturity_level_id: 1,
+                text: 'Respuesta ambiental'
+              }
+            ]
+          }
+        ]
+      },
+      {
+        id: 2,
+        name: 'Social',
+        color: '#1565C0',
+        letter: 'S',
+        indicators: [
+          {
+            id: 3,
+            question: 'Pregunta social 1',
+            answers: [
+              {
+                id: 4,
+                maturity_level_id: 1,
+                text: 'Respuesta social'
+              }
+            ]
+          }
+        ]
+      },
+      {
+        id: 3,
+        name: 'Gobernanza',
+        color: '#4823A4',
+        letter: 'G',
+        indicators: [
+          {
+            id: 4,
+            question: 'Pregunta de gobernanza 1',
+            answers: [
+              {
+                id: 5,
+                maturity_level_id: 1,
+                text: 'Respuesta de gobernanza'
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  };
 
   let getDraftSpy: jasmine.Spy;
   let saveDraftSpy: jasmine.Spy;
@@ -99,6 +176,159 @@ describe('EvaluationComponent', () => {
 
   it('should create', () => {
     expect(component).toBeTruthy();
+  });
+
+  describe('Global evaluation progress', () => {
+
+    it('should initialize global progress at zero', () => {
+      expect(component.totalQuestions()).toBe(1);
+      expect(component.answeredQuestions()).toBe(0);
+      expect(component.globalProgress()).toBe(0);
+    });
+
+    it('should return zero progress when no structure exists', () => {
+      component.structure.set(null);
+
+      expect(component.totalQuestions()).toBe(0);
+      expect(component.globalProgress()).toBe(0);
+    });
+
+    it('should return zero progress for an empty structure', () => {
+      component.structure.set({ ambits: [] });
+
+      expect(component.totalQuestions()).toBe(0);
+      expect(component.answeredQuestions()).toBe(0);
+      expect(component.globalProgress()).toBe(0);
+    });
+
+    it('should calculate progress across all ambits', fakeAsync(() => {
+      component.structure.set(multiAmbitStructure);
+
+      expect(component.totalQuestions()).toBe(4);
+      expect(component.globalProgress()).toBe(0);
+
+      component.selectAnswer(1, 1, 1);
+
+      expect(component.answeredQuestions()).toBe(1);
+      expect(component.globalProgress()).toBe(25);
+
+      component.selectAnswer(2, 3, 1);
+
+      expect(component.answeredQuestions()).toBe(2);
+      expect(component.globalProgress()).toBe(50);
+
+      component.ambit.set(1);
+      component.question.set(0);
+      component.selectAnswer(3, 4, 2);
+
+      expect(component.answeredQuestions()).toBe(3);
+      expect(component.globalProgress()).toBe(75);
+
+      component.ambit.set(2);
+      component.question.set(0);
+      component.selectAnswer(4, 5, 3);
+
+      expect(component.answeredQuestions()).toBe(4);
+      expect(component.globalProgress()).toBe(100);
+
+      tick(800);
+    }));
+
+    it('should not increase progress when an answer changes', fakeAsync(() => {
+      component.structure.set(multiAmbitStructure);
+
+      component.selectAnswer(1, 1, 1);
+
+      expect(component.answeredQuestions()).toBe(1);
+      expect(component.globalProgress()).toBe(25);
+
+      component.selectAnswer(1, 2, 1);
+
+      expect(component.responses().get(1)).toBe(2);
+      expect(component.answeredQuestions()).toBe(1);
+      expect(component.globalProgress()).toBe(25);
+
+      tick(800);
+    }));
+
+    it('should preserve global progress when changing the current ambit', () => {
+      component.structure.set(multiAmbitStructure);
+
+      component.responses.set(new Map([
+        [1, 1],
+        [2, 3]
+      ]));
+
+      expect(component.globalProgress()).toBe(50);
+
+      component.ambit.set(1);
+      component.question.set(0);
+
+      expect(component.globalProgress()).toBe(50);
+
+      component.ambit.set(2);
+      component.question.set(0);
+
+      expect(component.globalProgress()).toBe(50);
+    });
+
+    it('should not round incomplete progress up to 100 percent', () => {
+      const templateAmbit = multiAmbitStructure.ambits[0];
+      const templateIndicator = templateAmbit.indicators[0];
+
+      const indicators = Array.from(
+        { length: 201 },
+        (_, index) => ({
+          ...templateIndicator,
+          id: index + 1
+        })
+      );
+
+      component.structure.set({
+        ambits: [
+          {
+            ...templateAmbit,
+            indicators
+          }
+        ]
+      });
+
+      component.responses.set(new Map(
+        indicators.slice(0, 200).map(
+          indicator => [indicator.id, 1]
+        )
+      ));
+
+      expect(component.totalQuestions()).toBe(201);
+      expect(component.answeredQuestions()).toBe(200);
+      expect(component.globalProgress()).toBe(99);
+    });
+
+    it('should render the global progress accessibly', () => {
+      component.structure.set(multiAmbitStructure);
+
+      component.responses.set(new Map([
+        [1, 1],
+        [2, 3]
+      ]));
+
+      fixture.detectChanges();
+
+      const progressbar: HTMLElement =
+        fixture.nativeElement.querySelector(
+          '.evaluation-progress__track'
+        );
+
+      expect(progressbar).toBeTruthy();
+      expect(progressbar.getAttribute('role')).toBe('progressbar');
+      expect(progressbar.getAttribute('aria-valuemin')).toBe('0');
+      expect(progressbar.getAttribute('aria-valuemax')).toBe('100');
+      expect(progressbar.getAttribute('aria-valuenow')).toBe('50');
+
+      expect(progressbar.getAttribute('aria-valuetext'))
+        .toBe('2 de 4 preguntas respondidas');
+    });
+
   });
 
 
@@ -564,6 +794,8 @@ describe('EvaluationComponent', () => {
     expect(component.responses().get(1)).toBe(1);
     expect(component.completadas().get(1)).toBe(1);
     expect(component.progreso()).toBe(100);
+    expect(component.answeredQuestions()).toBe(1);
+    expect(component.globalProgress()).toBe(100);
 
     expect(component.autosaveStatus()).toBe('saved');
 
@@ -580,6 +812,8 @@ describe('EvaluationComponent', () => {
     expect(component.responses().size).toBe(0);
     expect(component.completadas().size).toBe(0);
     expect(component.progreso()).toBe(0);
+    expect(component.answeredQuestions()).toBe(0);
+    expect(component.globalProgress()).toBe(0);
 
     expect(component.autosaveStatus()).toBe('idle');
 
@@ -633,6 +867,8 @@ describe('EvaluationComponent', () => {
     expect(component.responses().get(1)).toBe(1);
     expect(component.completadas().get(1)).toBe(1);
     expect(component.progreso()).toBe(100);
+    expect(component.answeredQuestions()).toBe(1);
+    expect(component.globalProgress()).toBe(100);
 
     expect(component.autosaveStatus()).toBe('saved');
     expect(saveDraftSpy).not.toHaveBeenCalled();
@@ -664,6 +900,8 @@ describe('EvaluationComponent', () => {
     expect(component.responses().size).toBe(0);
     expect(component.completadas().size).toBe(0);
     expect(component.progreso()).toBe(0);
+    expect(component.answeredQuestions()).toBe(0);
+    expect(component.globalProgress()).toBe(0);
 
     expect(saveDraftSpy).not.toHaveBeenCalled();
   });

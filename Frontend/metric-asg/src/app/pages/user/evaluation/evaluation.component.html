@@ -1,61 +1,71 @@
-<div class="sw-split-ly color-bg">
-  <div>
-    <h2 class="text-my-purple text-center fw-bold mb-2">
-      <i class="bi bi-clipboard-data"></i> Evaluación ASG
-    </h2>
+<div class="evaluation-shell">
+  <div class="container evaluation-container">
 
-    <h6 class="sw-gris text-center mb-4 sw-fs-7">
-      <i class="bi bi-calendar-fill"></i>
-      Semestre {{mesFuturo}} {{anioFuturo != anioActual ? anioFuturo : ""}}
-      - {{mesActual}} {{anioActual}}
-    </h6>
-    <div class="d-flex justify-content-center align-items-center gap-2 mb-3 sw-fs-7" role="status" aria-live="polite">
+    <header class="evaluation-header">
+      <div class="evaluation-header__identity">
 
-      @if (
-      hasUnsavedResponses() &&
-      autosaveStatus() === 'idle'
-      ) {
-      <span class="text-warning">
-        <i class="bi bi-exclamation-triangle-fill me-1"></i>
-        Hay respuestas sin guardar.
-        Los cambios pendientes podrían perderse al salir.
-      </span>
-      }
+        <h1 class="evaluation-header__title">
+          Evaluación ASG
+        </h1>
 
-      @switch (autosaveStatus()) {
-      @case ('pending') {
-      <span class="text-secondary">
-        <i class="bi bi-clock"></i>
-        Cambios pendientes de guardar
-      </span>
-      }
+        <p class="evaluation-header__period">
+          <i class="bi bi-calendar3" aria-hidden="true"></i>
 
-      @case ('saving') {
-      <span class="text-secondary">
-        <span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>
-        Guardando respuestas...
-      </span>
-      }
+          <span>
+            {{ mesFuturo }}
+            {{ anioFuturo !== anioActual ? anioFuturo : '' }}
+            – {{ mesActual }} {{ anioActual }}
+          </span>
+        </p>
 
-      @case ('saved') {
-      <span class="text-success">
-        <i class="bi bi-check-circle-fill"></i>
-        Respuestas guardadas
-      </span>
-      }
+      </div>
+      <div class="evaluation-header__autosave" role="status" aria-live="polite">
+        @if (
+        hasUnsavedResponses() &&
+        autosaveStatus() === 'idle'
+        ) {
+        <span class="text-warning">
+          <i class="bi bi-exclamation-triangle-fill me-1"></i>
+          Hay respuestas sin guardar.
+          Los cambios pendientes podrían perderse al salir.
+        </span>
+        }
 
-      @case ('error') {
-      <span class="text-danger">
-        <i class="bi bi-exclamation-circle-fill"></i>
-        No se pudieron guardar las respuestas
-      </span>
+        @switch (autosaveStatus()) {
+        @case ('pending') {
+        <span class="text-secondary">
+          <i class="bi bi-clock"></i>
+          Cambios pendientes de guardar
+        </span>
+        }
 
-      <button type="button" class="btn btn-sm btn-outline-danger" (click)="retrySaveDraft()">
-        Reintentar
-      </button>
-      }
-      }
-    </div>
+        @case ('saving') {
+        <span class="text-secondary">
+          <span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>
+          Guardando respuestas...
+        </span>
+        }
+
+        @case ('saved') {
+        <span class="text-success">
+          <i class="bi bi-check-circle-fill"></i>
+          Respuestas guardadas
+        </span>
+        }
+
+        @case ('error') {
+        <span class="text-danger">
+          <i class="bi bi-exclamation-circle-fill"></i>
+          No se pudieron guardar las respuestas
+        </span>
+
+        <button type="button" class="btn btn-sm btn-outline-danger" (click)="retrySaveDraft()">
+          Reintentar
+        </button>
+        }
+        }
+      </div>
+    </header>
 
     @if (loading()) {
     <div class="d-flex justify-content-center align-items-center py-5">
@@ -118,11 +128,43 @@
 
     @if (currentAmbit(); as currentAmbit) {
     @if (currentQuestion(); as currentQuestion) {
+    <section class="evaluation-progress" aria-labelledby="evaluation-progress-title">
 
-    <div class="border rounded p-5 borde-izq shadow-sm bg-white" [style.--borde-color]="currentAmbit.color">
+      <div class="evaluation-progress__header">
 
-      <div class="d-flex align-items-stretch justify-content-between mb-5">
-        <div>
+        <div class="evaluation-progress__information">
+
+          <h2 id="evaluation-progress-title" class="evaluation-progress__title">
+            Progreso de evaluación
+          </h2>
+
+          <p class="evaluation-progress__description">
+            {{ answeredQuestions() }} de
+            {{ totalQuestions() }} preguntas respondidas
+          </p>
+
+        </div>
+
+        <span class="evaluation-progress__percentage">
+          {{ globalProgress() }}%
+        </span>
+
+      </div>
+
+      <div class="evaluation-progress__track" role="progressbar" aria-labelledby="evaluation-progress-title"
+        aria-valuemin="0" aria-valuemax="100" [attr.aria-valuenow]="globalProgress()"
+        [attr.aria-valuetext]="answeredQuestions() + ' de ' + totalQuestions() + ' preguntas respondidas'">
+
+        <div class="evaluation-progress__fill" [style.width.%]="globalProgress()">
+        </div>
+
+      </div>
+
+    </section>
+    <div class="evaluation-question-card">
+
+      <div class="evaluation-question-layout">
+        <div class="evaluation-question-content">
           <div>
             <p class="fw-bold" [style.color]="currentAmbit.color">
               <b class="text-white px-2 py-1 rounded" [style.backgroundColor]="currentAmbit.color">
@@ -172,24 +214,6 @@
           </app-evaluation-evidences>
 
 
-        </div>
-
-        <div class="d-flex align-items-start ms-4">
-          <div class="sw-v-center sw-bg-blue-light py-2 px-3 rounded">
-            <p class="sw-fs-7 mt-1 mb-1 fw-bold">
-              Progreso
-            </p>
-
-            <mat-progress-spinner class="sw-spinner ms-1" mode="determinate" [value]="progreso()" diameter="40"
-              strokeWidth="10" [style.--track-color]="fondo" [style.--mat-progress-spinner-active-indicator-color]="
-                    currentAmbit.color
-                  ">
-            </mat-progress-spinner>
-
-            <p class="sw-fs-7 ms-3 mt-1 mb-0">
-              {{progreso()}}%
-            </p>
-          </div>
         </div>
       </div>
 

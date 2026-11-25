@@ -9,7 +9,6 @@ import {
   Injector,
   inject
 } from '@angular/core';
-import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { EvaluationService } from '../../../services/evaluation.service';
 import {
   EvaluationAmbit,
@@ -27,7 +26,6 @@ import { toObservable, takeUntilDestroyed } from '@angular/core/rxjs-interop';
   selector: 'app-evaluation',
   standalone: true,
   imports: [
-    MatProgressSpinnerModule,
     EvaluationEvidencesComponent
   ],
   templateUrl: './evaluation.component.html',
@@ -135,6 +133,22 @@ export class EvaluationComponent {
     );
   });
 
+  readonly answeredQuestions = computed(() => {
+    return this.responses().size;
+  });
+
+  readonly globalProgress = computed(() => {
+    const total = this.totalQuestions();
+
+    if (total === 0) {
+      return 0;
+    }
+
+    return Math.min(
+      100,
+      Math.floor((this.answeredQuestions() / total) * 100)
+    );
+  });
 
   readonly canEditEvaluation = computed(() => {
     const role = this.companyContext.selectedRole();
