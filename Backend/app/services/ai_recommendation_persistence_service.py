@@ -1,6 +1,7 @@
 from fastapi import HTTPException, status
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
+from app.core.roles import CompanyRole
 
 from app.models.ai_recommendation_model import AIRecommendation
 from app.models.ai_recommendation_request import AIRecommendationRequest
@@ -38,6 +39,10 @@ class AIRecommendationPersistenceService:
         evaluation = action_service.get_evaluation_or_error(
             evaluation_id=evaluation_id,
             user_id=user_id,
+            allowed_roles=(
+                CompanyRole.COMPANY_ADMIN,
+                CompanyRole.ASG_MANAGER,
+            ),
         )
 
         action_service.validate_evaluation_completed(evaluation)

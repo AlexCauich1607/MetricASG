@@ -1,0 +1,138 @@
+@if (variant === 'context') {
+
+    <section
+        class="dashboard-loading"
+        aria-label="Cargando contexto empresarial">
+
+        <app-ui-state
+            type="loading"
+            title="Cargando empresas"
+            message="Estamos consultando tus empresas disponibles.">
+        </app-ui-state>
+
+        <div
+            class="asg-card dashboard-skeleton-context"
+            aria-hidden="true">
+
+            <span class="dashboard-skeleton dashboard-skeleton--icon">
+            </span>
+
+            <div class="dashboard-skeleton-content">
+
+                <span class="dashboard-skeleton w-25"></span>
+
+                <span class="dashboard-skeleton dashboard-skeleton--title w-75">
+                </span>
+
+                <span class="dashboard-skeleton w-50"></span>
+
+            </div>
+
+        </div>
+
+    </section>
+
+} @else {
+
+    <section
+        class="dashboard-loading"
+        aria-labelledby="dashboard-loading-title">
+
+        <header class="dashboard-loading__header">
+
+            <h2 id="dashboard-loading-title">
+                Desempeño ASG
+            </h2>
+
+        </header>
+
+        <app-ui-state
+            type="loading"
+            title="Cargando resultados"
+            message="Estamos consultando la información de tu empresa.">
+        </app-ui-state>
+
+        <div
+            class="dashboard-performance__grid"
+            aria-hidden="true">
+
+            @for (item of cards; track item) {
+
+                <div
+                    class="asg-card dashboard-skeleton-card"
+                    [class.dashboard-skeleton-card--featured]="item === 0"
+                    [class.dashboard-global-card]="item === 0">
+
+                    <span class="dashboard-skeleton dashboard-skeleton--icon">
+                    </span>
+
+                    <span class="dashboard-skeleton w-75">
+                    </span>
+
+                    <span class="dashboard-skeleton dashboard-skeleton--score w-50">
+                    </span>
+
+                    <span class="dashboard-skeleton dashboard-skeleton--progress w-100">
+                    </span>
+
+                    <span class="dashboard-skeleton dashboard-skeleton--pill w-75">
+                    </span>
+
+                    @if (item === 0) {
+
+                        <span class="dashboard-skeleton dashboard-skeleton--button w-100">
+                        </span>
+
+                    }
+
+                </div>
+
+            }
+
+        </div>
+
+        <div
+            class="dashboard-insights"
+            aria-hidden="true">
+
+            <div class="asg-card dashboard-skeleton-panel">
+
+                <span class="dashboard-skeleton dashboard-skeleton--title w-75">
+                </span>
+
+                <span class="dashboard-skeleton w-100"></span>
+
+                <div class="dashboard-skeleton dashboard-skeleton--chart">
+
+                    <i
+                        class="bi bi-bar-chart"
+                        aria-hidden="true">
+                    </i>
+
+                </div>
+
+            </div>
+
+            <div class="asg-card dashboard-skeleton-panel">
+
+                <span class="dashboard-skeleton dashboard-skeleton--title w-75">
+                </span>
+
+                <span class="dashboard-skeleton dashboard-skeleton--calendar">
+                </span>
+
+                <span class="dashboard-skeleton dashboard-skeleton--pill w-50">
+                </span>
+
+                <span class="dashboard-skeleton w-100"></span>
+
+                <span class="dashboard-skeleton dashboard-skeleton--button w-100">
+                </span>
+
+            </div>
+
+        </div>
+
+    </section>
+
+}

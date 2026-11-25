@@ -1,4 +1,14 @@
+<div
+  class="chart-container"
+  [class.chart-container--dashboard]="variant === 'dashboard'">
 
-<div class="chart-container" style="position: relative; height: 300px;">
-    <canvas #chartCanvas [id]="'MyChart' + id"></canvas>
+  <canvas
+    #chartCanvas
+    [id]="'MyChart' + id"
+    [attr.role]="variant === 'dashboard' ? 'img' : null"
+    [attr.aria-label]="variant === 'dashboard'
+      ? 'Gráfica de puntuaciones por ámbito ASG. Los valores se muestran en las tarjetas anteriores.'
+      : null">
+  </canvas>
+
 </div>

@@ -14,5 +14,6 @@ export interface ResultEvaluation {
   date: string;
   global_score: number;
   global_maturity_level: string;
+  global_maturity_color?: string | null;
   ambits: ResultAmbit[];
 }

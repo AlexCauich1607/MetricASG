@@ -1,178 +1,550 @@
-.sw-bg-sm-white {
-    background-color: rgba(255, 255, 255, 0.242);
+/* HU-056 / T03 — Dashboard empresarial */
+
+.dashboard-shell {
+    background:
+        radial-gradient(ellipse at 0% 0%,
+            rgb(93 151 50 / 12%),
+            transparent 50%),
+        radial-gradient(ellipse at 100% 100%,
+            rgba(21, 6, 117, 0.14),
+            transparent 75%),
+        var(--asg-color-surface-muted);
+
+    color: var(--asg-color-text-primary);
 }
 
-.sw-bg-sm-purple {
-    background-color: #cebdff63;
+.dashboard-container {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 1.5rem;
+    padding-block: 2rem;
 }
 
-
-.sw-gris {
-    color: #7c8c6f;
-
+.dashboard-welcome__title,
+.dashboard-company__title,
+.dashboard-company__date,
+.dashboard-performance__header h2,
+.dashboard-chart__header h2,
+.dashboard-schedule__header h2,
+.dashboard-schedule__date {
+    color: var(--asg-color-brand-primary);
+    overflow-wrap: anywhere;
 }
 
-.borde-izq {
-    border-left: 6px solid var(--borde-color) !important;
+.dashboard-welcome__description,
+.dashboard-company__label,
+.dashboard-performance__header p,
+.dashboard-chart__header p,
+.dashboard-evaluation-reason {
+    margin: 0;
+    color: var(--asg-color-text-muted);
+    font-size: .875rem;
+    overflow-wrap: anywhere;
 }
 
-
-
-.text-gray {
-    color: #a1a1a1;
+.dashboard-welcome__title,
+.dashboard-performance__header h2,
+.dashboard-chart__header h2,
+.dashboard-schedule__header h2,
+.dashboard-company__label {
+    margin: 0 0 .25rem;
 }
 
-.chart-container {
-    position: relative;
-    height: 65vh;
-    width: 100%;
-    padding: 10px;
+.dashboard-welcome__title {
+    font-size: clamp(1.5rem, 3vw, 2rem);
+    font-weight: 700;
 }
 
+.dashboard-welcome__eyebrow {
+    margin: 0 0 .75rem;
+    padding: .375rem .75rem;
+    background: #e6efde;
+    border: 1px solid #d3e3c5;
+    border-radius: var(--asg-radius-sm);
+    color: var(--asg-color-action-success);
+    font-size: .75rem;
+    font-weight: 600;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+}
 
-@media (min-width: 576px) and (max-width: 767px) {
-    .chart-container {
-        height: 60vh;
-        width: 100%;
+/* Contexto empresarial */
+
+.dashboard-company {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 1rem;
+    align-items: center;
+    padding: 1rem;
+
+    &--with-period {
+        grid-template-columns:
+            minmax(0, 1fr) minmax(0, 1fr);
+    }
+
+    &__identity,
+    &__content,
+    &__period {
+        min-width: 0;
+    }
+
+    &__identity {
+        padding: .5rem;
+    }
+
+    &__icon {
+        place-items: center;
+        width: 44px;
+        height: 44px;
+        border-radius: var(--asg-radius-sm);
+        background: var(--asg-color-surface-blue);
+        color: var(--asg-color-brand-primary);
+        font-size: 1.125rem;
+    }
+
+    &__label {
+        font-size: .75rem;
+        font-weight: 600;
+        letter-spacing: .035em;
+        text-transform: uppercase;
+    }
+
+    &__title,
+    &__date {
+        margin: 0;
+        font-size: 1.125rem;
+        font-weight: 600;
+    }
+
+    &__status {
+        margin: .375rem 0 0;
+        color: var(--asg-color-action-success);
+        font-size: .75rem;
+        overflow-wrap: anywhere;
+    }
+
+    &__period {
+        padding: 1rem;
+        background: #f5f8fc;
+        border-radius: var(--asg-radius-sm);
     }
 }
 
-@media (min-width: 768px) and (max-width: 991px) {
-    .chart-container {
-        height: 70vh;
-        width: 100%;
-        margin: 0 auto;
-    }
+/* Indicadores y gráficas */
+
+.dashboard-performance__header h2,
+.dashboard-schedule__date {
+    font-size: 1.5rem;
+    font-weight: 700;
 }
 
-@media (min-width: 992px) and (max-width: 1199px) {
-    .chart-container {
-        height: 70vh;
-        width: 100%;
-        margin: 0 auto;
-    }
+.dashboard-performance__grid,
+.dashboard-insights {
+    display: grid;
+    gap: 1rem;
 }
 
-@media (min-width: 1200px) and (max-width: 1399px) {
-    .chart-container {
-        height: 65vh;
-        width: 100%;
-        margin: 0 auto;
-    }
+.dashboard-performance__grid {
+    grid-template-columns:
+        minmax(0, 1.65fr) repeat(3, minmax(0, 1fr));
 }
 
-@media (min-width: 1400px) {
-    .chart-container {
-        height: 60vh;
-        width: 100%;
-        max-width: 1400px;
-        margin: 0 auto;
-    }
+.dashboard-insights {
+    grid-template-columns:
+        minmax(0, 1.8fr) minmax(0, 1fr);
 }
 
-.color-bg {
-    background-color: #5e97320f;
-}
-
-.sw-gris {
-    color: #7c8c6f;
-
-}
-
-/* HU-049 / T01: permitir que el contenido principal
-   se ajuste al ancho disponible del viewport. */
-:host .sw-split-ly>div {
+.dashboard-chart {
     min-width: 0;
-    width: 100%;
-    box-sizing: border-box;
+
+    app-bar-chart {
+        display: block;
+        min-width: 0;
+    }
+
+    h2 {
+        font-size: 1.125rem;
+        font-weight: 600;
+    }
 }
+
+button.asg-btn.dashboard-global-action {
+    padding-inline: .75rem;
+    background: rgb(255 255 255 / 8%);
+    border-color: rgb(255 255 255 / 20%);
+    color: #fff;
+    font-size: .875rem;
+
+    &:hover {
+        background: rgb(255 255 255 / 16%);
+        color: #fff;
+    }
+
+    &:focus-visible {
+        outline-color: #fff;
+    }
+}
+
+/* Programación */
+
+.dashboard-schedule {
+    align-content: center;
+    min-width: 0;
+
+    h2 {
+        font-size: 1.125rem;
+        font-weight: 600;
+    }
+
+    &__calendar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+
+        min-width: 0;
+        padding: 1.25rem;
+
+        border: 1px solid #d9e5f1;
+        border-radius: var(--asg-radius-card);
+
+        background: linear-gradient(135deg,
+                #f5f8fc,
+                var(--asg-color-surface-blue));
+    }
+
+    &__calendar-content {
+        min-width: 0;
+    }
+
+    &__calendar-icon {
+        flex-shrink: 0;
+        color: var(--asg-color-brand-primary);
+        opacity: .45;
+        font-size: 2.5rem;
+    }
+
+    &__date {
+        margin-top: .375rem;
+        font-size: clamp(1.375rem, 2.5vw, 2rem);
+        font-weight: 700;
+        font-variant-numeric: tabular-nums;
+        line-height: 1.2;
+    }
+
+    &__availability {
+        display: grid;
+        justify-items: start;
+        gap: .625rem;
+    }
+
+    &__status {
+        display: inline-flex;
+        align-items: center;
+        gap: .375rem;
+
+        padding: .375rem .75rem;
+
+        background: #fff3dc;
+        border: 1px solid #efdfba;
+        border-radius: var(--asg-radius-pill);
+
+        color: #854d0e;
+        font-size: .75rem;
+        font-weight: 600;
+
+        &--available {
+            background: #eaf2e5;
+            border-color: #d3e3c5;
+            color: var(--asg-color-action-success);
+        }
+    }
+
+    &__footer {
+        padding-top: 1rem;
+        border-top: 1px solid #e8edf1;
+    }
+}
+
+.dashboard-period__action {
+    max-width: 100%;
+    white-space: normal;
+
+    &:disabled {
+        opacity: 1;
+        background: #e9edf1;
+        border-color: #d9e1e8;
+        color: var(--asg-color-text-muted);
+    }
+}
+
+/* Onboarding empresarial */
+
+/* Onboarding empresarial y estado sin resultados */
+
+.company-onboarding,
+.dashboard-empty {
+    display: grid;
+    gap: 1.5rem;
+    min-width: 0;
+
+    h2,
+    h3 {
+        margin: 0;
+        color: var(--asg-color-brand-primary);
+        overflow-wrap: anywhere;
+    }
+
+    h2 {
+        margin-bottom: .375rem;
+        font-size: clamp(1.25rem, 2.5vw, 1.5rem);
+        font-weight: 700;
+    }
+
+    h3 {
+        font-size: 1.125rem;
+        font-weight: 600;
+    }
+}
+
+/* Usuario sin empresa */
 
 .company-onboarding {
-    width: 100%;
-    max-width: 900px;
-    margin-inline: auto;
+
+    &__content {
+        min-width: 0;
+    }
+
+    &__icon--green {
+        background: #e6efde;
+        color: var(--asg-color-action-success);
+    }
 
     &__actions {
         display: grid;
         grid-template-columns: repeat(2, minmax(0, 1fr));
-        gap: 16px;
-        margin-top: 24px;
+        gap: 1rem;
     }
 
     &__card {
         min-width: 0;
-        padding: 24px;
-        border: 1px solid var(--bs-border-color);
-        border-radius: 12px;
-        background: #fff;
+        padding: 1.5rem;
+        background: #f5f8fc;
+        border: 1px solid #dce5ee;
+        border-radius: var(--asg-radius-card);
+    }
 
-        display: flex;
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 12px;
+    &__benefits {
+        display: grid;
+        gap: .625rem;
+        padding: 0;
+        margin: 0;
+        list-style: none;
 
-        h4 {
-            font-size: 1.125rem;
-            font-weight: 600;
-            margin: 0;
+        li {
+            display: flex;
+            align-items: flex-start;
+            gap: .625rem;
+            font-size: .875rem;
+            color: var(--asg-color-text-primary);
         }
 
-        p {
-            margin: 0;
-            flex: 1;
+        i {
+            flex-shrink: 0;
+            color: var(--asg-color-action-success);
         }
     }
-}
 
-@media (max-width: 767px) {
-    .company-onboarding {
-        &__actions {
-            grid-template-columns: minmax(0, 1fr);
-        }
-
-        &__card {
-            padding: 16px;
-        }
-    }
-}
-
-.company-onboarding {
     &__invitation {
-        width: 100%;
         min-width: 0;
 
-        form {
-            width: 100%;
-        }
-
         .form-control {
-            width: 100%;
             min-width: 0;
-            border-radius: 8px;
-        }
-
-        .asg-btn {
-            max-width: 100%;
-            white-space: normal;
-            text-align: center;
+            min-height: 44px;
+            border-radius: var(--asg-radius-sm);
         }
     }
 
     &__success {
-        display: flex;
-        align-items: flex-start;
-        gap: 8px;
-        color: var(--asg-color-brand-accent, #5d9732);
-        font-size: 0.875rem;
-        margin-bottom: 0;
+        margin: 0;
+        color: var(--asg-color-action-success);
+        font-size: .875rem;
+    }
+
+    .asg-btn {
+        max-width: 100%;
+        white-space: normal;
     }
 }
 
-@media (max-width: 767px) {
-    .company-onboarding__invitation {
-        .asg-btn {
-            width: 100%;
-            justify-content: center;
+/* Empresa sin evaluaciones */
+
+.dashboard-empty {
+
+    &__header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 1rem;
+    }
+
+    &__icon {
+        width: 56px;
+        height: 56px;
+        font-size: 1.5rem;
+    }
+
+    &__content {
+        min-width: 0;
+    }
+
+    &__benefits {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 1rem;
+    }
+
+    &__benefit {
+        display: grid;
+        align-content: start;
+        gap: .625rem;
+        min-width: 0;
+        padding: 1rem;
+        background: #f5f8fc;
+        border: 1px solid #e2e9f0;
+        border-radius: var(--asg-radius-sm);
+
+        i {
+            color: var(--asg-color-brand-primary);
+            font-size: 1.375rem;
         }
+
+        h3 {
+            font-size: .9375rem;
+        }
+
+        p {
+            margin: 0;
+            color: var(--asg-color-text-muted);
+            font-size: .875rem;
+            overflow-wrap: anywhere;
+        }
+    }
+
+    &__actions {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 1rem;
+        padding-top: 1.25rem;
+        border-top: 1px solid #e8edf1;
+    }
+
+    &__action-content {
+        flex: 1 1 240px;
+        min-width: 0;
+    }
+}
+
+/* Responsive */
+
+@media (max-width: 1023.98px) {
+
+    .dashboard-performance__grid {
+        grid-template-columns:
+            repeat(3, minmax(0, 1fr));
+    }
+
+    .dashboard-global-card {
+        grid-column: 1 / -1;
+    }
+
+}
+
+@media (max-width: 991.98px) {
+
+    .dashboard-insights {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+}
+
+@media (max-width: 767.98px) {
+
+    .dashboard-container {
+        gap: 1rem;
+        padding-block: 1rem;
+    }
+
+    .dashboard-company--with-period,
+    .company-onboarding__actions,
+    .dashboard-empty__benefits {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .company-onboarding__card {
+        padding: 1rem;
+    }
+
+    .company-onboarding,
+    .dashboard-empty {
+        gap: 1rem;
+    }
+
+    .dashboard-empty__actions {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .dashboard-empty__action-content {
+        flex-basis: auto;
+    }
+
+    .company-onboarding__invitation .asg-btn,
+    .dashboard-empty__actions .asg-btn,
+    .dashboard-error__actions .asg-btn {
+        width: 100%;
+    }
+
+}
+
+@media (max-width: 575.98px) {
+
+    .dashboard-performance__grid {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .dashboard-period__action {
+        width: 100%;
+    }
+
+    .dashboard-schedule {
+
+        &__calendar {
+            padding: 1rem;
+        }
+
+        &__calendar-icon {
+            font-size: 1.75rem;
+        }
+
+    }
+
+}
+
+.dashboard-error {
+    display: grid;
+    gap: 1rem;
+    min-width: 0;
+
+    &__actions {
+        display: flex;
+        justify-content: flex-end;
+        flex-wrap: wrap;
+        gap: .75rem;
+        padding-top: 1rem;
+        border-top: 1px solid #e2e8f0;
     }
 }

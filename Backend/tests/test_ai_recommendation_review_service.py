@@ -302,7 +302,8 @@ def test_review_rejects_inactive_membership(db_session):
             payload=payload,
         )
 
-    assert exc.value.status_code == 403
+    assert exc.value.status_code == 404
+    assert exc.value.detail == "Evaluation not found"
 
     db_session.expire_all()
 

@@ -14,7 +14,14 @@ from app.models.indicator_model import Indicator
 from app.models.evaluation_indicator_response_model import (
     EvaluationIndicatorResponse,
 )
-
+from app.core.company_permissions import require_company_role
+from app.core.roles import CompanyRole
+from app.models.user_model import User
+from app.models.company_model import Company
+from app.models.company_membership_model import (
+    CompanyMembership,
+    CompanyMembershipStatus,
+)
 
 from app.models.evaluation_model import (
     Evaluation,
@@ -30,12 +37,34 @@ class EvidenceService:
         self,
         evaluation_id: int,
         user_id: int,
+        *,
+        write: bool = False,
+        lock: bool = False,
     ) -> Evaluation:
-        evaluation = (
+
+        query = (
             self.db.query(Evaluation)
-            .filter(Evaluation.id == evaluation_id)
-            .first()
+            .join(
+                CompanyMembership,
+                CompanyMembership.company_id == Evaluation.company_id,
+            )
+            .join(
+                Company,
+                Company.id == Evaluation.company_id,
+            )
+            .filter(
+                Evaluation.id == evaluation_id,
+                CompanyMembership.user_id == user_id,
+                CompanyMembership.status
+                == CompanyMembershipStatus.ACTIVE,
+                Company.active.is_(True),
+            )
         )
+
+        if lock:
+            query = query.with_for_update(of=Evaluation)
+
+        evaluation = query.first()
 
         if evaluation is None:
             raise HTTPException(
@@ -43,7 +72,43 @@ class EvidenceService:
                 detail="Evaluation not found",
             )
 
-        if evaluation.user_id != user_id:
+        user = self.db.get(User, user_id)
+
+        if user is None:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Active company membership required",
+            )
+
+        # Las operaciones de escritura y el acceso a borradores
+        # continúan restringidos al autor de la evaluación.
+        if write or evaluation.status == EvaluationStatus.DRAFT:
+
+            if evaluation.user_id != user_id:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="Evaluation not found",
+                )
+
+            require_company_role(
+                self.db,
+                user,
+                evaluation.company_id,
+                CompanyRole.COMPANY_ADMIN,
+                CompanyRole.ASG_MANAGER,
+                CompanyRole.COLLABORATOR,
+            )
+
+        elif evaluation.status == EvaluationStatus.COMPLETED:
+
+            require_company_role(
+                self.db,
+                user,
+                evaluation.company_id,
+                *tuple(CompanyRole),
+            )
+
+        else:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Evaluation not found",
@@ -127,21 +192,12 @@ class EvidenceService:
         payload: EvidenceCreateRequest,
     ) -> EvaluationEvidence:
         try:
-            evaluation = (
-                self.db.query(Evaluation)
-                .filter(
-                    Evaluation.id == evaluation_id,
-                    Evaluation.user_id == user_id,
-                )
-                .with_for_update()
-                .first()
+            evaluation = self.get_evaluation_or_error(
+                evaluation_id=evaluation_id,
+                user_id=user_id,
+                write=True,
+                lock=True,
             )
-
-            if evaluation is None:
-                raise HTTPException(
-                    status_code=status.HTTP_404_NOT_FOUND,
-                    detail="Evaluation not found",
-                )
 
             self.validate_evaluation_editable(evaluation)
 
@@ -189,21 +245,12 @@ class EvidenceService:
         storage_key = None
 
         try:
-            evaluation = (
-                self.db.query(Evaluation)
-                .filter(
-                    Evaluation.id == evaluation_id,
-                    Evaluation.user_id == user_id,
-                )
-                .with_for_update()
-                .first()
+            evaluation = self.get_evaluation_or_error(
+                evaluation_id=evaluation_id,
+                user_id=user_id,
+                write=True,
+                lock=True,
             )
-
-            if evaluation is None:
-                raise HTTPException(
-                    status_code=status.HTTP_404_NOT_FOUND,
-                    detail="Evaluation not found",
-                )
 
             self.validate_evaluation_editable(evaluation)
 
@@ -323,21 +370,12 @@ class EvidenceService:
         storage_key = None
 
         try:
-            evaluation = (
-                self.db.query(Evaluation)
-                .filter(
-                    Evaluation.id == evaluation_id,
-                    Evaluation.user_id == user_id,
-                )
-                .with_for_update()
-                .first()
+            evaluation = self.get_evaluation_or_error(
+                evaluation_id=evaluation_id,
+                user_id=user_id,
+                write=True,
+                lock=True,
             )
-
-            if evaluation is None:
-                raise HTTPException(
-                    status_code=status.HTTP_404_NOT_FOUND,
-                    detail="Evaluation not found",
-                )
 
             self.validate_evaluation_editable(evaluation)
 

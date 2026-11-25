@@ -1,247 +1,774 @@
-<div class="sw-split-ly color-bg content">
-  <div><!--
-    <div class="d-flex align-items-start mb-3">
+<div class="dashboard-shell">
+  <div class="container dashboard-container">
+    <header class="dashboard-welcome">
 
-      <div class="sw-all-center">
-        <img src="assets/logo.png" alt="MetricASG" height="40" width="40" class="me-2">
-        <span class="font-logo text-my-purple fs-4">concamin</span>
+      <p class="dashboard-welcome__eyebrow d-inline-flex align-items-center gap-2">
+        <i class="bi bi-globe-americas" aria-hidden="true"></i>
+
+        Resumen de sostenibilidad
+      </p>
+
+      <h1 class="dashboard-welcome__title">
+
+        @if (user?.name) {
+
+        ¡Bienvenido, {{ user?.name }}!
+
+        } @else {
+
+        ¡Bienvenido a MetricASG!
+
+        }
+
+      </h1>
+
+      <p class="dashboard-welcome__description">
+        Consulta y da seguimiento al desempeño ASG de tus organizaciones.
+      </p>
+
+    </header>
+
+    @if (
+    !companyContext.loading() &&
+    !companyContext.error() &&
+    companyContext.selectedMembership(); as membership
+    ) {
+
+    <section class="asg-card dashboard-company" aria-labelledby="dashboard-company-title"
+      [class.dashboard-company--with-period]="hasCurrentResults">
+
+      <div class="dashboard-company__identity d-flex align-items-center gap-3">
+
+        <div class="dashboard-company__icon d-grid flex-shrink-0" aria-hidden="true">
+
+          <i class="bi bi-building"></i>
+
+        </div>
+
+        <div class="dashboard-company__content">
+
+          <p class="dashboard-company__label">
+            Empresa activa
+          </p>
+
+          <h2 id="dashboard-company-title" class="dashboard-company__title">
+
+            {{ membership.company_name }}
+
+          </h2>
+
+          <p class="dashboard-company__status">
+
+            <i class="bi bi-check-circle-fill" aria-hidden="true">
+            </i>
+
+            Contexto empresarial seleccionado
+
+          </p>
+
+        </div>
+
       </div>
 
+      @if (hasCurrentResults) {
 
-    </div>-->
-    <div class="d-flex align-items-center mb-4">
-      <img src="assets/logo.png" alt="MetricASG" height="38" class="me-2">
-      <span class="fw-bold text-my-purple font-logo fs-4">MetricASG</span>
-    </div>
-    <h2 class="text-my-purple fw-bold mb-1">!Bienvenido, <b class="text-my-green">{{user?.name}}
-        {{user?.lastname}}</b>!</h2>
+      <div class="dashboard-company__period d-flex align-items-center gap-3">
 
-    @if (resultsStatus === 'loading') {
-    <app-ui-state type="loading" title="Cargando resultados"
-      message="Estamos consultando la información de tu empresa.">
-    </app-ui-state>
+        <div class="dashboard-company__icon d-grid flex-shrink-0" aria-hidden="true">
+
+          <i class="bi bi-calendar-range"></i>
+
+        </div>
+
+        <div class="dashboard-company__content">
+
+          <p class="dashboard-company__label">
+            Periodo evaluado
+          </p>
+
+          <p class="dashboard-company__date">
+
+            {{ mesAnterior }}
+            {{ anioAnterior !== anioActual ? anioAnterior : '' }}
+            – {{ mesActual }} {{ anioActual }}
+
+          </p>
+
+          <p class="dashboard-welcome__description">
+            Última evaluación empresarial
+          </p>
+
+        </div>
+
+      </div>
+
+      }
+
+    </section>
+
     }
 
-    @if (resultsStatus === 'error') {
-    <app-ui-state type="error" title="No se pudieron cargar los resultados"
-      message="Ocurrió un problema al consultar la información.">
-    </app-ui-state>
-    }
+    @if (dashboardStatus === 'context-loading') {
 
-    @if (companyContext.loading()) {
-    <app-ui-state type="loading" title="Cargando empresas" message="Estamos consultando tus empresas disponibles.">
-    </app-ui-state>
+    <app-dashboard-skeleton variant="context">
+    </app-dashboard-skeleton>
 
-    } @else if (companyContext.error()) {
-    <app-ui-state type="error" title="No se pudieron cargar tus empresas"
-      message="No pudimos verificar tus membresías empresariales. Inténtalo nuevamente.">
-    </app-ui-state>
-    @if (invitationAcceptedPendingSync) {
-    <div class="text-center mt-3">
-      <p role="alert">
-        La invitación fue aceptada, pero no pudimos actualizar
-        tus empresas.
-      </p>
+    } @else if (dashboardStatus === 'context-error') {
 
-      <button type="button" class="asg-btn asg-btn--primary" [disabled]="companyContext.loading()"
-        (click)="syncAcceptedInvitation()">
-        Reintentar sincronización
-      </button>
-    </div>
-    }
+    <section class="asg-card dashboard-error">
 
-    } @else if (
-    companyContext.memberships().length === 0 &&
-    companyContext.selectedCompanyId() === null
-    ) {
-    <section class="company-onboarding mt-4" aria-labelledby="company-onboarding-title">
+      <app-ui-state type="error" title="No se pudieron cargar tus empresas" [message]="invitationAcceptedPendingSync
+                ? 'La invitación fue aceptada, pero no pudimos actualizar tus empresas.'
+                : 'No pudimos verificar tus membresías empresariales.'">
+      </app-ui-state>
 
-      <h3 id="company-onboarding-title" class="fw-bold text-my-purple">
-        Configura tu primera empresa
-      </h3>
+      <div class="dashboard-error__actions">
 
-      <p class="text-muted">
-        Para comenzar a utilizar MetricASG, crea una empresa
-        o acepta una invitación de una organización existente.
-      </p>
+        <button type="button" class="asg-btn asg-btn--primary" (click)="retryMemberships()">
+
+          <i class="bi bi-arrow-clockwise" aria-hidden="true">
+          </i>
+
+          {{ invitationAcceptedPendingSync
+          ? 'Reintentar sincronización'
+          : 'Reintentar consulta' }}
+
+        </button>
+
+      </div>
+
+    </section>
+
+    } @else if (dashboardStatus === 'no-selection') {
+
+    <section class="asg-card dashboard-error">
+
+      <app-ui-state type="empty" title="Selecciona una empresa"
+        message="Utiliza el selector de empresas de la barra de navegación para consultar su información ASG.">
+      </app-ui-state>
+
+    </section>
+
+    } @else if (dashboardStatus === 'loading') {
+
+    <app-dashboard-skeleton variant="results">
+    </app-dashboard-skeleton>
+
+    } @else if (dashboardStatus === 'error') {
+
+    <section class="asg-card dashboard-error">
+
+      <app-ui-state type="error" title="No se pudieron cargar los resultados"
+        message="Ocurrió un problema al consultar la información de tu empresa. Puedes volver a intentarlo.">
+      </app-ui-state>
+
+      <div class="dashboard-error__actions">
+
+        <button type="button" class="asg-btn asg-btn--primary" (click)="retryResults()">
+
+          <i class="bi bi-arrow-clockwise" aria-hidden="true">
+          </i>
+
+          Reintentar consulta
+
+        </button>
+
+      </div>
+
+    </section>
+
+    } @else if (dashboardStatus === 'no-companies') {
+    <section class="asg-card company-onboarding" aria-labelledby="company-onboarding-title">
+
+      <header class="company-onboarding__header d-flex align-items-center gap-3">
+
+        <div class="dashboard-company__icon company-onboarding__icon--green d-grid flex-shrink-0" aria-hidden="true">
+
+          <i class="bi bi-building"></i>
+
+        </div>
+
+        <div class="company-onboarding__content">
+
+          <h2 id="company-onboarding-title">
+            Configura tu primera empresa
+          </h2>
+
+          <p class="dashboard-welcome__description">
+            Selecciona cómo deseas comenzar a utilizar MetricASG.
+          </p>
+
+        </div>
+
+      </header>
 
       <div class="company-onboarding__actions">
 
-        <div class="company-onboarding__card">
-          <i class="bi bi-building-add" aria-hidden="true"></i>
+        <!-- Crear empresa -->
 
-          <h4>Crear una empresa</h4>
+        <div class="company-onboarding__card d-flex flex-column gap-3">
 
-          <p>
+          <div class="dashboard-company__icon d-grid flex-shrink-0" aria-hidden="true">
+
+            <i class="bi bi-building-add"></i>
+
+          </div>
+
+          <h3>Crear una empresa</h3>
+
+          <p class="dashboard-welcome__description">
             Registra tu organización y comienza a gestionar
             sus evaluaciones ASG.
           </p>
 
-          <button type="button" class="asg-btn asg-btn--primary" (click)="openCreateCompany()">
+          <ul class="company-onboarding__benefits">
+
+            <li>
+              <i class="bi bi-check-circle-fill" aria-hidden="true"></i>
+              Configura tu organización
+            </li>
+
+            <li>
+              <i class="bi bi-check-circle-fill" aria-hidden="true"></i>
+              Gestiona sus integrantes
+            </li>
+
+            <li>
+              <i class="bi bi-check-circle-fill" aria-hidden="true"></i>
+              Realiza evaluaciones ASG
+            </li>
+
+          </ul>
+
+          <button type="button" class="asg-btn asg-btn--primary w-100 mt-auto justify-content-between"
+            (click)="openCreateCompany()">
+
             Crear empresa
+
+            <i class="bi bi-arrow-right" aria-hidden="true"></i>
+
           </button>
+
         </div>
 
-        <div class="company-onboarding__card">
-          <i class="bi bi-envelope-check" aria-hidden="true"></i>
+        <!-- Aceptar invitación -->
 
-          <h4>Aceptar una invitación</h4>
+        <div class="company-onboarding__card d-flex flex-column gap-3">
 
-          <p>
-            Si ya recibiste una invitación, podrás incorporarte
-            a la empresa mediante tu token de acceso.
+          <div class="dashboard-company__icon company-onboarding__icon--green d-grid flex-shrink-0" aria-hidden="true">
+
+            <i class="bi bi-envelope-check"></i>
+
+          </div>
+
+          <h3>Aceptar una invitación</h3>
+
+          <p class="dashboard-welcome__description">
+            Incorpórate a una organización existente
+            mediante tu token de acceso.
           </p>
 
-          <div class="company-onboarding__invitation">
-            <form (submit)="$event.preventDefault(); acceptInvitation()" aria-label="Aceptar invitación empresarial">
-              <label for="invitation-token" class="form-label fw-semibold">
+          <div class="company-onboarding__invitation w-100">
+
+            <form class="d-flex flex-column gap-2" (submit)="$event.preventDefault(); acceptInvitation()"
+              aria-label="Aceptar invitación empresarial">
+
+              <label for="invitation-token" class="form-label fw-semibold mb-0">
+
                 Token de invitación
+
               </label>
 
               <input id="invitation-token" name="invitationToken" type="text" class="form-control"
                 placeholder="Introduce tu token" autocomplete="off" [value]="invitationToken" [disabled]="
-  acceptingInvitation ||
-  invitationAcceptedPendingSync ||
-  companyContext.loading()
-" [attr.aria-invalid]="invitationError ? 'true' : null" [attr.aria-describedby]="
-        invitationError ? 'invitation-error' : null
-      " (input)="invitationToken = $any($event.target).value" />
+                            acceptingInvitation ||
+                            invitationAcceptedPendingSync ||
+                            companyContext.loading()
+                        " [attr.aria-invalid]="
+                            invitationError ? 'true' : null
+                        " [attr.aria-describedby]="
+                            invitationError
+                                ? 'invitation-help invitation-error'
+                                : 'invitation-help'
+                        " (input)="invitationToken = $any($event.target).value" />
+
+              <p id="invitation-help" class="dashboard-evaluation-reason">
+
+                Utiliza el token que recibiste
+                de tu organización.
+
+              </p>
 
               @if (invitationError) {
-              <p id="invitation-error" class="sw-text-error mt-2 mb-0" role="alert">
+
+              <p id="invitation-error" class="sw-text-error mb-0" role="alert">
+
                 {{ invitationError }}
+
               </p>
+
               }
+
               @if (
               invitationAcceptedPendingSync &&
               !companyContext.loading()
               ) {
-              <button type="button" class="asg-btn mt-2" (click)="syncAcceptedInvitation()">
+
+              <button type="button" class="asg-btn" (click)="syncAcceptedInvitation()">
+
                 Reintentar sincronización
+
               </button>
+
               }
 
               @if (invitationSuccess) {
-              <p class="company-onboarding__success mt-2" role="status">
-                <i class="bi bi-check-circle-fill" aria-hidden="true"></i>
-                Invitación aceptada y empresa sincronizada correctamente.
+
+              <p class="company-onboarding__success d-flex align-items-start gap-2" role="status">
+
+                <i class="bi bi-check-circle-fill" aria-hidden="true">
+                </i>
+
+                Invitación aceptada y empresa
+                sincronizada correctamente.
+
               </p>
+
               }
 
-              <button type="submit" class="asg-btn asg-btn--primary mt-3" [disabled]="
-  acceptingInvitation ||
-  invitationAcceptedPendingSync ||
-  companyContext.loading() ||
-  !invitationToken.trim()
-">
+              <button type="submit" class="asg-btn asg-btn--primary w-100 mt-2" [disabled]="
+                            acceptingInvitation ||
+                            invitationAcceptedPendingSync ||
+                            companyContext.loading() ||
+                            !invitationToken.trim()
+                        ">
+
                 @if (acceptingInvitation) {
-                <span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>
+
+                <span class="spinner-border spinner-border-sm me-2" aria-hidden="true">
+                </span>
+
                 Aceptando invitación...
+
                 } @else if (invitationAcceptedPendingSync) {
-                <span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>
+
+                <span class="spinner-border spinner-border-sm me-2" aria-hidden="true">
+                </span>
+
                 Actualizando empresas...
+
                 } @else {
-                <i class="bi bi-check-circle me-2" aria-hidden="true"></i>
+
+                <i class="bi bi-check-circle me-2" aria-hidden="true">
+                </i>
+
                 Aceptar invitación
+
                 }
+
               </button>
+
             </form>
+
           </div>
+
         </div>
 
       </div>
+
     </section>
 
-    } @else if (resultsStatus === 'empty') {
-    <div class="mt-3">
+    } @else if (dashboardStatus === 'empty') {
+    <section class="asg-card dashboard-empty" aria-labelledby="dashboard-empty-title">
 
-      <app-ui-state type="empty" title="Aún no tienes resultados"
-        message="Para comenzar, realiza tu primer autodiagnóstico.">
-      </app-ui-state>
+      <header class="dashboard-empty__header">
 
-      <button type="button" class="asg-btn asg-btn--primary mt-3" [disabled]="!canStartEvaluation"
-        (click)="goEvaluation()">
+        <div class="dashboard-company__icon dashboard-empty__icon d-grid flex-shrink-0" aria-hidden="true">
 
-        <i [class]="canStartEvaluation
-          ? 'bi bi-rocket-fill'
-          : 'bi bi-lock-fill'" aria-hidden="true">
-        </i>
+          <i class="bi bi-clipboard-data"></i>
 
-        Realizar autodiagnóstico
-      </button>
+        </div>
 
-    </div>
-    }
-    @if (results) {
-    <div class="d-flex  align-items-center justify-content-between mt-1 mb-4">
-      <h5 class="text-white fw-bold mt-4 fs-5 bg-my-purple border shadow-sm rounded-5 px-3 py-2"><i
-          class="bi bi-calendar-fill  "></i> Semestre {{mesAnterior}}
-        {{anioAnterior!=anioActual?anioAnterior:""}} - {{mesActual}} {{anioActual}} </h5>
-      <div>
-        <p class="sw-fs-7-5 text-center m-1 p-0">
-          Próximo autodiagnóstico:
-          <b>{{ evaluationDate || 'No programado' }}</b>
+        <span class="dashboard-schedule__status">
+
+          <i class="bi bi-clock" aria-hidden="true"></i>
+
+          Primera evaluación pendiente
+
+        </span>
+
+      </header>
+
+      <div class="dashboard-empty__content">
+
+        <h2 id="dashboard-empty-title">
+          Aún no hay resultados empresariales
+        </h2>
+
+        <p class="dashboard-welcome__description">
+          Esta empresa todavía no cuenta con una
+          evaluación ASG completada. Una vez realizada,
+          podrás conocer su desempeño en sostenibilidad.
         </p>
 
-        <button type="button" class="btn-my-purple m-0 sw-fs-7 shadow-sm" [disabled]="!canStartEvaluation"
-          [class.text-gray]="!canStartEvaluation" (click)="goEvaluation()">
+      </div>
 
-          <i [class]="canStartEvaluation
-      ? 'bi bi-rocket-fill'
-      : 'bi bi-lock-fill'">
+      <div class="dashboard-empty__benefits">
+
+        <div class="dashboard-empty__benefit">
+
+          <i class="bi bi-bar-chart" aria-hidden="true">
           </i>
 
-          ¡Realizar autodiagnóstico!
-        </button>
-      </div>
-    </div>
-    }
+          <h3>Indicadores ASG</h3>
 
-    <!--<h4 class="sw-gris fw-bold mt-3 mb-3 text-center"><i class="bi bi-clipboard-data"></i> Puntuaciones</h4>-->
-    @if (results) {
-    <div class="row g-3 mx-0 mb-4 align-items-stretch">
-      <div class="col-6 col-lg-3 mb-3">
-        <div class="sw-bg-blue-light sw-hover-scale border rounded shadow-sm p-4">
-          <div class="d-flex justify-content-between align-items-stretch">
-            <p class="text-my-purple sw-fs-7 fw-bold"><i class="bi bi-globe-americas"></i> Nivel ASG</p>
-          </div>
-          <div class="d-flex justify-content-end">
-            <div class="sw-bg-sm-purple text-my-purple p-0 px-3 py-1 rounded text-center">
-              <p class=" sw-fs-7 m-0 p-0">{{results.global_maturity_level}}
-              </p>
-              <p class="m-0 fs-3 p-0 fw-bold">{{results ? results.global_score.toFixed(1) : 0}}</p>
-            </div>
-          </div>
+          <p>
+            Conoce el desempeño por ámbito.
+          </p>
+
         </div>
+
+        <div class="dashboard-empty__benefit">
+
+          <i class="bi bi-speedometer2" aria-hidden="true">
+          </i>
+
+          <h3>Nivel de madurez</h3>
+
+          <p>
+            Identifica el nivel de tu organización.
+          </p>
+
+        </div>
+
+        <div class="dashboard-empty__benefit">
+
+          <i class="bi bi-graph-up-arrow" aria-hidden="true">
+          </i>
+
+          <h3>Seguimiento</h3>
+
+          <p>
+            Identifica oportunidades de mejora.
+          </p>
+
+        </div>
+
       </div>
-      @for (ambito of results?.ambits; track ambito) {
-      <div class="col-6 col-lg-3">
-        <app-ambit-card class="shadow-sm" [title]="ambito.ambit_name" [letter]="ambito.letter" [color]="ambito.color"
-          [subtitle]="ambito.maturity_level" [maturity_color]="ambito.maturity_color"
-          [score]="ambito.score"></app-ambit-card>
-      </div>
-      }
-    </div>
+
+      <footer class="dashboard-empty__actions">
+
+        <div class="dashboard-empty__action-content">
+
+          @if (evaluationUnavailableReason) {
+
+          <p id="dashboard-empty-reason" class="dashboard-evaluation-reason">
+
+            {{ evaluationUnavailableReason }}
+
+          </p>
+
+          } @else if (
+          companyContext.selectedMembership()?.role === 'COLLABORATOR'
+          ) {
+
+          <p class="dashboard-evaluation-reason">
+
+            Puedes preparar tu borrador,
+            pero no enviar la evaluación.
+
+          </p>
+
+          } @else {
+
+          <p class="dashboard-evaluation-reason">
+
+            Comienza a conocer el desempeño ASG
+            de tu empresa.
+
+          </p>
+
+          }
+
+        </div>
+
+        @if (hasCompanyError) {
+
+        <button type="button" class="asg-btn asg-btn--secondary" (click)="retryCompanyDetails()">
+
+          <i class="bi bi-arrow-clockwise" aria-hidden="true">
+          </i>
+
+          Verificar disponibilidad nuevamente
+
+        </button>
+
+        }
+
+        <button type="button" class="asg-btn asg-btn--primary dashboard-period__action" [disabled]="!canStartEvaluation"
+          [attr.aria-describedby]="
+                evaluationUnavailableReason
+                    ? 'dashboard-empty-reason'
+                    : null
+            " (click)="goEvaluation()">
+
+          <i [class]="canStartEvaluation
+                    ? 'bi bi-clipboard-check'
+                    : 'bi bi-lock'" aria-hidden="true">
+          </i>
+
+          {{ evaluationActionLabel }}
+
+        </button>
+
+      </footer>
+
+    </section>
     }
 
-    @if (results) {
-    <div class="row g-1 mx-0 split-margin">
-      <div class="col-12 col-lg-12">
-        <div class="border rounded p-4 px-5 shadow-sm bg-white">
-          <h5 class="text-my-green text-center fw-bold mb-2"><i
-              class="bi bi-bar-chart-fill bg-my-green px-1 rounded me-1 text-white"></i> Ámbitos</h5>
-          @if (loadingChart) {
-          <app-bar-chart class="mx-5 chart-container" [data]="ambits" [scores]="scores" [bordes]="bordes"
-            [colors]="colors"></app-bar-chart>
+    @if (hasCurrentResults && results) {
+
+    <section class="dashboard-performance" aria-labelledby="dashboard-performance-title">
+
+      <header class="dashboard-performance__header mb-3">
+
+        <h2 id="dashboard-performance-title">
+          Desempeño ASG
+        </h2>
+
+        <p>
+          Indicadores de la última evaluación.
+        </p>
+
+      </header>
+
+      <div class="dashboard-performance__grid">
+
+        <app-ambit-card class="dashboard-global-card" variant="dashboard" [featured]="true" title="Nivel ASG global"
+          letter="ASG" color="var(--asg-color-brand-primary)" [subtitle]="results.global_maturity_level"
+          [score]="results.global_score" [maturity_color]="results.global_maturity_color ?? ''">
+
+          <button dashboard-action type="button" class="asg-btn dashboard-global-action w-100 justify-content-between"
+            (click)="goToResults()">
+
+            Consultar resultados
+
+            <i class="bi bi-arrow-right" aria-hidden="true">
+            </i>
+
+          </button>
+
+        </app-ambit-card>
+
+        @for (ambito of results.ambits; track ambito.ambit_id) {
+
+        <app-ambit-card variant="dashboard" [title]="ambito.ambit_name" [letter]="ambito.letter" [color]="ambito.color"
+          [subtitle]="ambito.maturity_level" [maturity_color]="ambito.maturity_color" [score]="ambito.score">
+        </app-ambit-card>
+
+        }
+
+      </div>
+
+    </section>
+    }
+
+    @if (hasCurrentResults && results) {
+
+    <div class="dashboard-insights">
+
+      <section class="asg-card dashboard-chart" aria-labelledby="dashboard-chart-title">
+
+        <header class="dashboard-chart__header mb-3">
+
+          <h2 id="dashboard-chart-title">
+            Perfil de desempeño ASG
+          </h2>
+
+          <p>
+            Puntuación obtenida por ámbito en una escala de 0 a 10.
+          </p>
+
+        </header>
+
+        @if (loadingChart) {
+
+        @for (
+        chartEvaluation of [results];
+        track chartEvaluation.evaluation_id
+        ) {
+
+        <app-bar-chart variant="dashboard" [data]="ambits" [scores]="scores" [colors]="colors">
+        </app-bar-chart>
+
+        }
+
+        }
+
+      </section>
+
+      <section class="asg-card dashboard-schedule d-grid gap-3" aria-labelledby="dashboard-schedule-title">
+
+        <header class="dashboard-schedule__header d-flex align-items-center gap-3">
+
+          <div class="dashboard-company__icon d-grid flex-shrink-0" aria-hidden="true">
+
+            <i class="bi bi-calendar-check"></i>
+
+          </div>
+
+          <div>
+
+            <h2 id="dashboard-schedule-title">
+              Próximo autodiagnóstico
+            </h2>
+
+            <p class="dashboard-welcome__description">
+              Planificación del ciclo de evaluación
+            </p>
+
+          </div>
+
+        </header>
+
+        <div class="dashboard-schedule__calendar">
+
+          <div class="dashboard-schedule__calendar-content">
+
+            <p class="dashboard-company__label">
+              Fecha programada
+            </p>
+
+            <div class="dashboard-schedule__date">
+
+              @if (isCompanyLoading) {
+
+              Consultando fecha...
+
+              } @else if (
+              hasCompanyError ||
+              !company ||
+              company.id !== companyContext.selectedCompanyId()
+              ) {
+
+              Fecha no disponible
+
+              } @else {
+
+              {{ evaluationDate || 'No programado' }}
+
+              }
+
+            </div>
+
+          </div>
+
+          <i class="bi bi-calendar2-week dashboard-schedule__calendar-icon" aria-hidden="true">
+          </i>
+
+        </div>
+
+        <div class="dashboard-schedule__availability">
+
+          <span class="dashboard-schedule__status" [class.dashboard-schedule__status--available]="canStartEvaluation">
+
+            <i [class]="canStartEvaluation
+                    ? 'bi bi-check-circle-fill'
+                    : 'bi bi-info-circle'" aria-hidden="true">
+            </i>
+
+            @if (isCompanyLoading) {
+
+            Verificando disponibilidad
+
+            } @else if (hasCompanyError) {
+
+            Error de consulta
+
+            } @else if (canStartEvaluation) {
+
+            Disponible
+
+            } @else if (
+            companyContext.selectedMembership()?.role === 'AUDITOR'
+            ) {
+
+            Solo lectura
+
+            } @else {
+
+            No disponible
+
+            }
+
+          </span>
+
+          @if (evaluationUnavailableReason) {
+
+          <p id="dashboard-evaluation-reason" class="dashboard-evaluation-reason">
+
+            {{ evaluationUnavailableReason }}
+
+          </p>
+
+          } @else if (
+          companyContext.selectedMembership()?.role === 'COLLABORATOR'
+          ) {
+
+          <p class="dashboard-evaluation-reason">
+
+            Puedes preparar tu borrador,
+            pero no enviar la evaluación.
+
+          </p>
+
+          } @else {
+
+          <p class="dashboard-evaluation-reason">
+
+            Puedes iniciar el autodiagnóstico de tu empresa.
+
+          </p>
+
+          }
+
+        </div>
+
+        <div class="dashboard-schedule__footer">
+
+          <button type="button" class="asg-btn asg-btn--primary dashboard-period__action w-100"
+            [disabled]="!canStartEvaluation" [attr.aria-describedby]="
+                evaluationUnavailableReason
+                    ? 'dashboard-evaluation-reason'
+                    : null
+            " (click)="goEvaluation()">
+
+            <i [class]="canStartEvaluation
+                    ? 'bi bi-clipboard-check'
+                    : 'bi bi-lock'" aria-hidden="true">
+            </i>
+
+            {{ evaluationActionLabel }}
+
+          </button>
+          @if (hasCompanyError) {
+
+          <button type="button" class="asg-btn asg-btn--secondary w-100 mt-2" (click)="retryCompanyDetails()">
+
+            <i class="bi bi-arrow-clockwise" aria-hidden="true">
+            </i>
+
+            Reintentar consulta
+
+          </button>
+
           }
         </div>
-      </div>
+
+      </section>
+
     </div>
-    }
-    @if (results) {
-    <div class="d-flex align-items-center justify-content-center mt-4">
-      <button class="btn-my-purple" (click)="downloadPdf()"><i class="bi bi-eye-fill me-1"></i> Ver Resultados</button>
-    </div>
+
     }
   </div>
 </div>
