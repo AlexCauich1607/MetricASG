@@ -2802,4 +2802,128 @@ describe('EvaluationComponent', () => {
     });
 
   });
+  it('should display the skeleton while loading the evaluation', () => {
+    component.loading.set(true);
+
+    fixture.detectChanges();
+
+    const element: HTMLElement = fixture.nativeElement;
+
+    expect(
+      element.querySelector('app-evaluation-skeleton')
+    ).not.toBeNull();
+
+    expect(
+      element.querySelector('.evaluation-question-card')
+    ).toBeNull();
+
+    expect(
+      element.querySelector('.evaluation-progress')
+    ).toBeNull();
+  });
+  it('should preserve the evaluation header while loading', () => {
+    component.loading.set(true);
+
+    fixture.detectChanges();
+
+    const element: HTMLElement = fixture.nativeElement;
+
+    expect(
+      element.querySelector('.evaluation-header__title')
+        ?.textContent
+    ).toContain('Evaluación ASG');
+
+    expect(
+      element.querySelector('.evaluation-header__period')
+    ).not.toBeNull();
+
+    expect(
+      element.querySelector('app-evaluation-skeleton')
+    ).not.toBeNull();
+  });
+  it('should replace the skeleton with the questionnaire after loading', () => {
+    component.loading.set(true);
+
+    fixture.detectChanges();
+
+    const element: HTMLElement = fixture.nativeElement;
+
+    expect(
+      element.querySelector('app-evaluation-skeleton')
+    ).not.toBeNull();
+
+    component.loading.set(false);
+
+    fixture.detectChanges();
+
+    expect(
+      element.querySelector('app-evaluation-skeleton')
+    ).toBeNull();
+
+    expect(
+      element.querySelector('.evaluation-progress')
+    ).not.toBeNull();
+
+    expect(
+      element.querySelector('.evaluation-question-card')
+    ).not.toBeNull();
+  });
+  it('should replace the skeleton with the error state when loading fails', () => {
+    component.loading.set(true);
+
+    fixture.detectChanges();
+
+    const element: HTMLElement = fixture.nativeElement;
+
+    expect(
+      element.querySelector('app-evaluation-skeleton')
+    ).not.toBeNull();
+
+    component.loadError.set(true);
+    component.loading.set(false);
+
+    fixture.detectChanges();
+
+    expect(
+      element.querySelector('app-evaluation-skeleton')
+    ).toBeNull();
+
+    expect(
+      element.querySelector('.evaluation-question-card')
+    ).toBeNull();
+
+    expect(element.textContent)
+      .toContain('No se pudo recuperar la evaluación');
+
+    expect(element.textContent)
+      .toContain('Reintentar');
+  });
+  it('should display the skeleton again when loading is retried', () => {
+    component.loading.set(false);
+    component.loadError.set(true);
+
+    fixture.detectChanges();
+
+    const element: HTMLElement = fixture.nativeElement;
+
+    expect(
+      element.querySelector('app-evaluation-skeleton')
+    ).toBeNull();
+
+    component.loading.set(true);
+    component.loadError.set(false);
+
+    fixture.detectChanges();
+
+    expect(
+      element.querySelector('app-evaluation-skeleton')
+    ).not.toBeNull();
+
+    expect(element.textContent)
+      .not.toContain('No se pudo recuperar la evaluación');
+
+    expect(
+      element.querySelector('.evaluation-question-card')
+    ).toBeNull();
+  });
 });

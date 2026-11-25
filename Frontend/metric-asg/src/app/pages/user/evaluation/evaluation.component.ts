@@ -25,13 +25,16 @@ import {
   EvaluationAutosaveComponent,
   EvaluationAutosaveStatus
 } from '../evaluation-autosave/evaluation-autosave.component';
+import { EvaluationSkeletonComponent } from
+  '../evaluation-skeleton/evaluation-skeleton.component';
 
 @Component({
   selector: 'app-evaluation',
   standalone: true,
   imports: [
     EvaluationEvidencesComponent,
-    EvaluationAutosaveComponent
+    EvaluationAutosaveComponent,
+    EvaluationSkeletonComponent
   ],
   templateUrl: './evaluation.component.html',
   changeDetection: ChangeDetectionStrategy.Eager,

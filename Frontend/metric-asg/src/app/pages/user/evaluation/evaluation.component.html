@@ -4,7 +4,7 @@
     <header class="evaluation-header">
       <div class="evaluation-header__identity">
         <p class="evaluation-header__period d-inline-flex align-items-center gap-2">
-           <i class="bi bi-calendar3" aria-hidden="true"></i>
+          <i class="bi bi-calendar3" aria-hidden="true"></i>
 
           <span>
             {{ mesFuturo }}
@@ -42,17 +42,10 @@
 
     }
     @if (loading()) {
-    <div class="d-flex justify-content-center align-items-center py-5">
-      <div class="text-center">
-        <div class="spinner-border text-my-purple mb-3" role="status">
-          <span class="visually-hidden">Cargando evaluación...</span>
-        </div>
 
-        <p class="sw-gris mb-0">
-          Recuperando evaluación...
-        </p>
-      </div>
-    </div>
+    <app-evaluation-skeleton>
+    </app-evaluation-skeleton>
+
     } @else if (loadError()) {
 
     <div class="border rounded p-5 shadow-sm bg-white text-center">
