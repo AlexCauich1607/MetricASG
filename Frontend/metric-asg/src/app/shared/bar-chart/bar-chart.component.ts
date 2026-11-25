@@ -1,4 +1,12 @@
-import { Component, Input, AfterViewInit, ViewChild, ElementRef, ChangeDetectionStrategy } from '@angular/core';
+import {
+  Component,
+  Input,
+  AfterViewInit,
+  OnDestroy,
+  ViewChild,
+  ElementRef,
+  ChangeDetectionStrategy
+} from '@angular/core';
 import { Chart, ChartConfiguration, registerables } from 'chart.js';
 
 Chart.register(...registerables);
@@ -10,10 +18,12 @@ Chart.register(...registerables);
   changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './bar-chart.component.scss'
 })
-export class BarChartComponent implements AfterViewInit {
+export class BarChartComponent implements AfterViewInit, OnDestroy {
   @ViewChild('chartCanvas') chartCanvas!: ElementRef;
 
   chart: any;
+  private initializationTimer:
+    ReturnType<typeof setTimeout> | null = null;
   @Input() id: number = 0;
   @Input() data: string[] = [];
   @Input() scores: number[] = [];
@@ -23,7 +33,10 @@ export class BarChartComponent implements AfterViewInit {
 
 
   ngAfterViewInit(): void {
-    setTimeout(() => this.cargarGrafica(), 0);
+    this.initializationTimer = setTimeout(() => {
+      this.initializationTimer = null;
+      this.cargarGrafica();
+    }, 0);
   }
 
   private cargarGrafica(): void {
@@ -205,9 +218,14 @@ export class BarChartComponent implements AfterViewInit {
   }
 
   ngOnDestroy(): void {
+    if (this.initializationTimer !== null) {
+      clearTimeout(this.initializationTimer);
+      this.initializationTimer = null;
+    }
 
     if (this.chart) {
       this.chart.destroy();
+      this.chart = null;
     }
   }
 }

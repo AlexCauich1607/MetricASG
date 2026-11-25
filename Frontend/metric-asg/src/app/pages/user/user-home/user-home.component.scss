@@ -139,8 +139,7 @@
 }
 
 .dashboard-performance__grid,
-.dashboard-insights,
-.company-onboarding__actions {
+.dashboard-insights {
     display: grid;
     gap: 1rem;
 }
@@ -452,48 +451,34 @@ button.asg-btn.dashboard-global-action {
 /* Responsive */
 
 @media (max-width: 1023.98px) {
+
     .dashboard-performance__grid {
-        grid-template-columns: repeat(3, minmax(0, 1fr));
+        grid-template-columns:
+            repeat(3, minmax(0, 1fr));
     }
 
     .dashboard-global-card {
         grid-column: 1 / -1;
     }
+
 }
 
 @media (max-width: 991.98px) {
+
     .dashboard-insights {
         grid-template-columns: minmax(0, 1fr);
     }
+
 }
 
 @media (max-width: 767.98px) {
+
     .dashboard-container {
         gap: 1rem;
         padding-block: 1rem;
     }
 
-    .dashboard-company--with-period {
-        grid-template-columns: minmax(0, 1fr);
-    }
-
-    .company-onboarding__actions {
-        grid-template-columns: minmax(0, 1fr);
-    }
-
-    .company-onboarding__card {
-        padding: 1rem;
-    }
-
-    .company-onboarding__invitation .asg-btn {
-        width: 100%;
-    }
-
-    .company-onboarding,
-    .dashboard-empty {
-        gap: 1rem;
-    }
-
+    .dashboard-company--with-period,
     .company-onboarding__actions,
     .dashboard-empty__benefits {
         grid-template-columns: minmax(0, 1fr);
@@ -501,6 +486,11 @@ button.asg-btn.dashboard-global-action {
 
     .company-onboarding__card {
         padding: 1rem;
+    }
+
+    .company-onboarding,
+    .dashboard-empty {
+        gap: 1rem;
     }
 
     .dashboard-empty__actions {
@@ -512,12 +502,16 @@ button.asg-btn.dashboard-global-action {
         flex-basis: auto;
     }
 
-    .dashboard-empty__actions .asg-btn {
+    .company-onboarding__invitation .asg-btn,
+    .dashboard-empty__actions .asg-btn,
+    .dashboard-error__actions .asg-btn {
         width: 100%;
     }
+
 }
 
 @media (max-width: 575.98px) {
+
     .dashboard-performance__grid {
         grid-template-columns: minmax(0, 1fr);
     }
@@ -525,10 +519,9 @@ button.asg-btn.dashboard-global-action {
     .dashboard-period__action {
         width: 100%;
     }
-}
 
-@media (max-width: 575.98px) {
     .dashboard-schedule {
+
         &__calendar {
             padding: 1rem;
         }
@@ -536,5 +529,22 @@ button.asg-btn.dashboard-global-action {
         &__calendar-icon {
             font-size: 1.75rem;
         }
+
+    }
+
+}
+
+.dashboard-error {
+    display: grid;
+    gap: 1rem;
+    min-width: 0;
+
+    &__actions {
+        display: flex;
+        justify-content: flex-end;
+        flex-wrap: wrap;
+        gap: .75rem;
+        padding-top: 1rem;
+        border-top: 1px solid #e2e8f0;
     }
 }

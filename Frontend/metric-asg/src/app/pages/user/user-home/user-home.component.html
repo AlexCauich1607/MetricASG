@@ -35,7 +35,7 @@
     ) {
 
     <section class="asg-card dashboard-company" aria-labelledby="dashboard-company-title"
-      [class.dashboard-company--with-period]="!!results">
+      [class.dashboard-company--with-period]="hasCurrentResults">
 
       <div class="dashboard-company__identity d-flex align-items-center gap-3">
 
@@ -70,7 +70,7 @@
 
       </div>
 
-      @if (results) {
+      @if (hasCurrentResults) {
 
       <div class="dashboard-company__period d-flex align-items-center gap-3">
 
@@ -107,44 +107,77 @@
     </section>
 
     }
-    @if (resultsStatus === 'loading') {
-    <app-ui-state type="loading" title="Cargando resultados"
-      message="Estamos consultando la información de tu empresa.">
-    </app-ui-state>
-    }
 
-    @if (resultsStatus === 'error') {
-    <app-ui-state type="error" title="No se pudieron cargar los resultados"
-      message="Ocurrió un problema al consultar la información.">
-    </app-ui-state>
-    }
+    @if (dashboardStatus === 'context-loading') {
 
-    @if (companyContext.loading()) {
-    <app-ui-state type="loading" title="Cargando empresas" message="Estamos consultando tus empresas disponibles.">
-    </app-ui-state>
+    <app-dashboard-skeleton variant="context">
+    </app-dashboard-skeleton>
 
-    } @else if (companyContext.error()) {
-    <app-ui-state type="error" title="No se pudieron cargar tus empresas"
-      message="No pudimos verificar tus membresías empresariales. Inténtalo nuevamente.">
-    </app-ui-state>
-    @if (invitationAcceptedPendingSync) {
-    <div class="text-center mt-3">
-      <p role="alert">
-        La invitación fue aceptada, pero no pudimos actualizar
-        tus empresas.
-      </p>
+    } @else if (dashboardStatus === 'context-error') {
 
-      <button type="button" class="asg-btn asg-btn--primary" [disabled]="companyContext.loading()"
-        (click)="syncAcceptedInvitation()">
-        Reintentar sincronización
-      </button>
-    </div>
-    }
+    <section class="asg-card dashboard-error">
 
-    } @else if (
-    companyContext.memberships().length === 0 &&
-    companyContext.selectedCompanyId() === null
-    ) {
+      <app-ui-state type="error" title="No se pudieron cargar tus empresas" [message]="invitationAcceptedPendingSync
+                ? 'La invitación fue aceptada, pero no pudimos actualizar tus empresas.'
+                : 'No pudimos verificar tus membresías empresariales.'">
+      </app-ui-state>
+
+      <div class="dashboard-error__actions">
+
+        <button type="button" class="asg-btn asg-btn--primary" (click)="retryMemberships()">
+
+          <i class="bi bi-arrow-clockwise" aria-hidden="true">
+          </i>
+
+          {{ invitationAcceptedPendingSync
+          ? 'Reintentar sincronización'
+          : 'Reintentar consulta' }}
+
+        </button>
+
+      </div>
+
+    </section>
+
+    } @else if (dashboardStatus === 'no-selection') {
+
+    <section class="asg-card dashboard-error">
+
+      <app-ui-state type="empty" title="Selecciona una empresa"
+        message="Utiliza el selector de empresas de la barra de navegación para consultar su información ASG.">
+      </app-ui-state>
+
+    </section>
+
+    } @else if (dashboardStatus === 'loading') {
+
+    <app-dashboard-skeleton variant="results">
+    </app-dashboard-skeleton>
+
+    } @else if (dashboardStatus === 'error') {
+
+    <section class="asg-card dashboard-error">
+
+      <app-ui-state type="error" title="No se pudieron cargar los resultados"
+        message="Ocurrió un problema al consultar la información de tu empresa. Puedes volver a intentarlo.">
+      </app-ui-state>
+
+      <div class="dashboard-error__actions">
+
+        <button type="button" class="asg-btn asg-btn--primary" (click)="retryResults()">
+
+          <i class="bi bi-arrow-clockwise" aria-hidden="true">
+          </i>
+
+          Reintentar consulta
+
+        </button>
+
+      </div>
+
+    </section>
+
+    } @else if (dashboardStatus === 'no-companies') {
     <section class="asg-card company-onboarding" aria-labelledby="company-onboarding-title">
 
       <header class="company-onboarding__header d-flex align-items-center gap-3">
@@ -345,7 +378,7 @@
 
     </section>
 
-    } @else if (resultsStatus === 'empty') {
+    } @else if (dashboardStatus === 'empty') {
     <section class="asg-card dashboard-empty" aria-labelledby="dashboard-empty-title">
 
       <header class="dashboard-empty__header">
@@ -459,6 +492,19 @@
 
         </div>
 
+        @if (hasCompanyError) {
+
+        <button type="button" class="asg-btn asg-btn--secondary" (click)="retryCompanyDetails()">
+
+          <i class="bi bi-arrow-clockwise" aria-hidden="true">
+          </i>
+
+          Verificar disponibilidad nuevamente
+
+        </button>
+
+        }
+
         <button type="button" class="asg-btn asg-btn--primary dashboard-period__action" [disabled]="!canStartEvaluation"
           [attr.aria-describedby]="
                 evaluationUnavailableReason
@@ -480,7 +526,7 @@
     </section>
     }
 
-    @if (results) {
+    @if (hasCurrentResults && results) {
 
     <section class="dashboard-performance" aria-labelledby="dashboard-performance-title">
 
@@ -527,7 +573,7 @@
     </section>
     }
 
-    @if (results) {
+    @if (hasCurrentResults && results) {
 
     <div class="dashboard-insights">
 
@@ -547,8 +593,15 @@
 
         @if (loadingChart) {
 
+        @for (
+        chartEvaluation of [results];
+        track chartEvaluation.evaluation_id
+        ) {
+
         <app-bar-chart variant="dashboard" [data]="ambits" [scores]="scores" [colors]="colors">
         </app-bar-chart>
+
+        }
 
         }
 
@@ -588,12 +641,12 @@
 
             <div class="dashboard-schedule__date">
 
-              @if (companyLoading) {
+              @if (isCompanyLoading) {
 
               Consultando fecha...
 
               } @else if (
-              companyError ||
+              hasCompanyError ||
               !company ||
               company.id !== companyContext.selectedCompanyId()
               ) {
@@ -624,7 +677,15 @@
                     : 'bi bi-info-circle'" aria-hidden="true">
             </i>
 
-            @if (canStartEvaluation) {
+            @if (isCompanyLoading) {
+
+            Verificando disponibilidad
+
+            } @else if (hasCompanyError) {
+
+            Error de consulta
+
+            } @else if (canStartEvaluation) {
 
             Disponible
 
@@ -633,10 +694,6 @@
             ) {
 
             Solo lectura
-
-            } @else if (companyLoading || companyContext.loading()) {
-
-            Verificando disponibilidad
 
             } @else {
 
@@ -694,7 +751,18 @@
             {{ evaluationActionLabel }}
 
           </button>
+          @if (hasCompanyError) {
 
+          <button type="button" class="asg-btn asg-btn--secondary w-100 mt-2" (click)="retryCompanyDetails()">
+
+            <i class="bi bi-arrow-clockwise" aria-hidden="true">
+            </i>
+
+            Reintentar consulta
+
+          </button>
+
+          }
         </div>
 
       </section>

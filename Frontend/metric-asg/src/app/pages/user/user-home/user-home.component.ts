@@ -1,7 +1,13 @@
-import { Component, ComponentRef, ViewContainerRef, ChangeDetectionStrategy, DestroyRef } from '@angular/core';
+import {
+  Component,
+  ViewContainerRef,
+  ChangeDetectionStrategy,
+  DestroyRef,
+  computed,
+  signal
+} from '@angular/core';
 import { ResultEvaluation } from '../../../models/evaluation_result';
 import { EvaluationService } from '../../../services/evaluation.service';
-import { Chart, ChartConfiguration, registerables } from 'chart.js';
 import { UserService } from '../../../services/user.service';
 import { User } from '../../../models/user';
 import { Router } from '@angular/router';
@@ -28,9 +34,18 @@ import {
 
 import { CreateCompanyComponent } from '../../modals/create-company/create-company.component';
 import { CompanyInvitationService } from '../../../services/company-invitation.service';
+import { DashboardSkeletonComponent } from
+  './dashboard-skeleton/dashboard-skeleton.component';
 
-Chart.register(...registerables);
-
+type DashboardStatus =
+  | 'context-loading'
+  | 'context-error'
+  | 'no-companies'
+  | 'no-selection'
+  | 'loading'
+  | 'error'
+  | 'empty'
+  | 'success';
 
 @Component({
   selector: 'app-user-home',
@@ -38,7 +53,8 @@ Chart.register(...registerables);
   imports: [
     AmbitCardComponent,
     BarChartComponent,
-    UiStateComponent
+    UiStateComponent,
+    DashboardSkeletonComponent
   ],
   templateUrl: './user-home.component.html',
   changeDetection: ChangeDetectionStrategy.Eager,
@@ -71,6 +87,7 @@ export class UserHomeComponent {
   invitationSuccess = false;
   invitationAcceptedPendingSync = false;
 
+
   get hasEvaluationPermission(): boolean {
     const role =
       this.companyContext.selectedMembership()?.role;
@@ -89,14 +106,14 @@ export class UserHomeComponent {
 
     if (
       this.companyContext.loading() ||
-      this.companyLoading
+      this.isCompanyLoading
     ) {
       return 'Estamos consultando la disponibilidad.';
     }
 
     if (
       this.companyContext.error() ||
-      this.companyError
+      this.hasCompanyError
     ) {
       return 'No fue posible verificar la disponibilidad.';
     }
@@ -166,6 +183,91 @@ export class UserHomeComponent {
   loadingChart = false;
   resultsStatus: 'loading' | 'error' | 'empty' | 'success' = 'loading';
 
+  private readonly resultsRetryVersion = signal(0);
+
+  private readonly companyRetryVersion = signal(0);
+
+  private resultsCompanyId: number | null = null;
+
+  private requestedCompanyId: number | null = null;
+
+  private readonly activeCompanyId = computed(() => {
+    if (
+      this.companyContext.loading() ||
+      this.companyContext.error()
+    ) {
+      return null;
+    }
+
+    return this.companyContext.selectedMembership()?.company_id
+      ?? null;
+  });
+
+  private readonly resultsRequest = computed(() => ({
+    companyId: this.activeCompanyId(),
+    version: this.resultsRetryVersion()
+  }));
+
+  private readonly companyRequest = computed(() => ({
+    companyId: this.activeCompanyId(),
+    version: this.companyRetryVersion()
+  }));
+
+  get dashboardStatus(): DashboardStatus {
+    if (this.companyContext.loading()) {
+      return 'context-loading';
+    }
+
+    if (this.companyContext.error()) {
+      return 'context-error';
+    }
+
+    if (this.companyContext.memberships().length === 0) {
+      return 'no-companies';
+    }
+
+    const companyId = this.activeCompanyId();
+
+    if (companyId === null) {
+      return 'no-selection';
+    }
+
+    if (this.resultsCompanyId !== companyId) {
+      return 'loading';
+    }
+
+    return this.resultsStatus;
+  }
+
+  get hasCurrentResults(): boolean {
+    return (
+      this.dashboardStatus === 'success' &&
+      this.results !== null
+    );
+  }
+
+  get isCompanyLoading(): boolean {
+    const companyId = this.activeCompanyId();
+
+    return (
+      companyId !== null &&
+      (
+        this.requestedCompanyId !== companyId ||
+        this.companyLoading
+      )
+    );
+  }
+
+  get hasCompanyError(): boolean {
+    const companyId = this.activeCompanyId();
+
+    return (
+      companyId !== null &&
+      this.requestedCompanyId === companyId &&
+      this.companyError
+    );
+  }
+
   constructor(
     private resultService: EvaluationService,
     private userService: UserService,
@@ -178,86 +280,199 @@ export class UserHomeComponent {
     private companyInvitationService: CompanyInvitationService,
   ) {
 
-    toObservable(this.companyContext.selectedCompanyId)
+    toObservable(this.resultsRequest)
       .pipe(
-        tap(() => {
+        tap(({ companyId }) => {
           this.clearResultsState();
-          this.resultsStatus = 'loading';
+          this.resultsCompanyId = companyId;
+
+          this.resultsStatus = companyId === null
+            ? 'empty'
+            : 'loading';
         }),
-        switchMap(companyId => {
-          if (companyId === null) {
-            this.resultsStatus = 'empty';
+
+        switchMap(({ companyId }) => {
+          if (
+            companyId === null ||
+            companyId !== this.activeCompanyId()
+          ) {
             return EMPTY;
           }
 
-          return this.resultService.getLastEvaluationResult().pipe(
+          return this.resultService
+            .getLastEvaluationResult()
+            .pipe(
+              tap(data => {
+                if (
+                  companyId !== this.activeCompanyId()
+                ) {
+                  return;
+                }
 
-            catchError(error => {
-              const noEvaluations =
-                error?.status === 404 &&
-                error?.error?.detail === 'No evaluations found';
+                this.results = data;
 
-              if (noEvaluations) {
-                this.resultsStatus = 'empty';
-              } else {
-                console.error('Error al cargar resultados:', error);
-                this.resultsStatus = 'error';
-              }
+                if (!data) {
+                  this.resultsStatus = 'empty';
+                  return;
+                }
 
-              return EMPTY;
-            })
+                this.resultsStatus = 'success';
 
-          );
+                this.getPeriodo(data.date);
+                this.cargarGrafica();
+              }),
+
+              catchError(error => {
+                if (
+                  companyId !== this.activeCompanyId()
+                ) {
+                  return EMPTY;
+                }
+
+                const noEvaluations =
+                  error?.status === 404 &&
+                  error?.error?.detail ===
+                  'No evaluations found';
+
+                if (noEvaluations) {
+                  this.resultsStatus = 'empty';
+                } else {
+                  console.error(
+                    'Error al cargar resultados:',
+                    error
+                  );
+
+                  this.resultsStatus = 'error';
+                }
+
+                return EMPTY;
+              })
+            );
         }),
+
         takeUntilDestroyed(this.destroyRef)
       )
-      .subscribe(data => {
-        this.results = data;
-
-        if (!data) {
-          this.resultsStatus = 'empty';
-          return;
-        }
-
-        this.resultsStatus = 'success';
-        this.getPeriodo(data.date);
-        this.cargarGrafica();
-      });
-    toObservable(this.companyContext.selectedCompanyId)
+      .subscribe();
+    toObservable(this.companyRequest)
       .pipe(
-        tap(() => {
+        tap(({ companyId }) => {
+          this.requestedCompanyId = companyId;
           this.company = null;
-          this.companyLoading = true;
+          this.companyLoading = companyId !== null;
           this.companyError = false;
           this.evaluationDate = '';
         }),
-        switchMap(companyId => {
-          if (companyId === null) {
-            this.companyLoading = false;
+
+        switchMap(({ companyId }) => {
+          if (
+            companyId === null ||
+            companyId !== this.activeCompanyId()
+          ) {
             return EMPTY;
           }
 
-          return this.companyMembershipService.getCompany(companyId).pipe(
-            catchError(error => {
-              console.error('Error al consultar empresa:', error);
-              this.companyError = true;
-              this.companyLoading = false;
-              return EMPTY;
-            })
-          );
+          return this.companyMembershipService
+            .getCompany(companyId)
+            .pipe(
+              tap(company => {
+                if (
+                  companyId !== this.activeCompanyId()
+                ) {
+                  return;
+                }
+
+                if (company.id !== companyId) {
+                  this.company = null;
+                  this.companyError = true;
+                  this.companyLoading = false;
+                  return;
+                }
+
+                this.company = company;
+                this.companyLoading = false;
+
+                this.evaluationDate =
+                  company.next_evaluation
+                    ? this.formatDateDDMMYYString(
+                      company.next_evaluation
+                    )
+                    : '';
+              }),
+
+              catchError(error => {
+                if (
+                  companyId !== this.activeCompanyId()
+                ) {
+                  return EMPTY;
+                }
+
+                console.error(
+                  'Error al consultar empresa:',
+                  error
+                );
+
+                this.companyError = true;
+                this.companyLoading = false;
+
+                return EMPTY;
+              })
+            );
         }),
+
         takeUntilDestroyed(this.destroyRef)
       )
-      .subscribe(company => {
-        this.company = company;
-        this.companyLoading = false;
-
-        this.evaluationDate = company.next_evaluation
-          ? this.formatDateDDMMYYString(company.next_evaluation)
-          : '';
-      });
+      .subscribe();
   }
 
+  retryResults(): void {
+    if (
+      this.activeCompanyId() === null ||
+      this.dashboardStatus !== 'error'
+    ) {
+      return;
+    }
+
+    this.clearResultsState();
+    this.resultsStatus = 'loading';
+
+    this.resultsRetryVersion.update(
+      version => version + 1
+    );
+  }
+
+  retryMemberships(): void {
+    if (this.companyContext.loading()) {
+      return;
+    }
+
+    if (this.invitationAcceptedPendingSync) {
+      this.syncAcceptedInvitation();
+      return;
+    }
+
+    this.companyContext.refreshMemberships()
+      .pipe(
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe();
+  }
+  retryCompanyDetails(): void {
+    if (
+      this.activeCompanyId() === null ||
+      !this.hasCompanyError
+    ) {
+      return;
+    }
+
+    this.company = null;
+    this.companyLoading = true;
+    this.companyError = false;
+    this.evaluationDate = '';
+
+    this.companyRetryVersion.update(
+      version => version + 1
+    );
+  }
   private clearResultsState(): void {
     this.results = null;
 
@@ -274,7 +489,6 @@ export class UserHomeComponent {
     this.loadingChart = false;
   }
 
-  chart: any;
   ngOnInit(): void {
     this.loadUser();
   }
@@ -291,55 +505,30 @@ export class UserHomeComponent {
     });
   }
 
-  cargarGrafica(): void {
+  private cargarGrafica(): void {
+    const ambits = this.results?.ambits ?? [];
+
     this.loadingChart = false;
-    this.results?.ambits.forEach(a => {
-      this.ambits.push(a.ambit_name)
-      this.scores.push(parseFloat(a.score.toFixed(1)));
-      this.colors.push(a.color);
-      this.bordes.push(a.maturity_color);
-    });
-    this.loadingChart = true;
 
+    this.ambits = ambits.map(
+      ambit => ambit.ambit_name
+    );
+
+    this.scores = ambits.map(
+      ambit => Number(ambit.score.toFixed(1))
+    );
+
+    this.colors = ambits.map(
+      ambit => ambit.color
+    );
+
+    this.bordes = ambits.map(
+      ambit => ambit.maturity_color
+    );
+
+    this.loadingChart = ambits.length > 0;
   }
 
-
-  onSelect(event: any): void {
-    console.log('Barra seleccionada:', event);
-
-  }
-
-
-
-  yAxisTickFormatting(value: number): string {
-    return `${value}/10`;
-  }
-
-  loadResults() {
-    this.resultService.getLastEvaluationResult().subscribe({
-      next: (data) => {
-        this.results = data;
-        this.getPeriodo(this.results.date);
-        this.cargarGrafica();
-
-      },
-      error: (err) => {
-
-      }
-    })
-  }
-
-  getBorderColor(level: string): string {
-    let color = "";
-    if (level === "Básico") {
-      color = "#ce4040ff";
-    } else if (level === "Intermedio") {
-      color = "#eac84fff";
-    } else {
-      color = "#15b91dff";
-    }
-    return color;
-  }
   capitalizar(texto: string): string {
     if (!texto) return texto;
     return texto.charAt(0).toUpperCase() + texto.slice(1);
@@ -356,13 +545,6 @@ export class UserHomeComponent {
     this.anioAnterior = before.toLocaleString('es-ES', { year: 'numeric' });
   }
 
-  formatDateDDMMYY(date: Date): string {
-    const day = date.getDate().toString().padStart(2, '0');
-    const month = (date.getMonth() + 1).toString().padStart(2, '0');
-    const year = date.getFullYear().toString();
-
-    return `${day}/${month}/${year}`;
-  }
   formatDateDDMMYYString(fecha: string): string {
     const date = new Date(fecha);
     const day = date.getDate().toString().padStart(2, '0');
@@ -475,13 +657,7 @@ export class UserHomeComponent {
   }
 
   goToResults(): void {
-    if (
-      this.results &&
-      this.resultsStatus === 'success' &&
-      this.companyContext.selectedMembership() &&
-      !this.companyContext.loading() &&
-      !this.companyContext.error()
-    ) {
+    if (this.hasCurrentResults) {
       this.router.navigate(['/user/results']);
     }
   }

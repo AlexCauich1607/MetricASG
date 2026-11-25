@@ -162,4 +162,37 @@ describe('BarChartComponent', () => {
 
     expect(destroy).toHaveBeenCalledTimes(1);
   }));
+  it('should cancel pending chart initialization when destroyed', fakeAsync(() => {
+    component.variant = 'dashboard';
+    component.data = ['Ambiental'];
+    component.scores = [8.5];
+    component.colors = ['#5d9732'];
+
+    fixture.detectChanges();
+
+    expect(component.chart).toBeFalsy();
+
+    fixture.destroy();
+
+    tick(0);
+
+    expect(component.chart).toBeFalsy();
+  }));
+  it('should release the chart reference after destruction', fakeAsync(() => {
+    renderChart();
+
+    const destroy = spyOn(
+      component.chart,
+      'destroy'
+    ).and.callThrough();
+
+    fixture.destroy();
+
+    expect(destroy).toHaveBeenCalledTimes(1);
+    expect(component.chart).toBeNull();
+
+    component.ngOnDestroy();
+
+    expect(destroy).toHaveBeenCalledTimes(1);
+  }));
 });

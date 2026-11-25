@@ -41,6 +41,24 @@ describe('UserHomeComponent', () => {
     TestBed.tick();
     fixture.detectChanges();
   }
+  function prepareCompanyMemberships(): void {
+    memberships.set([
+      {
+        membership_id: 1,
+        company_id: 3,
+        company_name: 'Empresa A',
+        role: CompanyRole.COMPANY_ADMIN,
+        joined_at: '2026-11-23T12:00:00'
+      },
+      {
+        membership_id: 2,
+        company_id: 7,
+        company_name: 'Empresa B',
+        role: CompanyRole.COMPANY_ADMIN,
+        joined_at: '2026-11-23T12:00:00'
+      }
+    ]);
+  }
   let component: UserHomeComponent;
   let fixture: ComponentFixture<UserHomeComponent>;
 
@@ -199,6 +217,7 @@ describe('UserHomeComponent', () => {
 
 
   it('should reload results and chart data when switching companies', () => {
+    prepareCompanyMemberships();
     evaluationService.getLastEvaluationResult.and.returnValues(
       of(companyAResults),
       of(companyBResults)
@@ -228,6 +247,7 @@ describe('UserHomeComponent', () => {
 
 
   it('should clear previous results while loading another company', () => {
+    prepareCompanyMemberships();
     const pendingResults = new Subject<ResultEvaluation>();
 
     evaluationService.getLastEvaluationResult.and.returnValues(
@@ -262,6 +282,7 @@ describe('UserHomeComponent', () => {
 
 
   it('should show loading while results are pending', async () => {
+    prepareCompanyMemberships();
     const pendingResults = new Subject<ResultEvaluation>();
 
     evaluationService.getLastEvaluationResult.and.returnValue(
@@ -285,6 +306,7 @@ describe('UserHomeComponent', () => {
   });
 
   it('should show empty when no completed evaluations exist', async () => {
+    prepareCompanyMemberships();
     evaluationService.getLastEvaluationResult.and.returnValue(
       throwError(() => ({
         status: 404,
@@ -329,6 +351,7 @@ describe('UserHomeComponent', () => {
   });
 
   it('should show error for service failures', async () => {
+    prepareCompanyMemberships();
     evaluationService.getLastEvaluationResult.and.returnValue(
       throwError(() => ({
         status: 500,
@@ -351,6 +374,7 @@ describe('UserHomeComponent', () => {
   });
 
   it('should not treat unrelated 404 errors as empty', async () => {
+    prepareCompanyMemberships();
     evaluationService.getLastEvaluationResult.and.returnValue(
       throwError(() => ({
         status: 404,
@@ -871,5 +895,583 @@ describe('UserHomeComponent', () => {
       .toBe('example-invitation-token');
 
     expect(submitButton.disabled).toBeFalse();
+  });
+  it('should prioritize context loading over other dashboard states', () => {
+    prepareCompanyMemberships();
+
+    companyContext.loading.set(true);
+    selectedCompanyId.set(3);
+
+    TestBed.tick();
+    fixture.detectChanges();
+
+    const element: HTMLElement = fixture.nativeElement;
+
+    expect(component.dashboardStatus)
+      .toBe('context-loading');
+
+    expect(
+      element.querySelector('.dashboard-skeleton-context')
+    ).not.toBeNull();
+
+    expect(
+      element.querySelector('.dashboard-skeleton-card')
+    ).toBeNull();
+
+    expect(
+      element.querySelector('.company-onboarding')
+    ).toBeNull();
+
+    expect(
+      element.querySelector('.dashboard-empty')
+    ).toBeNull();
+
+    expect(
+      element.querySelector('.dashboard-performance')
+    ).toBeNull();
+
+    expect(
+      evaluationService.getLastEvaluationResult
+    ).not.toHaveBeenCalled();
+
+    expect(
+      companyMembershipService.getCompany
+    ).not.toHaveBeenCalled();
+  });
+  it('should recover from a membership error through the retry action', () => {
+    prepareCompanyMemberships();
+
+    selectedCompanyId.set(3);
+    companyContext.error.set(true);
+
+    TestBed.tick();
+    fixture.detectChanges();
+
+    expect(component.dashboardStatus)
+      .toBe('context-error');
+
+    expect(
+      evaluationService.getLastEvaluationResult
+    ).not.toHaveBeenCalled();
+
+    const refreshMemberships =
+      companyContext.refreshMemberships as jasmine.Spy;
+
+    refreshMemberships.and.callFake(() => {
+      companyContext.error.set(false);
+
+      return of(memberships());
+    });
+
+    const retryButton: HTMLButtonElement =
+      fixture.nativeElement.querySelector(
+        '.dashboard-error__actions button'
+      );
+
+    expect(retryButton).not.toBeNull();
+
+    retryButton.click();
+
+    TestBed.tick();
+    fixture.detectChanges();
+
+    expect(refreshMemberships)
+      .toHaveBeenCalledTimes(1);
+
+    expect(component.dashboardStatus)
+      .toBe('success');
+
+    expect(component.results)
+      .toEqual(companyAResults);
+
+    expect(
+      fixture.nativeElement.querySelector(
+        '.asg-state--error'
+      )
+    ).toBeNull();
+  });
+  it('should request a company selection when memberships exist', () => {
+    prepareCompanyMemberships();
+
+    selectedCompanyId.set(null);
+
+    TestBed.tick();
+    fixture.detectChanges();
+
+    expect(component.dashboardStatus)
+      .toBe('no-selection');
+
+    expect(
+      fixture.nativeElement.textContent
+    ).toContain('Selecciona una empresa');
+
+    expect(
+      fixture.nativeElement.querySelector(
+        '.company-onboarding'
+      )
+    ).toBeNull();
+
+    expect(
+      fixture.nativeElement.querySelector(
+        '.dashboard-empty'
+      )
+    ).toBeNull();
+
+    expect(
+      evaluationService.getLastEvaluationResult
+    ).not.toHaveBeenCalled();
+  });
+  it('should not request company data for an invalid membership', () => {
+    prepareCompanyMemberships();
+
+    selectedCompanyId.set(99);
+
+    TestBed.tick();
+    fixture.detectChanges();
+
+    expect(component.dashboardStatus)
+      .toBe('no-selection');
+
+    expect(component.hasCurrentResults)
+      .toBeFalse();
+
+    expect(component.canStartEvaluation)
+      .toBeFalse();
+
+    expect(
+      evaluationService.getLastEvaluationResult
+    ).not.toHaveBeenCalled();
+
+    expect(
+      companyMembershipService.getCompany
+    ).not.toHaveBeenCalled();
+  });
+  it('should retry failed results without reloading company details', () => {
+    prepareCompanyMemberships();
+
+    spyOn(console, 'error');
+
+    const pendingResults =
+      new Subject<ResultEvaluation>();
+
+    evaluationService.getLastEvaluationResult
+      .and.returnValues(
+        throwError(() => ({
+          status: 500,
+          error: {
+            detail: 'Internal Server Error'
+          }
+        })),
+        pendingResults.asObservable()
+      );
+
+    selectedCompanyId.set(3);
+
+    TestBed.tick();
+    fixture.detectChanges();
+
+    expect(component.dashboardStatus)
+      .toBe('error');
+
+    const retryButton: HTMLButtonElement =
+      fixture.nativeElement.querySelector(
+        '.dashboard-error__actions button'
+      );
+
+    expect(retryButton).not.toBeNull();
+
+    retryButton.click();
+
+    // Un segundo intento durante la carga no debe
+    // generar otra solicitud.
+    component.retryResults();
+
+    TestBed.tick();
+    fixture.detectChanges();
+
+    expect(component.dashboardStatus)
+      .toBe('loading');
+
+    expect(
+      fixture.nativeElement.querySelector(
+        'app-dashboard-skeleton'
+      )
+    ).not.toBeNull();
+
+    expect(
+      evaluationService.getLastEvaluationResult
+    ).toHaveBeenCalledTimes(2);
+
+    expect(
+      companyMembershipService.getCompany
+    ).toHaveBeenCalledTimes(1);
+
+    pendingResults.next(companyAResults);
+    pendingResults.complete();
+
+    fixture.detectChanges();
+
+    expect(component.dashboardStatus)
+      .toBe('success');
+
+    expect(component.results)
+      .toEqual(companyAResults);
+
+    expect(component.scores)
+      .toEqual([8.5]);
+
+    expect(
+      fixture.nativeElement.querySelector(
+        'app-dashboard-skeleton'
+      )
+    ).toBeNull();
+  });
+  it('should discard stale results when switching companies', () => {
+    prepareCompanyMemberships();
+
+    const pendingA =
+      new Subject<ResultEvaluation>();
+
+    const pendingB =
+      new Subject<ResultEvaluation>();
+
+    evaluationService.getLastEvaluationResult
+      .and.returnValues(
+        pendingA.asObservable(),
+        pendingB.asObservable()
+      );
+
+    selectedCompanyId.set(3);
+
+    TestBed.tick();
+
+    pendingA.next(companyAResults);
+
+    fixture.detectChanges();
+
+    expect(component.hasCurrentResults)
+      .toBeTrue();
+
+    selectedCompanyId.set(7);
+
+    // La selección cambió, aunque toObservable todavía
+    // no haya procesado la nueva solicitud.
+    expect(component.hasCurrentResults)
+      .toBeFalse();
+
+    expect(component.dashboardStatus)
+      .toBe('loading');
+
+    const router = TestBed.inject(Router);
+    const navigate = spyOn(router, 'navigate');
+
+    component.goToResults();
+
+    expect(navigate).not.toHaveBeenCalled();
+
+    pendingA.next({
+      ...companyAResults,
+      global_score: 9.9
+    });
+
+    TestBed.tick();
+    fixture.detectChanges();
+
+    expect(component.results).toBeNull();
+
+    expect(component.scores).toEqual([]);
+
+    expect(
+      fixture.nativeElement.querySelector(
+        '.dashboard-company__period'
+      )
+    ).toBeNull();
+
+    expect(
+      fixture.nativeElement.querySelector(
+        '.dashboard-performance'
+      )
+    ).toBeNull();
+
+    pendingB.next(companyBResults);
+
+    // Simular una respuesta tardía de la empresa anterior.
+    pendingA.next(companyAResults);
+
+    fixture.detectChanges();
+
+    expect(component.results)
+      .toEqual(companyBResults);
+
+    expect(component.ambits)
+      .toEqual(['Social']);
+
+    expect(component.scores)
+      .toEqual([7.5]);
+
+    expect(component.hasCurrentResults)
+      .toBeTrue();
+
+    pendingA.complete();
+    pendingB.complete();
+  });
+  it('should discard stale company details after switching companies', () => {
+    prepareCompanyMemberships();
+
+    const pendingA =
+      new Subject<CompanyDetailResponse>();
+
+    const pendingB =
+      new Subject<CompanyDetailResponse>();
+
+    const companyA = {
+      id: 3,
+      name: 'Empresa A',
+      sector_id: 1,
+      size_id: 1,
+      active: true,
+      biannual_evaluation: true,
+      next_evaluation: '2099-01-15T12:00:00'
+    } as CompanyDetailResponse;
+
+    const companyB = {
+      ...companyA,
+      id: 7,
+      name: 'Empresa B',
+      biannual_evaluation: false,
+      next_evaluation: '2099-02-20T12:00:00'
+    } as CompanyDetailResponse;
+
+    companyMembershipService.getCompany
+      .and.returnValues(
+        pendingA.asObservable(),
+        pendingB.asObservable()
+      );
+
+    evaluationService.getLastEvaluationResult
+      .and.returnValues(
+        of(companyAResults),
+        of(companyBResults)
+      );
+
+    selectedCompanyId.set(3);
+
+    TestBed.tick();
+    fixture.detectChanges();
+
+    expect(component.isCompanyLoading)
+      .toBeTrue();
+
+    selectedCompanyId.set(7);
+
+    pendingA.next(companyA);
+
+    TestBed.tick();
+    fixture.detectChanges();
+
+    expect(component.company).toBeNull();
+
+    expect(component.evaluationDate).toBe('');
+
+    expect(component.canStartEvaluation)
+      .toBeFalse();
+
+    pendingB.next(companyB);
+
+    pendingA.next(companyA);
+
+    fixture.detectChanges();
+
+    expect(component.company?.id)
+      .toBe(7);
+
+    expect(component.evaluationDate)
+      .toBe('20/02/2099');
+
+    expect(component.isCompanyLoading)
+      .toBeFalse();
+
+    expect(component.canStartEvaluation)
+      .toBeTrue();
+
+    pendingA.complete();
+    pendingB.complete();
+  });
+  it('should recreate the chart when switching evaluation results', () => {
+    prepareCompanyMemberships();
+
+    evaluationService.getLastEvaluationResult
+      .and.returnValues(
+        of(companyAResults),
+        of(companyBResults)
+      );
+
+    selectedCompanyId.set(3);
+
+    TestBed.tick();
+    fixture.detectChanges();
+
+    const chartA = fixture.nativeElement.querySelector(
+      'app-bar-chart'
+    );
+
+    expect(chartA).not.toBeNull();
+
+    selectedCompanyId.set(7);
+
+    TestBed.tick();
+    fixture.detectChanges();
+
+    const chartB = fixture.nativeElement.querySelector(
+      'app-bar-chart'
+    );
+
+    expect(chartB).not.toBeNull();
+
+    expect(chartB).not.toBe(chartA);
+
+    expect(component.ambits)
+      .toEqual(['Social']);
+
+    expect(component.scores)
+      .toEqual([7.5]);
+  });
+  [
+    {
+      description: 'with completed evaluations',
+      hasResults: true,
+      expectedStatus: 'success',
+      container: '.dashboard-schedule__footer'
+    },
+    {
+      description: 'without completed evaluations',
+      hasResults: false,
+      expectedStatus: 'empty',
+      container: '.dashboard-empty__actions'
+    }
+  ].forEach((scenario) => {
+
+    it(`should recover company details ${scenario.description}`, () => {
+      prepareCompanyMemberships();
+
+      spyOn(console, 'error');
+
+      evaluationService.getLastEvaluationResult
+        .and.returnValue(
+          scenario.hasResults
+            ? of(companyAResults)
+            : throwError(() => ({
+              status: 404,
+              error: {
+                detail: 'No evaluations found'
+              }
+            }))
+        );
+
+      const pendingCompany =
+        new Subject<CompanyDetailResponse>();
+
+      companyMembershipService.getCompany
+        .and.returnValues(
+          throwError(() => ({
+            status: 500
+          })),
+          pendingCompany.asObservable()
+        );
+
+      selectedCompanyId.set(3);
+
+      TestBed.tick();
+      fixture.detectChanges();
+
+      expect(component.dashboardStatus)
+        .toBe(scenario.expectedStatus);
+
+      expect(component.hasCompanyError)
+        .toBeTrue();
+
+      expect(component.canStartEvaluation)
+        .toBeFalse();
+
+      const actionButton: HTMLButtonElement =
+        fixture.nativeElement.querySelector(
+          `${scenario.container} .dashboard-period__action`
+        );
+
+      expect(actionButton).not.toBeNull();
+
+      expect(actionButton.disabled)
+        .toBeTrue();
+
+      const retryButton: HTMLButtonElement =
+        fixture.nativeElement.querySelector(
+          `${scenario.container} .asg-btn--secondary`
+        );
+
+      expect(retryButton).not.toBeNull();
+
+      retryButton.click();
+
+      // Evitar solicitudes duplicadas.
+      component.retryCompanyDetails();
+
+      TestBed.tick();
+      fixture.detectChanges();
+
+      expect(component.isCompanyLoading)
+        .toBeTrue();
+
+      expect(component.dashboardStatus)
+        .toBe(scenario.expectedStatus);
+
+      expect(
+        companyMembershipService.getCompany
+      ).toHaveBeenCalledTimes(2);
+
+      expect(
+        evaluationService.getLastEvaluationResult
+      ).toHaveBeenCalledTimes(1);
+
+      pendingCompany.next({
+        id: 3,
+        name: 'Empresa A',
+        sector_id: 1,
+        size_id: 1,
+        active: true,
+        biannual_evaluation: false,
+        next_evaluation: null
+      } as CompanyDetailResponse);
+
+      pendingCompany.complete();
+
+      fixture.detectChanges();
+
+      expect(component.hasCompanyError)
+        .toBeFalse();
+
+      expect(component.isCompanyLoading)
+        .toBeFalse();
+
+      expect(component.canStartEvaluation)
+        .toBeTrue();
+
+      expect(component.dashboardStatus)
+        .toBe(scenario.expectedStatus);
+
+      expect(component.results)
+        .toEqual(
+          scenario.hasResults
+            ? companyAResults
+            : null
+        );
+
+      expect(
+        fixture.nativeElement.querySelector(
+          `${scenario.container} .asg-btn--secondary`
+        )
+      ).toBeNull();
+
+    });
+
   });
 });
