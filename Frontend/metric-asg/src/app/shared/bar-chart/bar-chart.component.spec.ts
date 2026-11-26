@@ -21,7 +21,7 @@ describe('BarChartComponent', () => {
   });
 
   function renderChart(
-    variant: 'default' | 'dashboard' = 'dashboard'
+    variant: 'default' | 'dashboard' | 'results' = 'dashboard'
   ): void {
     component.variant = variant;
 
@@ -195,4 +195,121 @@ describe('BarChartComponent', () => {
 
     expect(destroy).toHaveBeenCalledTimes(1);
   }));
+
+  it('should render a horizontal results chart', fakeAsync(() => {
+
+    renderChart('results');
+
+    expect(component.chart.options.indexAxis)
+      .toBe('y');
+
+    expect(component.chart.config.type)
+      .toBe('bar');
+
+  }));
+
+  it('should use a fixed horizontal ASG scale', fakeAsync(() => {
+
+    renderChart('results');
+
+    const scale = component.chart.options.scales.x;
+
+    expect(scale.min).toBe(0);
+    expect(scale.max).toBe(10);
+    expect(scale.ticks.stepSize).toBe(2);
+
+  }));
+
+  it('should preserve score values and colors in results', fakeAsync(() => {
+
+    renderChart('results');
+
+    const dataset = component.chart.data.datasets[0];
+
+    expect(dataset.data)
+      .toEqual([9.8, 9.6, 9.0]);
+
+    expect(dataset.backgroundColor)
+      .toEqual(component.colors);
+
+    expect(component.chart.data.labels)
+      .toEqual(component.data);
+
+  }));
+
+  it('should apply the results bar styling', fakeAsync(() => {
+
+    renderChart('results');
+
+    const dataset = component.chart.data.datasets[0];
+
+    expect(dataset.borderWidth).toBe(0);
+
+    expect(dataset.borderRadius).toBe(6);
+
+    expect(dataset.maxBarThickness).toBe(32);
+
+    expect(component.chart.options.animation)
+      .toBeFalse();
+
+  }));
+
+  it('should register the results score labels plugin', fakeAsync(() => {
+
+    renderChart('results');
+
+    expect(
+      component.chart.config.plugins.some(
+        (plugin: { id: string }) =>
+          plugin.id === 'resultsScoreLabels'
+      )
+    ).toBeTrue();
+
+  }));
+
+  it('should not register results labels in the dashboard', fakeAsync(() => {
+
+    renderChart('dashboard');
+
+    const plugins = component.chart.config.plugins ?? [];
+
+    expect(
+      plugins.some(
+        (plugin: { id: string }) =>
+          plugin.id === 'resultsScoreLabels'
+      )
+    ).toBeFalse();
+
+  }));
+
+  it('should provide an accessible results chart', fakeAsync(() => {
+
+    renderChart('results');
+
+    const canvas: HTMLCanvasElement =
+      fixture.nativeElement.querySelector('canvas');
+
+    expect(canvas.getAttribute('role'))
+      .toBe('img');
+
+    expect(canvas.getAttribute('aria-label'))
+      .toContain('puntuaciones por ámbito ASG');
+
+    expect(
+      fixture.nativeElement.querySelector(
+        '.chart-container--results'
+      )
+    ).not.toBeNull();
+
+  }));
+
+  it('should preserve the vertical dashboard orientation', fakeAsync(() => {
+
+    renderChart('dashboard');
+
+    expect(component.chart.options.indexAxis)
+      .toBe('x');
+
+  }));
+
 });

@@ -16,7 +16,10 @@ Chart.register(...registerables);
   standalone: true,
   templateUrl: './bar-chart.component.html',
   changeDetection: ChangeDetectionStrategy.Eager,
-  styleUrl: './bar-chart.component.scss'
+  styleUrl: './bar-chart.component.scss',
+  host: {
+    '[class.bar-chart--results]': "variant === 'results'"
+  },
 })
 export class BarChartComponent implements AfterViewInit, OnDestroy {
   @ViewChild('chartCanvas') chartCanvas!: ElementRef;
@@ -29,7 +32,7 @@ export class BarChartComponent implements AfterViewInit, OnDestroy {
   @Input() scores: number[] = [];
   @Input() colors: string[] = [];
   @Input() bordes: string[] = [];
-  @Input() variant: 'default' | 'dashboard' = 'default';
+  @Input() variant: 'default' | 'dashboard' | 'results' = 'default';
 
 
   ngAfterViewInit(): void {
@@ -49,6 +52,7 @@ export class BarChartComponent implements AfterViewInit, OnDestroy {
 
     const ctx = this.chartCanvas.nativeElement.getContext('2d');
     const isDashboard = this.variant === 'dashboard';
+    const isResults = this.variant === 'results';
 
     if (!ctx) {
       console.error('Could not get 2d context');
@@ -207,6 +211,162 @@ export class BarChartComponent implements AfterViewInit, OnDestroy {
           }
         }
       };
+    }
+
+    if (isResults) {
+
+      const dataset = config.data.datasets[0];
+
+      dataset.borderColor = 'transparent';
+      dataset.borderWidth = 0;
+      dataset.borderRadius = 6;
+      dataset.borderSkipped = false;
+      dataset.barPercentage = 0.60;
+      dataset.categoryPercentage = 0.70;
+      dataset.maxBarThickness = 32;
+
+      config.options = {
+
+        indexAxis: 'y',
+
+        responsive: true,
+        maintainAspectRatio: false,
+        animation: false,
+
+        layout: {
+          padding: {
+            top: 12,
+            right: 40,
+            bottom: 8,
+            left: 4
+          }
+        },
+        plugins: {
+
+          legend: {
+            display: false
+          },
+
+          tooltip: {
+            backgroundColor: '#00245d',
+            titleColor: '#ffffff',
+            bodyColor: '#ffffff',
+            padding: 12,
+            cornerRadius: 8,
+            displayColors: false,
+
+            callbacks: {
+              label: context =>
+                `Puntuación: ${context.parsed.x?.toFixed(1)} / 10`
+            }
+          }
+
+        },
+
+        scales: {
+
+          x: {
+
+            min: 0,
+            max: 10,
+            beginAtZero: true,
+
+            border: {
+              display: false
+            },
+
+            grid: {
+              color: '#e4e9ed',
+              drawTicks: false
+            },
+
+            ticks: {
+              stepSize: 2,
+              color: '#595959',
+              padding: 8,
+
+              font: {
+                size: 12
+              }
+            }
+
+          },
+
+          y: {
+
+            border: {
+              display: false
+            },
+
+            grid: {
+              display: false
+            },
+
+            ticks: {
+              color: '#13243d',
+              padding: 8,
+              autoSkip: false,
+
+              font: {
+                size: 12,
+                weight: 500
+              }
+            }
+
+          }
+
+        }
+
+      };
+
+      config.plugins = [
+
+        ...(config.plugins ?? []),
+
+        {
+          id: 'resultsScoreLabels',
+
+          afterDatasetsDraw(chart) {
+
+            const { ctx } = chart;
+
+            const dataset = chart.data.datasets[0];
+            const meta = chart.getDatasetMeta(0);
+
+            ctx.save();
+
+            ctx.font = '600 13px Aptos, Segoe UI, sans-serif';
+            ctx.fillStyle = '#00245d';
+            ctx.textAlign = 'left';
+            ctx.textBaseline = 'middle';
+
+            meta.data.forEach((bar, index) => {
+
+              const score = dataset.data[index];
+
+              if (
+                typeof score !== 'number' ||
+                !Number.isFinite(score)
+              ) {
+                return;
+              }
+
+              ctx.fillText(
+                score.toFixed(1),
+                bar.x + 8,
+                bar.y
+              );
+
+            });
+
+            ctx.restore();
+
+          }
+
+        }
+
+      ];
+
     }
 
     if (this.chart) {

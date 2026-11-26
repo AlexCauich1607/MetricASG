@@ -202,35 +202,30 @@ describe('ResultsComponent', () => {
     expect(component.results).toEqual(mockResults);
   });
 
-  it('should build chart data when results are loaded', () => {
+
+  it('should preserve evaluation results for the performance component', () => {
     evaluationServiceSpy.getLastEvaluationResult.and.returnValue(
       of(mockResults)
     );
 
     component.loadResults();
 
-    expect(component.ambits).toEqual([
-      'Ambiental',
-      'Social'
-    ]);
+    expect(component.results).toEqual(mockResults);
 
-    expect(component.scores).toEqual([
-      9.5,
-      7.5
-    ]);
-
-    expect(component.colors).toEqual([
-      '#00AA00',
-      '#0000AA'
-    ]);
-
-    expect(component.bordes).toEqual([
-      '#15b91d',
-      '#eac84f'
-    ]);
-
-    expect(component.loadingChart).toBeTrue();
+    expect(component.results?.ambits)
+      .toEqual(mockResults.ambits);
   });
+
+  it('should calculate the current and previous evaluation periods', () => {
+    component.getPeriodo('2026-09-15T12:00:00');
+
+    expect(component.mesActual).toBe('Septiembre');
+    expect(component.anioActual).toBe('2026');
+
+    expect(component.mesAnterior).toBe('Marzo');
+    expect(component.anioAnterior).toBe('2026');
+  });
+
 
   it('should calculate the current and previous evaluation periods', () => {
     component.getPeriodo('2026-09-15T12:00:00');
@@ -248,12 +243,6 @@ describe('ResultsComponent', () => {
 
   it('should return the same value when capitalizing an empty text', () => {
     expect(component.capitalizar('')).toBe('');
-  });
-
-  it('should return the correct border color for each maturity level', () => {
-    expect(component.getBorderColor('Básico')).toBe('#ce4040ff');
-    expect(component.getBorderColor('Intermedio')).toBe('#eac84fff');
-    expect(component.getBorderColor('Avanzado')).toBe('#15b91dff');
   });
 
   it('should load evidences for the completed evaluation', () => {
@@ -326,32 +315,6 @@ describe('ResultsComponent', () => {
     expect(component.evidences).toEqual(mockEvidences);
   });
 
-  it('should return unique and sorted indicator IDs', () => {
-    component.evidences = [
-      {
-        ...mockEvidences[1],
-        id: 3,
-        indicator_id: 8
-      },
-      {
-        ...mockEvidences[0],
-        id: 4,
-        indicator_id: 3
-      },
-      {
-        ...mockEvidences[0],
-        id: 5,
-        indicator_id: 5
-      },
-      {
-        ...mockEvidences[1],
-        id: 6,
-        indicator_id: 8
-      }
-    ];
-
-    expect(component.getEvidenceIndicatorIds()).toEqual([3, 5, 8]);
-  });
 
   it('should recover evidences after retrying a failed request', () => {
     evidenceServiceSpy.getEvidences.and.returnValues(
@@ -1170,5 +1133,165 @@ describe('ResultsComponent', () => {
       expect(component.results?.global_score).toBe(8.5);
     });
   });
+
+  it('should identify the highest and lowest scoring ambits', () => {
+
+    const baseAmbit = mockResults.ambits[0];
+
+    component.results = {
+      ...mockResults,
+      ambits: [
+        {
+          ...baseAmbit,
+          ambit_id: 1,
+          score: 9.8
+        },
+        {
+          ...baseAmbit,
+          ambit_id: 2,
+          score: 9.6
+        },
+        {
+          ...baseAmbit,
+          ambit_id: 3,
+          score: 9.0
+        }
+      ]
+    };
+
+    expect(
+      component.highestScoringAmbits.map(
+        ambit => ambit.ambit_id
+      )
+    ).toEqual([1]);
+
+    expect(
+      component.lowestScoringAmbits.map(
+        ambit => ambit.ambit_id
+      )
+    ).toEqual([3]);
+
+  });
+
+  it('should preserve all ambits tied for the highest score', () => {
+
+    const baseAmbit = mockResults.ambits[0];
+
+    component.results = {
+      ...mockResults,
+      ambits: [
+        {
+          ...baseAmbit,
+          ambit_id: 1,
+          score: 9.8
+        },
+        {
+          ...baseAmbit,
+          ambit_id: 2,
+          score: 9.8
+        },
+        {
+          ...baseAmbit,
+          ambit_id: 3,
+          score: 9.0
+        }
+      ]
+    };
+
+    expect(
+      component.highestScoringAmbits.map(
+        ambit => ambit.ambit_id
+      )
+    ).toEqual([1, 2]);
+
+  });
+
+  it('should preserve all ambits tied for the lowest score', () => {
+
+    const baseAmbit = mockResults.ambits[0];
+
+    component.results = {
+      ...mockResults,
+      ambits: [
+        {
+          ...baseAmbit,
+          ambit_id: 1,
+          score: 9.8
+        },
+        {
+          ...baseAmbit,
+          ambit_id: 2,
+          score: 9.0
+        },
+        {
+          ...baseAmbit,
+          ambit_id: 3,
+          score: 9.0
+        }
+      ]
+    };
+
+    expect(
+      component.lowestScoringAmbits.map(
+        ambit => ambit.ambit_id
+      )
+    ).toEqual([2, 3]);
+
+  });
+
+  it('should handle an empty collection of ambits', () => {
+
+    component.results = {
+      ...mockResults,
+      ambits: []
+    };
+
+    expect(component.highestScoringAmbits)
+      .toEqual([]);
+
+    expect(component.lowestScoringAmbits)
+      .toEqual([]);
+
+  });
+
+  it('should ignore non-finite scores in performance insights', () => {
+
+    const baseAmbit = mockResults.ambits[0];
+
+    component.results = {
+      ...mockResults,
+      ambits: [
+        {
+          ...baseAmbit,
+          ambit_id: 1,
+          score: Number.NaN
+        },
+        {
+          ...baseAmbit,
+          ambit_id: 2,
+          score: Number.POSITIVE_INFINITY
+        },
+        {
+          ...baseAmbit,
+          ambit_id: 3,
+          score: 8.5
+        }
+      ]
+    };
+
+    expect(
+      component.highestScoringAmbits.map(
+        ambit => ambit.ambit_id
+      )
+    ).toEqual([3]);
+
+    expect(
+      component.lowestScoringAmbits.map(
+        ambit => ambit.ambit_id
+      )
+    ).toEqual([3]);
+
+  });
+
 
 });

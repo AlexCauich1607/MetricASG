@@ -1,0 +1,364 @@
+/* HU-058 — Desempeño de la evaluación */
+
+:host {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--asg-space-6);
+
+  min-width: 0;
+}
+
+.performance {
+  min-width: 0;
+
+  &__header {
+    margin-bottom: var(--asg-space-4);
+
+    h2 {
+      margin: 0 0 var(--asg-space-1);
+
+      color: var(--asg-color-brand-primary);
+      font-size: clamp(1.25rem, 2.5vw, 1.5rem);
+      font-weight: var(--asg-font-weight-bold);
+
+      overflow-wrap: anywhere;
+    }
+
+    p {
+      margin: 0;
+
+      color: var(--asg-color-text-muted);
+      font-size: var(--asg-font-size-sm);
+      line-height: 1.5;
+    }
+  }
+
+  &__grid {
+    display: grid;
+
+    grid-template-columns:
+      minmax(0, 1.65fr) repeat(3, minmax(0, 1fr));
+
+    align-items: stretch;
+    gap: var(--asg-space-4);
+
+    min-width: 0;
+
+    app-ambit-card {
+      min-width: 0;
+    }
+  }
+}
+
+/* Tablet */
+
+@media (max-width: 1023.98px) {
+
+  .performance__grid {
+    grid-template-columns:
+      repeat(3, minmax(0, 1fr));
+  }
+
+  .performance__global {
+    grid-column: 1 / -1;
+  }
+
+}
+
+/* Móvil */
+
+@media (max-width: 575.98px) {
+
+  .performance__grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--asg-space-3);
+  }
+
+}
+
+
+/* Análisis de desempeño */
+
+.performance-analysis {
+  min-width: 0;
+
+  &__grid {
+    display: grid;
+
+    grid-template-columns:
+      minmax(0, 1.2fr) minmax(0, 1fr);
+
+    align-items: stretch;
+    gap: var(--asg-space-4);
+
+    min-width: 0;
+  }
+
+  &__empty {
+    display: grid;
+    justify-items: center;
+
+    gap: var(--asg-space-3);
+
+    color: var(--asg-color-text-muted);
+    text-align: center;
+
+    i {
+      color: var(--asg-color-brand-primary);
+      font-size: 2rem;
+    }
+
+    p {
+      margin: 0;
+    }
+  }
+}
+
+/* Contenedores de gráficas */
+
+.performance-chart {
+  padding: var(--asg-space-6);
+  display: flex;
+  flex-direction: column;
+
+  gap: var(--asg-space-4);
+
+  min-width: 0;
+
+  &__header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+
+    gap: var(--asg-space-3);
+
+    >div {
+      min-width: 0;
+    }
+
+    h3 {
+      margin: 0 0 var(--asg-space-1);
+
+      color: var(--asg-color-brand-primary);
+      font-size: var(--asg-font-size-lg);
+      font-weight: var(--asg-font-weight-semibold);
+
+      overflow-wrap: anywhere;
+    }
+
+    p {
+      margin: 0;
+
+      color: var(--asg-color-text-muted);
+      font-size: var(--asg-font-size-sm);
+      line-height: 1.5;
+    }
+  }
+
+  &__icon {
+    display: grid;
+    place-items: center;
+    flex-shrink: 0;
+
+    width: 44px;
+    height: 44px;
+
+    background: var(--asg-color-surface-blue);
+    border-radius: var(--asg-radius-sm);
+
+    color: var(--asg-color-brand-primary);
+    font-size: 1.25rem;
+  }
+
+  &__body {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+
+    flex: 1;
+    min-width: 0;
+
+    app-bar-chart,
+    app-radar-chart {
+      display: block;
+
+      width: 100%;
+      min-width: 0;
+    }
+  }
+}
+
+/* Resumen interpretativo */
+
+
+.performance-summary {
+  display: grid;
+  gap: var(--asg-space-4);
+
+  min-width: 0;
+
+  h2 {
+    margin: 0;
+
+    color: var(--asg-color-brand-primary);
+    font-size: var(--asg-font-size-lg);
+    font-weight: var(--asg-font-weight-semibold);
+  }
+
+  &__grid {
+    display: grid;
+
+    grid-template-columns:
+      repeat(2, minmax(0, 1fr));
+
+    gap: var(--asg-space-6);
+
+    min-width: 0;
+  }
+
+  &__item {
+    display: flex;
+    align-items: center;
+
+    gap: var(--asg-space-3);
+
+    min-width: 0;
+
+    &--highest {
+
+      .performance-summary__icon {
+        background: #e6efde;
+        color: var(--asg-color-action-success);
+      }
+
+      .performance-summary__score {
+        color: var(--asg-color-action-success);
+      }
+
+    }
+  }
+
+  &__grid>&__item+&__item {
+    padding-left: var(--asg-space-6);
+
+    border-left: 1px solid #e2e9f0;
+  }
+
+  &__icon {
+    display: grid;
+    place-items: center;
+    flex-shrink: 0;
+
+    width: 44px;
+    height: 44px;
+
+    background: var(--asg-color-surface-blue);
+    border-radius: var(--asg-radius-sm);
+
+    color: var(--asg-color-brand-primary);
+    font-size: 1.25rem;
+  }
+
+  &__content {
+    flex: 1;
+
+    min-width: 0;
+  }
+
+  &__label {
+    margin: 0 0 var(--asg-space-1);
+
+    color: var(--asg-color-text-muted);
+    font-size: var(--asg-font-size-sm);
+
+    overflow-wrap: anywhere;
+  }
+
+  &__name {
+    margin: 0;
+
+    color: var(--asg-color-brand-primary);
+    font-size: var(--asg-font-size-md);
+    font-weight: var(--asg-font-weight-semibold);
+
+    overflow-wrap: anywhere;
+  }
+
+  &__score {
+    flex-shrink: 0;
+
+    margin: 0;
+
+    color: var(--asg-color-brand-primary);
+    font-size: var(--asg-font-size-xl);
+    font-weight: var(--asg-font-weight-bold);
+    font-variant-numeric: tabular-nums;
+
+    white-space: nowrap;
+
+    span {
+      color: var(--asg-color-text-muted);
+      font-size: var(--asg-font-size-sm);
+      font-weight: 400;
+    }
+  }
+}
+
+
+/* Responsive del análisis */
+
+@media (max-width: 1199.98px) {
+
+  .performance-analysis__grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+}
+
+@media (max-width: 767.98px) {
+
+  :host {
+    gap: var(--asg-space-4);
+  }
+
+  .performance-summary__grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--asg-space-3);
+  }
+
+  .performance-summary__grid>.performance-summary__item+.performance-summary__item {
+
+    padding-left: 0;
+    padding-top: var(--asg-space-3);
+
+    border-left: 0;
+    border-top: 1px solid #e2e9f0;
+
+  }
+
+}
+
+@media (max-width: 575.98px) {
+
+  .performance-chart,
+  .performance-summary {
+    padding: var(--asg-space-4);
+  }
+
+  .performance-chart__icon,
+  .performance-summary__icon {
+    width: 36px;
+    height: 36px;
+
+    font-size: 1.125rem;
+  }
+
+  .performance-summary__item {
+    gap: var(--asg-space-2);
+  }
+
+  .performance-summary__score {
+    font-size: 1.25rem;
+  }
+
+}

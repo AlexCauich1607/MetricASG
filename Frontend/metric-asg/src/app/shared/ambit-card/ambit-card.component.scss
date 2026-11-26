@@ -264,3 +264,11 @@
     }
 
 }
+
+/* HU-058 / T01 — Ocultar acciones no proyectadas */
+
+.dashboard-kpi--featured {
+  .dashboard-kpi__footer:not(:has(*)) {
+    display: none;
+  }
+}

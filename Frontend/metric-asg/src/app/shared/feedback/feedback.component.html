@@ -1,18 +1,101 @@
-@for (ambito of ambits; track ambito) {
-  <div class="sw-bg-blue-light borde-izq p-0 mb-4 shadow-sm rounded " [style.--border-color]="ambito.color" [style.backgroundColor]="ambito.color"
-    >
-    <div class="sw-bg-sm-white p-4">
-      <div class="d-flex flex-column flex-md-row align-items-stretch">
-        <div class="sw-all-center p-3 p-md-4 me-md-4">
-          <p class="text-white fs-1 fw-bold m-0 mb-2">
-            <b class="text-white px-3 py-1 rounded" [style.backgroundColor]="ambito.color">{{ambito.letter}}</b>
-          </p>
-          <p class="text-white sw-fs-7 fw-bold m-0">{{ambito.ambit_name}} </p>
+@if (variant === 'analysis') {
+
+<div class="analysis-feedback">
+
+  @for (ambit of ambits; track ambit.ambit_id) {
+
+  <article class="asg-card analysis-feedback__card" [style.--feedback-accent]="
+      ambit.color || 'var(--asg-color-brand-primary)'
+    " [style.--feedback-maturity]="
+      ambit.maturity_color || '#64748b'
+    ">
+
+    <header class="analysis-feedback__header">
+
+      <div class="analysis-feedback__identity">
+
+        <span class="analysis-feedback__icon" aria-hidden="true">
+
+          <i [class]="getAmbitIcon(ambit.letter)"></i>
+
+        </span>
+
+        <div class="analysis-feedback__identity-content">
+
+          <h3 class="analysis-feedback__title">
+            {{ ambit.ambit_name }}
+          </h3>
+
+          <span class="analysis-feedback__maturity">
+
+            <span class="analysis-feedback__maturity-dot" aria-hidden="true">
+            </span>
+
+            {{ ambit.maturity_level || 'No disponible' }}
+
+          </span>
+
         </div>
-        <div class="flex-grow-1  rounded p-3 sw-card-bg" >
-          <div class=" justify-content-end">
-            <div class=" p-0 px-3 py-1 rounded">
-              <p class="sw-fs-6 p-0 fw-bold text-white m-0 mb-3 p-0"><span class=" px-4  py-1 rounded-3 " [style.backgroundColor]="ambito.maturity_color">{{ambito.maturity_level}}</span>
+
+      </div>
+
+      <div class="analysis-feedback__score">
+
+        {{ ambit.score.toFixed(1) }}
+
+        <span>/ 10</span>
+
+      </div>
+
+    </header>
+
+    <div class="analysis-feedback__track" aria-hidden="true">
+
+      <div class="analysis-feedback__fill" [style.width.%]="ambit.score * 10">
+      </div>
+
+    </div>
+
+    <div class="analysis-feedback__recommendation">
+
+      <h4>
+
+        <i class="bi bi-clipboard-list" aria-hidden="true"></i>
+
+        Recomendaciones del ámbito
+
+      </h4>
+
+      <p>
+        {{ ambit.feedback || 'No hay recomendaciones disponibles para este ámbito.' }}
+      </p>
+
+    </div>
+
+  </article>
+
+  }
+
+</div>
+
+} @else {
+
+@for (ambito of ambits; track ambito) {
+<div class="sw-bg-blue-light borde-izq p-0 mb-4 shadow-sm rounded " [style.--border-color]="ambito.color"
+  [style.backgroundColor]="ambito.color">
+  <div class="sw-bg-sm-white p-4">
+    <div class="d-flex flex-column flex-md-row align-items-stretch">
+      <div class="sw-all-center p-3 p-md-4 me-md-4">
+        <p class="text-white fs-1 fw-bold m-0 mb-2">
+          <b class="text-white px-3 py-1 rounded" [style.backgroundColor]="ambito.color">{{ambito.letter}}</b>
+        </p>
+        <p class="text-white sw-fs-7 fw-bold m-0">{{ambito.ambit_name}} </p>
+      </div>
+      <div class="flex-grow-1  rounded p-3 sw-card-bg">
+        <div class=" justify-content-end">
+          <div class=" p-0 px-3 py-1 rounded">
+            <p class="sw-fs-6 p-0 fw-bold text-white m-0 mb-3 p-0"><span class=" px-4  py-1 rounded-3 "
+                [style.backgroundColor]="ambito.maturity_color">{{ambito.maturity_level}}</span>
             </p>
             <p class="sw-fs-7 text-black">
               {{ambito.feedback}}
@@ -23,4 +106,5 @@
     </div>
   </div>
 </div>
+}
 }

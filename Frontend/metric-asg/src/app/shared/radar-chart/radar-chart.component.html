@@ -1,0 +1,27 @@
+
+<div class="radar-chart">
+
+  <div class="radar-container">
+
+    <canvas
+      #chartCanvas
+      role="img"
+      [attr.aria-label]="accessibleDescription">
+
+    </canvas>
+
+  </div>
+
+  <div
+    class="radar-legend"
+    aria-hidden="true">
+
+    <span class="radar-legend__sample"></span>
+
+    <span>
+      {{ label }}
+    </span>
+
+  </div>
+
+</div>

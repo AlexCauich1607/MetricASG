@@ -1,0 +1,173 @@
+<section class="asg-card results-ai" data-html2canvas-ignore aria-labelledby="ai-explanation-title">
+
+  <header class="results-panel-header">
+
+    <div class="results-panel-header__identity">
+
+      <span class="results-panel-header__icon" aria-hidden="true">
+
+        <i class="bi bi-stars"></i>
+
+      </span>
+
+      <div class="results-panel-header__content">
+
+        <h2 id="ai-explanation-title">
+          Interpretación con IA
+        </h2>
+
+        <p>
+          Obtén un análisis complementario
+          de tu desempeño ASG.
+        </p>
+
+      </div>
+
+    </div>
+
+
+    <div class="results-ai__actions">
+
+      <button type="button" class="asg-btn" [class.asg-btn--primary]="!explanation"
+        [class.asg-btn--secondary]="!!explanation" [disabled]="generating" [attr.aria-busy]="generating"
+        (click)="requestExplanation()">
+
+        @if (generating) {
+
+        <span class="spinner-border spinner-border-sm" aria-hidden="true">
+        </span>
+
+        Generando explicación...
+
+        } @else {
+
+        <i [class]="explanation || error
+          ? 'bi bi-arrow-clockwise'
+          : 'bi bi-stars'" aria-hidden="true">
+        </i>
+
+        {{ explanation
+        ? 'Generar nuevamente'
+        : error
+        ? 'Reintentar'
+        : 'Generar explicación con IA'
+        }}
+
+        }
+
+      </button>
+
+    </div>
+
+
+  </header>
+
+
+  <div class="results-ai__body" [attr.aria-busy]="generating">
+
+    @if (generating) {
+
+    <div class="results-ai__loading" role="status">
+
+      <span class="spinner-border spinner-border-sm" aria-hidden="true">
+      </span>
+
+      <div class="results-ai__loading-content">
+
+        <p class="results-ai__loading-title">
+          Analizando tus resultados...
+        </p>
+
+        <p class="results-ai__loading-description">
+          Estamos preparando una interpretación
+          de las puntuaciones de tu empresa.
+        </p>
+
+      </div>
+
+    </div>
+
+    }
+
+    @if (error) {
+
+    <div class="alert alert-danger mb-0 results-ai__error" role="alert">
+
+      <i class="bi bi-exclamation-circle" aria-hidden="true">
+      </i>
+
+      <span>
+        {{ error }}
+      </span>
+
+    </div>
+
+    }
+
+    @if (explanation) {
+
+    <article class="results-ai__interpretation" aria-live="polite">
+
+      <header class="results-ai__interpretation-header">
+
+        <i class="bi bi-stars" aria-hidden="true">
+        </i>
+
+        <h3>
+          Interpretación de los resultados
+        </h3>
+
+      </header>
+
+
+      <div class="results-ai__explanation">
+
+        @for (block of explanationBlocks; track $index) {
+
+        @switch (block.type) {
+
+        @case ('heading') {
+
+        <h4 class="results-ai__section-title">
+          {{ block.text }}
+        </h4>
+
+        }
+
+        @case ('paragraph') {
+
+        <p class="results-ai__paragraph">
+          {{ block.text }}
+        </p>
+
+        }
+
+        }
+
+        }
+
+      </div>
+
+
+    </article>
+
+    }
+
+  </div>
+
+
+  <footer class="results-ai__disclaimer">
+
+    <i class="bi bi-info-circle" aria-hidden="true">
+    </i>
+
+    <p>
+      El contenido generado por inteligencia
+      artificial puede contener imprecisiones
+      y no modifica las puntuaciones oficiales
+      de MetricASG.
+    </p>
+
+  </footer>
+
+</section>

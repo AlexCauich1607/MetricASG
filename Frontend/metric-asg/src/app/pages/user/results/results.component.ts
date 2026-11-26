@@ -18,8 +18,6 @@ import {
 import { ResultEvaluation } from '../../../models/evaluation_result';
 import { EvaluationService } from '../../../services/evaluation.service';
 import { SessionService } from '../../../shared/class/temporalStorage';
-import { AmbitCardComponent } from '../../../shared/ambit-card/ambit-card.component';
-import { BarChartComponent } from '../../../shared/bar-chart/bar-chart.component';
 import { FeedbackComponent } from '../../../shared/feedback/feedback.component';
 import { EvidenceService } from '../../../services/evidence.service';
 import { EvaluationEvidence } from '../../../models/evaluation_evidence';
@@ -30,15 +28,27 @@ import { AsgReportPaginatorService } from '../../../services/asg-report-paginato
 import { AsgPdfService } from '../../../services/asg-pdf.service';
 import { AsgReportTemplateComponent } from '../../../shared/asg-report-template/asg-report-template.component';
 import { CompanyContextService } from '../../../services/company-context.service';
+import { ResultsAiComponent } from './results-ai/results-ai.component';
+import {
+  ResultsEvidencesComponent
+} from './results-evidences/results-evidences.component';
+import {
+  ResultsPerformanceComponent
+} from './results-performance/results-performance.component';
+
+import {
+  isValidAsgScore
+} from '../../../shared/utils/asg-score.utils';
 
 @Component({
   selector: 'app-results',
   standalone: true,
   imports: [
-    AmbitCardComponent,
-    BarChartComponent,
     FeedbackComponent,
-    AsgReportTemplateComponent
+    AsgReportTemplateComponent,
+    ResultsAiComponent,
+    ResultsEvidencesComponent,
+    ResultsPerformanceComponent
   ],
   templateUrl: './results.component.html',
   changeDetection: ChangeDetectionStrategy.Eager,
@@ -60,18 +70,12 @@ export class ResultsComponent {
   downloadingEvidenceId: number | null = null;
   evidenceDownloadError: string | null = null;
 
-  ambits: string[] = [];
-  scores: number[] = [];
-  colors: string[] = [];
-  bordes: string[] = [];
-
   asgReport: AsgReport | null = null;
 
   generatingAsgReport = false;
 
   asgReportError: string | null = null;
 
-  loadingChart = false;
   private evidenceRequest?: Subscription;
   private evidenceDownloadRequest?: Subscription;
 
@@ -82,6 +86,44 @@ export class ResultsComponent {
 
   private aiExplanationRequest?: Subscription;
 
+
+  get highestScoringAmbits() {
+
+    const ambits = (this.results?.ambits ?? [])
+      .filter(ambit => isValidAsgScore(ambit.score));
+
+    if (!ambits.length) {
+      return [];
+    }
+
+    const highestScore = Math.max(
+      ...ambits.map(ambit => ambit.score)
+    );
+
+    return ambits.filter(
+      ambit => ambit.score === highestScore
+    );
+
+  }
+
+  get lowestScoringAmbits() {
+
+    const ambits = (this.results?.ambits ?? [])
+      .filter(ambit => isValidAsgScore(ambit.score));
+
+    if (!ambits.length) {
+      return [];
+    }
+
+    const lowestScore = Math.min(
+      ...ambits.map(ambit => ambit.score)
+    );
+
+    return ambits.filter(
+      ambit => ambit.score === lowestScore
+    );
+
+  }
 
   constructor(
     private resultService: EvaluationService,
@@ -131,12 +173,10 @@ export class ResultsComponent {
       .subscribe(data => {
         this.results = data;
         this.getPeriodo(data.date);
-        this.cargarGrafica();
         this.loadEvidences(data.evaluation_id);
       });
 
   }
-  chart: any;
 
 
   openImprovementPlan(): void {
@@ -273,19 +313,9 @@ export class ResultsComponent {
   }
 
 
-  private cargarGrafica(): void {
-    this.loadingChart = false;
-    this.results?.ambits.forEach(a => {
-      this.ambits.push(a.ambit_name)
-      this.scores.push(parseFloat(a.score.toFixed(1)));
-      this.colors.push(a.color);
-      this.bordes.push(a.maturity_color);
-    });
-    this.loadingChart = true;
-
-  }
 
   private clearResultsState(): void {
+
     this.results = null;
 
     // Periodos de evaluación
@@ -293,13 +323,6 @@ export class ResultsComponent {
     this.anioActual = '';
     this.mesAnterior = '';
     this.anioAnterior = '';
-
-    // Datos de la gráfica
-    this.ambits = [];
-    this.scores = [];
-    this.colors = [];
-    this.bordes = [];
-    this.loadingChart = false;
 
     // Evidencias
     this.evidences = [];
@@ -310,46 +333,36 @@ export class ResultsComponent {
     // Reporte ASG
     this.asgReport = null;
     this.asgReportError = null;
+
   }
 
+
   loadResults(): void {
+
     this.resultService.getLastEvaluationResult().subscribe({
+
       next: (data) => {
+
         this.results = data;
 
         this.getPeriodo(data.date);
-        this.cargarGrafica();
 
         this.loadEvidences(data.evaluation_id);
+
       },
+
       error: (err) => {
+
         this.evidences = [];
         this.loadingEvidences = false;
+
       }
+
     });
+
   }
 
 
-  getEvidenceIndicatorIds(): number[] {
-    return [
-      ...new Set(
-        this.evidences.map(evidence => evidence.indicator_id)
-      )
-    ].sort((a, b) => a - b);
-  }
-
-
-  getBorderColor(level: string): string {
-    let color = "";
-    if (level === "Básico") {
-      color = "#ce4040ff";
-    } else if (level === "Intermedio") {
-      color = "#eac84fff";
-    } else {
-      color = "#15b91dff";
-    }
-    return color;
-  }
   capitalizar(texto: string): string {
     if (!texto) return texto;
     return texto.charAt(0).toUpperCase() + texto.slice(1);

@@ -1,6 +1,25 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { AmbitCardComponent } from './ambit-card.component';
+import { Component } from '@angular/core';
+
+@Component({
+  standalone: true,
+  imports: [AmbitCardComponent],
+  template: `
+    <app-ambit-card
+      variant="dashboard"
+      [featured]="true"
+      [score]="9.5">
+
+      <button type="button" dashboard-action>
+        Consultar resultados
+      </button>
+
+    </app-ambit-card>
+  `
+})
+class FeaturedCardHostComponent { }
 
 describe('AmbitCardComponent', () => {
   let component: AmbitCardComponent;
@@ -9,7 +28,8 @@ describe('AmbitCardComponent', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [
-        AmbitCardComponent
+        AmbitCardComponent,
+        FeaturedCardHostComponent
       ]
     })
       .compileComponents();
@@ -349,4 +369,50 @@ describe('AmbitCardComponent', () => {
     });
 
   });
+
+  it('should hide the featured footer without projected actions', () => {
+
+    component.variant = 'dashboard';
+    component.featured = true;
+    component.score = 9.5;
+
+    fixture.detectChanges();
+
+    const footer: HTMLElement =
+      fixture.nativeElement.querySelector(
+        '.dashboard-kpi__footer'
+      );
+
+    expect(footer).not.toBeNull();
+
+    expect(getComputedStyle(footer).display)
+      .toBe('none');
+
+  });
+
+  it('should preserve the featured footer with projected actions', () => {
+
+    const hostFixture = TestBed.createComponent(
+      FeaturedCardHostComponent
+    );
+
+    hostFixture.detectChanges();
+
+    const footer: HTMLElement =
+      hostFixture.nativeElement.querySelector(
+        '.dashboard-kpi__footer'
+      );
+
+    expect(footer).not.toBeNull();
+
+    expect(getComputedStyle(footer).display)
+      .not.toBe('none');
+
+    expect(footer.textContent)
+      .toContain('Consultar resultados');
+
+    hostFixture.destroy();
+
+  });
+
 });

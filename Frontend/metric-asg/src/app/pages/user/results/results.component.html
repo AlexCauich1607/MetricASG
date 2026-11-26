@@ -1,117 +1,141 @@
-<div class="sw-split-ly color-bg">
-  <div>
+<div class="results-shell">
+  <div class="container results-container">
+
     <p class="d-flex align-items-center mb-5 solo-pdf">
       <img src="assets/logo.png" alt="MetricASG" height="38" class="me-2">
-      <span class=" text-my-purple mb-1 font-logo fs-4">MetricAsg</span>
+      <span class="text-my-purple mb-1 font-logo fs-4">
+        MetricASG
+      </span>
     </p>
-    <h2 class="text-my-purple text-center fw-bold mb-2"><i class="bi bi-clipboard-data"></i> Evaluación ASG</h2>
-    <h6 class="sw-gris text-center mb-5 sw-fs-7"><i class="bi bi-calendar-fill"></i> Semestre {{mesAnterior}}
-      {{anioAnterior!=anioActual?anioAnterior:""}} - {{mesActual}} {{anioActual}} </h6>
-    <p class="fw-bold fs-5 mb-4 sw-gris text-center">!!Felicitaciones <b class="text-my-purple">{{name}}</b>, haz
-      concluido con tu Autodiagnóstico!!</p>
-    <!--<h4 class="sw-gris fw-bold mt-3 mb-3 text-center"><i class="bi bi-clipboard-data"></i> Puntuaciones</h4>-->
+
+    <!-- Encabezado de resultados -->
 
 
-    <p class=" text-my-purple fw-bold fs-5"><span class="bg-white py-2 px-3 rounded-5 shadow-sm border"><i
-          class="bi bi-star-fill "></i> Tus Puntaciones</span></p>
+    <header class="results-header">
+
+      <p class="results-header__eyebrow d-inline-flex align-items-center gap-2">
+        <i class="bi bi-clipboard-data" aria-hidden="true"></i>
+        Última evaluación ASG
+      </p>
+
+      <h1 class="results-header__title">
+        Resultados de tu evaluación ASG
+      </h1>
+
+      <p class="results-header__description">
+        Conoce el desempeño de tu empresa y descubre
+        oportunidades para seguir mejorando.
+      </p>
+
+    </header>
 
 
-    <div class="row mx-0 mb-1 align-items-stretch">
-      <div class="col-6 col-lg-3 mb-3">
-        <div class="sw-bg-blue-light sw-hover-scale rounded p-4">
-          <div class="d-flex justify-content-between align-items-stretch">
-            <p class="text-my-purple sw-fs-7 fw-bold"><i class="bi bi-globe-americas"></i> Nivel ASG</p>
-          </div>
-          <div class="d-flex justify-content-end">
-            <div class="sw-bg-sm-purple text-my-purple p-0 px-3 py-1 rounded text-center">
-              <p class=" sw-fs-7 m-0 p-0">{{results?.global_maturity_level}}
-              </p>
-              <p class="m-0 fs-3 p-0 fw-bold">{{results ? results.global_score.toFixed(1) : 0}}</p>
-            </div>
-          </div>
-        </div>
-      </div>
+    @if (results; as evaluation) {
 
-      @for (ambito of results?.ambits; track ambito) {
-      <div class="col-6 col-lg-3">
-        <app-ambit-card [title]="ambito.ambit_name" [letter]="ambito.letter" [color]="ambito.color"
-          [subtitle]="ambito.maturity_level" [maturity_color]="ambito.maturity_color"
-          [score]="ambito.score"></app-ambit-card>
-      </div>
-      }
-    </div>
+    <!-- Contexto empresarial -->
 
-    <div class="row g-1 mx-0 split-margin">
-      <div class="col-12 col-lg-12">
-        <div class="border rounded p-4 px-5 shadow-sm bg-white">
-          <h5 class="sw-gris text-center fw-bold mb-2"><i
-              class="bi bi-bar-chart-fill sw-bg-gris px-1 rounded me-1 text-white"></i> Ámbitos</h5>
-          @if (loadingChart) {
-          <app-bar-chart class="mx-5 chart-container" [data]="ambits" [scores]="scores" [bordes]="bordes"
-            [colors]="colors"></app-bar-chart>
-          }
-        </div>
-      </div>
-    </div>
-    <div class="mt-5">
-      <p class=" text-my-purple fw-bold fs-5 mb-4"><span class="bg-white py-2 px-3 rounded-5 shadow-sm border"><i
-            class="bi bi-chat-left-fill me-2"></i> Recomendaciones</span></p>
-      <feedback-component [ambits]="results? results.ambits: []"></feedback-component>
-    </div>
+    <section class="asg-card results-company" aria-label="Información de la evaluación">
 
-    @if (results) {
-    <section class="mt-5" data-html2canvas-ignore aria-labelledby="ai-explanation-title">
-      <h3 id="ai-explanation-title" class="text-my-purple fw-bold fs-5 mb-4">
-        <span class="bg-white py-2 px-3 rounded-5 shadow-sm border">
-          <i class="bi bi-stars me-2"></i>
-          Explicación generada por IA
+      <div class="results-company__identity">
+
+        <span class="results-company__icon" aria-hidden="true">
+
+          <i class="bi bi-building"></i>
+
         </span>
-      </h3>
 
-      <div class="bg-white border rounded shadow-sm p-4">
-        <p class="text-muted mb-3">
-          Obtén una interpretación adicional de tus resultados ASG
-          utilizando inteligencia artificial.
+        <div class="results-company__content">
+
+          <p class="results-company__label">
+            Empresa evaluada
+          </p>
+
+          <p class="results-company__title">
+            {{ name }}
+          </p>
+
+        </div>
+
+      </div>
+
+      <div class="results-company__period">
+
+        <span class="results-company__icon" aria-hidden="true">
+
+          <i class="bi bi-calendar-range"></i>
+
+        </span>
+
+        <div class="results-company__content">
+
+          <p class="results-company__label">
+            Periodo evaluado
+          </p>
+
+          <p class="results-company__date">
+
+            {{ mesAnterior }}
+            {{ anioAnterior !== anioActual ? anioAnterior : '' }}
+            – {{ mesActual }} {{ anioActual }}
+
+          </p>
+
+        </div>
+
+      </div>
+
+    </section>
+
+
+
+
+    <!-- Desempeño de la evaluación -->
+
+    <app-results-performance [globalScore]="evaluation.global_score" [globalMaturity]="evaluation.global_maturity_level"
+      [globalMaturityColor]="evaluation.global_maturity_color ?? ''" [ambits]="evaluation.ambits"
+      [highestAmbits]="highestScoringAmbits" [lowestAmbits]="lowestScoringAmbits">
+
+    </app-results-performance>
+
+    }
+
+
+    @if (results; as evaluation) {
+
+    <section class="results-recommendations" aria-labelledby="results-recommendations-title">
+
+      <header class="results-section-header">
+
+        <h2 id="results-recommendations-title">
+          Recomendaciones ASG
+        </h2>
+
+        <p>
+          Oportunidades de mejora identificadas
+          en cada ámbito de la evaluación.
         </p>
 
-        <button type="button" class="btn btn-primary" [disabled]="generatingAIExplanation"
-          (click)="generateAIExplanation()">
-          @if (generatingAIExplanation) {
-          <span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>
-          Generando explicación...
-          } @else {
-          <i class="bi bi-stars me-2"></i>
-          {{ aiExplanation ? 'Generar nuevamente' : 'Generar explicación con IA' }}
-          }
-        </button>
+      </header>
 
-        @if (aiExplanationError) {
-        <div class="alert alert-danger mt-3 mb-0" role="alert">
-          {{ aiExplanationError }}
-        </div>
-        }
+      <feedback-component variant="analysis" [ambits]="evaluation.ambits">
 
-        @if (aiExplanation) {
-        <div class="mt-4" aria-live="polite">
-          <h4 class="fs-6 fw-bold text-my-purple">
-            Interpretación de los resultados
-          </h4>
+      </feedback-component>
 
-          <div class="ai-explanation-content">
-            {{ aiExplanation }}
-          </div>
-
-          <p class="text-muted small mt-3 mb-0">
-            <i class="bi bi-info-circle me-1"></i>
-            Contenido generado por inteligencia artificial.
-            Puede contener imprecisiones y no modifica las
-            puntuaciones oficiales de MetricASG.
-          </p>
-        </div>
-        }
-      </div>
     </section>
+
     }
+
+
+
+    @if (results) {
+
+    <app-results-ai data-html2canvas-ignore [explanation]="aiExplanation" [generating]="generatingAIExplanation"
+      [error]="aiExplanationError" (generate)="generateAIExplanation()">
+
+    </app-results-ai>
+
+    }
+
 
     @if (results) {
     <div class="mt-5" data-html2canvas-ignore>
@@ -144,112 +168,24 @@
     </div>
     }
 
-    <div class="mt-5" data-html2canvas-ignore>
-      <p class="text-my-purple fw-bold fs-5 mb-4">
-        <span class="bg-white py-2 px-3 rounded-5 shadow-sm border">
-          <i class="bi bi-paperclip me-2"></i>
-          Evidencias registradas
-        </span>
-      </p>
+    @if (results; as evaluation) {
 
-      <div class="border rounded p-4 shadow-sm bg-white">
-        @if (evidenceDownloadError) {
-        <p class="text-danger small mb-3" role="alert">
-          {{ evidenceDownloadError }}
-        </p>
-        }
-        @if (loadingEvidences) {
-        <div class="text-center py-3" role="status">
-          <div class="spinner-border text-my-purple mb-2" aria-hidden="true">
-          </div>
-          <p class="text-muted mb-0">
-            Cargando evidencias...
-          </p>
-        </div>
-        } @else if (evidencesError) {
-        <div class="text-center py-3">
-          <p class="text-danger">
-            No se pudieron recuperar las evidencias.
-          </p>
+    @for (
+    evidenceEvaluation of [evaluation];
+    track evidenceEvaluation.evaluation_id
+    ) {
 
-          @if (results) {
-          <button type="button" class="btn btn-outline-secondary btn-sm" (click)="loadEvidences(results.evaluation_id)">
-            Reintentar
-          </button>
-          }
-        </div>
-        } @else if (evidences.length === 0) {
-        <p class="text-muted mb-0">
-          No se registraron evidencias para esta evaluación.
-        </p>
-        } @else {
-        @for (indicatorId of getEvidenceIndicatorIds(); track indicatorId) {
-        <div class="mb-4">
-          <h6 class="text-my-purple fw-bold mb-3">
-            Indicador {{ indicatorId }}
-          </h6>
+    <app-results-evidences data-html2canvas-ignore [evidences]="evidences" [loading]="loadingEvidences"
+      [error]="evidencesError" [downloadingEvidenceId]="downloadingEvidenceId" [downloadError]="evidenceDownloadError"
+      (retry)="loadEvidences(evidenceEvaluation.evaluation_id)" (download)="downloadEvidence($event)">
 
-          <div class="d-flex flex-column gap-2">
-            @for (evidence of evidences; track evidence.id) {
-            @if (evidence.indicator_id === indicatorId) {
-            <div class="border rounded p-3 bg-light">
-              @switch (evidence.type) {
-              @case ('COMMENT') {
-              <p class="fw-semibold small mb-1">
-                <i class="bi bi-chat-left-text me-2"></i>
-                Comentario
-              </p>
+    </app-results-evidences>
 
-              <p class="mb-0 evidence-content">
-                {{ evidence.content }}
-              </p>
-              }
+    }
 
-              @case ('URL') {
-              <p class="fw-semibold small mb-1">
-                <i class="bi bi-link-45deg me-2"></i>
-                Enlace
-              </p>
-
-              <a [href]="evidence.content" target="_blank" rel="noopener noreferrer">
-                {{ evidence.content }}
-              </a>
-              }
+    }
 
 
-              @case ('FILE') {
-              <p class="fw-semibold small mb-1">
-                <i class="bi bi-file-earmark me-2"></i>
-                Archivo adjunto
-              </p>
-
-              <p class="mb-2">
-                {{ evidence.original_filename }}
-              </p>
-
-              <button type="button" class="btn btn-outline-secondary btn-sm" [disabled]="downloadingEvidenceId !== null"
-                (click)="downloadEvidence(evidence)">
-
-                @if (downloadingEvidenceId === evidence.id) {
-                <span class="spinner-border spinner-border-sm me-1" aria-hidden="true">
-                </span>
-                Descargando...
-                } @else {
-                <i class="bi bi-download me-1"></i>
-                Descargar
-                }
-              </button>
-              }
-              }
-            </div>
-            }
-            }
-          </div>
-        </div>
-        }
-        }
-      </div>
-    </div>
 
     <div class="d-flex align-items-center justify-content-center mt-4" data-html2canvas-ignore>
 
