@@ -1,6 +1,350 @@
-<div class="sw-split-ly color-bg">
-    <div>
-        <h4 class="text-my-purple fw-bold mb-5"><span class="bg-white py-2 px-4 rounded-5 shadow-sm border"><i class="bi bi-chat-left-fill me-1 "></i> Recomendaciones</span></h4>
-        <feedback-component [ambits]="results? results.ambits: []"></feedback-component>
-    </div>
+
+<div class="feedback-shell">
+
+  <div class="container feedback-container">
+
+    <!-- Encabezado -->
+
+    <header class="feedback-header">
+
+      <p class="feedback-header__eyebrow">
+
+        <i
+          class="bi bi-lightbulb"
+          aria-hidden="true">
+        </i>
+
+        Mejora continua
+
+      </p>
+
+      <h1 class="feedback-header__title">
+
+        Recomendaciones ASG
+
+      </h1>
+
+      <p class="feedback-header__description">
+
+        Identifica las oportunidades de mejora
+        de tu última evaluación y fortalece
+        el desempeño de tu empresa.
+
+      </p>
+
+      @if (results(); as evaluation) {
+
+        <p class="feedback-header__date">
+
+          <i
+            class="bi bi-calendar3"
+            aria-hidden="true">
+          </i>
+
+          <span>
+            Última evaluación ·
+            {{ evaluation.date | date:'dd/MM/yyyy' }}
+          </span>
+
+        </p>
+
+      }
+
+    </header>
+
+    <!-- Estado de carga -->
+
+    @if (state().status === 'loading') {
+
+      <span
+        class="visually-hidden"
+        role="status">
+
+        Cargando recomendaciones ASG.
+
+      </span>
+
+      <div
+        class="feedback-skeleton"
+        aria-busy="true"
+        aria-hidden="true">
+
+        @for (item of [1, 2, 3]; track item) {
+
+          <article
+            class="asg-card feedback-skeleton__card">
+
+            <div class="feedback-skeleton__header">
+
+              <div class="feedback-skeleton__identity">
+
+                <span
+                  class="feedback-skeleton__block
+                         feedback-skeleton__icon">
+                </span>
+
+                <div
+                  class="feedback-skeleton__identity-content">
+
+                  <span
+                    class="feedback-skeleton__block
+                           feedback-skeleton__title">
+                  </span>
+
+                  <span
+                    class="feedback-skeleton__block
+                           feedback-skeleton__badge">
+                  </span>
+
+                </div>
+
+              </div>
+
+              <span
+                class="feedback-skeleton__block
+                       feedback-skeleton__score">
+              </span>
+
+            </div>
+
+            <span
+              class="feedback-skeleton__block
+                     feedback-skeleton__track">
+            </span>
+
+            <div class="feedback-skeleton__content">
+
+              <span
+                class="feedback-skeleton__block
+                       feedback-skeleton__line
+                       feedback-skeleton__line--heading">
+              </span>
+
+              <span
+                class="feedback-skeleton__block
+                       feedback-skeleton__line">
+              </span>
+
+              <span
+                class="feedback-skeleton__block
+                       feedback-skeleton__line">
+              </span>
+
+              <span
+                class="feedback-skeleton__block
+                       feedback-skeleton__line
+                       feedback-skeleton__line--short">
+              </span>
+
+            </div>
+
+          </article>
+
+        }
+
+      </div>
+
+    }
+
+    <!-- Estado de error -->
+
+    @else if (state().status === 'error') {
+
+      <section
+        class="asg-card feedback-state"
+        role="alert">
+
+        <span
+          class="feedback-state__icon
+                 feedback-state__icon--error">
+
+          <i
+            class="bi bi-exclamation-circle"
+            aria-hidden="true">
+          </i>
+
+        </span>
+
+        <h2>
+
+          No pudimos cargar las recomendaciones
+
+        </h2>
+
+        <p>
+
+          Ocurrió un problema al consultar
+          la información de tu evaluación.
+          Inténtalo nuevamente.
+
+        </p>
+
+        <button
+          type="button"
+          class="asg-btn asg-btn--primary"
+          (click)="retry()">
+
+          <i
+            class="bi bi-arrow-clockwise"
+            aria-hidden="true">
+          </i>
+
+          Reintentar
+
+        </button>
+
+      </section>
+
+    }
+
+    <!-- Sin evaluaciones -->
+
+    @else if (state().status === 'empty') {
+
+      <section class="asg-card feedback-state">
+
+        <span class="feedback-state__icon">
+
+          <i
+            class="bi bi-clipboard-data"
+            aria-hidden="true">
+          </i>
+
+        </span>
+
+        <h2>
+
+          Aún no hay recomendaciones disponibles
+
+        </h2>
+
+        <p>
+
+          Completa una evaluación ASG para
+          identificar las oportunidades de mejora
+          de tu empresa.
+
+        </p>
+
+        <button
+          type="button"
+          class="asg-btn asg-btn--primary"
+          (click)="goToHome()">
+
+          <i
+            class="bi bi-house"
+            aria-hidden="true">
+          </i>
+
+          Volver a Inicio
+
+        </button>
+
+      </section>
+
+    }
+
+    <!-- Recomendaciones -->
+
+    @else if (results(); as evaluation) {
+
+      @if (evaluation.ambits.length > 0) {
+
+        <section aria-label="Recomendaciones por ámbito ASG">
+
+          <feedback-component
+            variant="analysis"
+            [ambits]="evaluation.ambits">
+
+          </feedback-component>
+
+        </section>
+
+      } @else {
+
+        <section class="asg-card feedback-state">
+
+          <span class="feedback-state__icon">
+
+            <i
+              class="bi bi-lightbulb"
+              aria-hidden="true">
+            </i>
+
+          </span>
+
+          <h2>
+
+            No hay recomendaciones por ámbito
+
+          </h2>
+
+          <p>
+
+            La evaluación no contiene
+            recomendaciones detalladas disponibles.
+
+          </p>
+
+        </section>
+
+      }
+
+      <!-- Acceso al plan de mejora -->
+
+      <section
+        class="asg-card feedback-plan"
+        aria-labelledby="feedback-plan-title">
+
+        <div class="feedback-plan__identity">
+
+          <span
+            class="feedback-plan__icon"
+            aria-hidden="true">
+
+            <i class="bi bi-clipboard-check"></i>
+
+          </span>
+
+          <div class="feedback-plan__content">
+
+            <h2 id="feedback-plan-title">
+
+              Convierte las recomendaciones en acciones
+
+            </h2>
+
+            <p>
+
+              Organiza tus oportunidades de mejora,
+              establece responsables y da seguimiento
+              al cumplimiento de tus acciones.
+
+            </p>
+
+          </div>
+
+        </div>
+
+        <button
+          type="button"
+          class="asg-btn asg-btn--primary"
+          [disabled]="!canOpenPlan()"
+          (click)="openPlan()">
+
+          Consultar plan de mejora
+
+          <i
+            class="bi bi-arrow-right"
+            aria-hidden="true">
+          </i>
+
+        </button>
+
+      </section>
+
+    }
+
+  </div>
+
 </div>

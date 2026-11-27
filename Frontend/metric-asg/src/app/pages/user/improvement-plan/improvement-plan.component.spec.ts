@@ -1,6 +1,13 @@
+import { signal } from '@angular/core';
 
+import { CompanyContextService } from
+  '../../../services/company-context.service';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { ActivatedRoute, convertToParamMap } from '@angular/router';
+import {
+  ActivatedRoute,
+  convertToParamMap,
+  Router
+} from '@angular/router';
 import { of, Subject, throwError } from 'rxjs';
 
 import { ImprovementPlanComponent } from './improvement-plan.component';
@@ -12,11 +19,24 @@ import {
   ExportTable
 } from '../../../services/advanced-export.service';
 
+import { EvaluationService } from
+  '../../../services/evaluation.service';
+
+import {
+  EvaluationHistory,
+  History
+} from '../../../models/history_evaluations';
+
 describe('ImprovementPlanComponent', () => {
   let component: ImprovementPlanComponent;
   let fixture: ComponentFixture<ImprovementPlanComponent>;
   let improvementActionService: jasmine.SpyObj<ImprovementActionService>;
   let routeParams: Subject<ReturnType<typeof convertToParamMap>>;
+  let selectedCompanyId: ReturnType<typeof signal<number | null>>;
+  let evaluationService:
+    jasmine.SpyObj<EvaluationService>;
+
+  let router: jasmine.SpyObj<Router>;
 
   const action: ImprovementAction = {
     id: 5,
@@ -31,6 +51,41 @@ describe('ImprovementPlanComponent', () => {
     created_at: '2026-11-03T12:00:00Z',
     updated_at: '2026-11-03T12:00:00Z'
   };
+
+
+  function buildHistory(
+    evaluationIds: number[]
+  ): EvaluationHistory {
+
+    const history: History[] =
+      evaluationIds.map(evaluationId => ({
+
+        evaluation_id: evaluationId,
+
+        date: '2026-11-20',
+
+        global_score: 7.5,
+
+        ambits: []
+
+      }));
+
+    return {
+
+      history,
+
+      averages: {
+
+        global_score: 7.5,
+
+        ambits: []
+
+      }
+
+    };
+
+  }
+
 
   beforeEach(async () => {
     routeParams = new Subject();
@@ -53,6 +108,28 @@ describe('ImprovementPlanComponent', () => {
         progress_percentage: 0
       })
     );
+
+    selectedCompanyId = signal<number | null>(1);
+
+    router = jasmine.createSpyObj(
+      'Router',
+      ['navigate']
+    );
+
+    router.navigate.and.returnValue(
+      Promise.resolve(true)
+    );
+
+    evaluationService =
+      jasmine.createSpyObj<EvaluationService>(
+        'EvaluationService',
+        ['getEvaluationHistory']
+      );
+
+    evaluationService.getEvaluationHistory.and.returnValue(
+      of(buildHistory([10, 11, 20]))
+    );
+
     await TestBed.configureTestingModule({
       imports: [ImprovementPlanComponent],
       providers: [
@@ -65,7 +142,21 @@ describe('ImprovementPlanComponent', () => {
           useValue: {
             paramMap: routeParams.asObservable()
           }
-        }
+        },
+        {
+          provide: CompanyContextService,
+          useValue: {
+            selectedCompanyId
+          }
+        },
+        {
+          provide: Router,
+          useValue: router
+        },
+        {
+          provide: EvaluationService,
+          useValue: evaluationService
+        },
       ]
     }).compileComponents();
 
@@ -855,6 +946,541 @@ describe('ImprovementPlanComponent', () => {
     expect(alert?.textContent).toContain(
       'No fue posible exportar el plan de mejora.'
     );
+  });
+
+  it('should invalidate the plan when the selected company changes', () => {
+
+    improvementActionService.getActions.and.returnValue(
+      of([action])
+    );
+
+    routeParams.next(
+      convertToParamMap({
+        evaluationId: '10'
+      })
+    );
+
+    fixture.detectChanges();
+
+    expect(component.actions).toEqual([action]);
+
+    selectedCompanyId.set(2);
+
+    TestBed.tick();
+    fixture.detectChanges();
+
+    expect(component.evaluationId).toBeNull();
+
+    expect(component.actions).toEqual([]);
+
+    expect(component.progress).toBeNull();
+
+    expect(component.canExportActions).toBeFalse();
+
+    expect(router.navigate).toHaveBeenCalledWith([
+      '/user/improvement/plan'
+    ]);
+
+  });
+
+  it('should ignore pending actions after a company change', () => {
+
+    const pendingActions$ =
+      new Subject<ImprovementAction[]>();
+
+    improvementActionService.getActions.and.returnValue(
+      pendingActions$.asObservable()
+    );
+
+    routeParams.next(
+      convertToParamMap({
+        evaluationId: '10'
+      })
+    );
+
+    fixture.detectChanges();
+
+    selectedCompanyId.set(2);
+
+    TestBed.tick();
+
+    pendingActions$.next([action]);
+
+    fixture.detectChanges();
+
+    expect(component.actions).toEqual([]);
+
+    expect(component.evaluationId).toBeNull();
+
+    expect(component.loading).toBeFalse();
+
+  });
+
+  it('should ignore pending actions after an evaluation change', () => {
+
+    const previousActions$ =
+      new Subject<ImprovementAction[]>();
+
+    const currentAction: ImprovementAction = {
+      ...action,
+      id: 6,
+      evaluation_id: 20
+    };
+
+    improvementActionService.getActions.and.callFake(
+      evaluationId =>
+        evaluationId === 10
+          ? previousActions$.asObservable()
+          : of([currentAction])
+    );
+
+    routeParams.next(
+      convertToParamMap({
+        evaluationId: '10'
+      })
+    );
+
+    routeParams.next(
+      convertToParamMap({
+        evaluationId: '20'
+      })
+    );
+
+    previousActions$.next([action]);
+
+    fixture.detectChanges();
+
+    expect(component.evaluationId).toBe(20);
+
+    expect(component.actions).toEqual([
+      currentAction
+    ]);
+
+  });
+
+  it('should close the create form after a company change', () => {
+
+    routeParams.next(
+      convertToParamMap({
+        evaluationId: '10'
+      })
+    );
+
+    fixture.detectChanges();
+
+    component.toggleCreateForm();
+
+    expect(component.activeModal).toBe('create');
+
+    selectedCompanyId.set(2);
+
+    TestBed.tick();
+    fixture.detectChanges();
+
+    expect(component.activeModal).toBeNull();
+
+    expect(component.showCreateForm).toBeFalse();
+
+    expect(component.saving).toBeFalse();
+
+    expect(component.newAction.description).toBe('');
+
+  });
+
+
+  it('should prevent mutations when the company context changes', () => {
+
+    routeParams.next(
+      convertToParamMap({
+        evaluationId: '10'
+      })
+    );
+
+    fixture.detectChanges();
+
+    selectedCompanyId.set(2);
+
+    component.createAction();
+    component.updateAction();
+    component.deleteAction();
+
+    expect(
+      improvementActionService.createAction
+    ).not.toHaveBeenCalled();
+
+    expect(
+      improvementActionService.updateAction
+    ).not.toHaveBeenCalled();
+
+    expect(
+      improvementActionService.deleteAction
+    ).not.toHaveBeenCalled();
+
+  });
+
+  it('should validate evaluation ownership before loading the plan', () => {
+
+    const pendingHistory =
+      new Subject<EvaluationHistory>();
+
+    evaluationService.getEvaluationHistory.and.returnValue(
+      pendingHistory.asObservable()
+    );
+
+    routeParams.next(
+      convertToParamMap({ evaluationId: '10' })
+    );
+
+    fixture.detectChanges();
+
+    expect(component.validatingEvaluation)
+      .toBeTrue();
+
+    expect(component.evaluationId)
+      .toBeNull();
+
+    expect(improvementActionService.getActions)
+      .not.toHaveBeenCalled();
+
+    expect(improvementActionService.getProgressMetrics)
+      .not.toHaveBeenCalled();
+
+    pendingHistory.next(buildHistory([10]));
+
+    fixture.detectChanges();
+
+    expect(component.validatingEvaluation)
+      .toBeFalse();
+
+    expect(component.evaluationId)
+      .toBe(10);
+
+    expect(improvementActionService.getActions)
+      .toHaveBeenCalledOnceWith(10);
+
+    expect(improvementActionService.getProgressMetrics)
+      .toHaveBeenCalledOnceWith(10);
+
+  });
+
+
+  it('should reject an evaluation outside the selected company', () => {
+
+    evaluationService.getEvaluationHistory.and.returnValue(
+      of(buildHistory([20]))
+    );
+
+    routeParams.next(
+      convertToParamMap({ evaluationId: '10' })
+    );
+
+    fixture.detectChanges();
+
+    expect(component.evaluationId)
+      .toBeNull();
+
+    expect(improvementActionService.getActions)
+      .not.toHaveBeenCalled();
+
+    expect(improvementActionService.getProgressMetrics)
+      .not.toHaveBeenCalled();
+
+    expect(router.navigate)
+      .toHaveBeenCalledOnceWith([
+        '/user/improvement/plan'
+      ]);
+
+  });
+
+
+  it('should block plan loading when ownership validation fails', () => {
+
+    evaluationService.getEvaluationHistory.and.returnValue(
+      throwError(() => new Error('Request failed'))
+    );
+
+    routeParams.next(
+      convertToParamMap({ evaluationId: '10' })
+    );
+
+    fixture.detectChanges();
+
+    expect(component.evaluationValidationError)
+      .toBeTrue();
+
+    expect(component.validatingEvaluation)
+      .toBeFalse();
+
+    expect(component.loading)
+      .toBeFalse();
+
+    expect(component.evaluationId)
+      .toBeNull();
+
+    expect(component.errorMessage)
+      .toContain('No fue posible verificar la evaluación');
+
+    expect(improvementActionService.getActions)
+      .not.toHaveBeenCalled();
+
+    expect(improvementActionService.getProgressMetrics)
+      .not.toHaveBeenCalled();
+
+    expect(router.navigate)
+      .not.toHaveBeenCalled();
+
+  });
+
+
+  it('should retry a failed ownership validation', () => {
+
+    evaluationService.getEvaluationHistory.and.returnValues(
+
+      throwError(() => new Error('Request failed')),
+
+      of(buildHistory([10]))
+
+    );
+
+    routeParams.next(
+      convertToParamMap({ evaluationId: '10' })
+    );
+
+    expect(component.evaluationValidationError)
+      .toBeTrue();
+
+    component.retryEvaluationValidation();
+
+    fixture.detectChanges();
+
+    expect(evaluationService.getEvaluationHistory)
+      .toHaveBeenCalledTimes(2);
+
+    expect(component.evaluationValidationError)
+      .toBeFalse();
+
+    expect(component.evaluationId)
+      .toBe(10);
+
+    expect(improvementActionService.getActions)
+      .toHaveBeenCalledOnceWith(10);
+
+  });
+
+
+  it('should ignore ownership validation after a company change', () => {
+
+    const pendingHistory =
+      new Subject<EvaluationHistory>();
+
+    evaluationService.getEvaluationHistory.and.returnValue(
+      pendingHistory.asObservable()
+    );
+
+    routeParams.next(
+      convertToParamMap({ evaluationId: '10' })
+    );
+
+    expect(pendingHistory.observed)
+      .toBeTrue();
+
+    selectedCompanyId.set(2);
+
+    // Respuesta anterior antes de sincronizar los efectos.
+
+    pendingHistory.next(buildHistory([10]));
+
+    expect(improvementActionService.getActions)
+      .not.toHaveBeenCalled();
+
+    expect(improvementActionService.getProgressMetrics)
+      .not.toHaveBeenCalled();
+
+    TestBed.flushEffects();
+
+    fixture.detectChanges();
+
+    expect(pendingHistory.observed)
+      .toBeFalse();
+
+    expect(component.evaluationId)
+      .toBeNull();
+
+  });
+
+
+  it('should cancel ownership validation when changing evaluations', () => {
+
+    const previousHistory =
+      new Subject<EvaluationHistory>();
+
+    evaluationService.getEvaluationHistory.and.returnValues(
+
+      previousHistory.asObservable(),
+
+      of(buildHistory([10, 20]))
+
+    );
+
+    routeParams.next(
+      convertToParamMap({ evaluationId: '10' })
+    );
+
+    expect(previousHistory.observed)
+      .toBeTrue();
+
+    routeParams.next(
+      convertToParamMap({ evaluationId: '20' })
+    );
+
+    expect(previousHistory.observed)
+      .toBeFalse();
+
+    previousHistory.next(buildHistory([10]));
+
+    fixture.detectChanges();
+
+    expect(component.evaluationId)
+      .toBe(20);
+
+    expect(improvementActionService.getActions)
+      .toHaveBeenCalledOnceWith(20);
+
+    expect(improvementActionService.getProgressMetrics)
+      .toHaveBeenCalledOnceWith(20);
+
+  });
+
+
+  it('should block mutations while validating evaluation ownership', () => {
+
+    const pendingHistory =
+      new Subject<EvaluationHistory>();
+
+    evaluationService.getEvaluationHistory.and.returnValue(
+      pendingHistory.asObservable()
+    );
+
+    routeParams.next(
+      convertToParamMap({ evaluationId: '10' })
+    );
+
+    component.newAction = {
+      indicator_id: null,
+      gap_description: 'Brecha de prueba',
+      description: 'Acción de prueba',
+      priority: 'HIGH',
+      responsible: 'Operaciones',
+      target_date: '2026-12-15'
+    };
+
+    component.editingActionId = 5;
+
+    component.editAction = {
+      ...component.newAction,
+      status: 'PENDING'
+    };
+
+    component.confirmDeleteActionId = 5;
+
+    component.actions = [action];
+
+    component.createAction();
+
+    component.updateAction();
+
+    component.deleteAction();
+
+    expect(component.canExportActions)
+      .toBeFalse();
+
+    expect(improvementActionService.createAction)
+      .not.toHaveBeenCalled();
+
+    expect(improvementActionService.updateAction)
+      .not.toHaveBeenCalled();
+
+    expect(improvementActionService.deleteAction)
+      .not.toHaveBeenCalled();
+
+  });
+
+  it('should display the evaluation validation loading state', () => {
+
+    const pendingHistory =
+      new Subject<EvaluationHistory>();
+
+    evaluationService.getEvaluationHistory.and.returnValue(
+      pendingHistory.asObservable()
+    );
+
+    routeParams.next(
+      convertToParamMap({ evaluationId: '10' })
+    );
+
+    fixture.detectChanges();
+
+    const content: string =
+      fixture.nativeElement.textContent;
+
+    expect(content)
+      .toContain('Verificando evaluación...');
+
+    expect(content)
+      .not.toContain('Nueva acción');
+
+    expect(content)
+      .not.toContain('Progreso del plan de mejora');
+
+  });
+
+
+  it('should retry evaluation validation using the HTML button', () => {
+
+    evaluationService.getEvaluationHistory.and.returnValues(
+
+      throwError(() => new Error('Request failed')),
+
+      of(buildHistory([10]))
+
+    );
+
+    routeParams.next(
+      convertToParamMap({ evaluationId: '10' })
+    );
+
+    fixture.detectChanges();
+
+    const element: HTMLElement =
+      fixture.nativeElement;
+
+    const retryButton =
+      Array.from(
+        element.querySelectorAll<HTMLButtonElement>(
+          'button'
+        )
+      ).find(button =>
+        button.textContent?.includes('Reintentar')
+      );
+
+    expect(retryButton).toBeDefined();
+
+    retryButton?.click();
+
+    fixture.detectChanges();
+
+    expect(evaluationService.getEvaluationHistory)
+      .toHaveBeenCalledTimes(2);
+
+    expect(component.evaluationValidationError)
+      .toBeFalse();
+
+    expect(component.evaluationId)
+      .toBe(10);
+
+    expect(improvementActionService.getActions)
+      .toHaveBeenCalledOnceWith(10);
+
   });
 
 });

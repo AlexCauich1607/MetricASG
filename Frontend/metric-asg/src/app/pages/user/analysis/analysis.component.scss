@@ -1,0 +1,102 @@
+
+/* HU-058 — Navegación secundaria de Análisis ASG */
+
+:host {
+  display: block;
+  min-width: 0;
+}
+
+.analysis-shell {
+  min-width: 0;
+  background: var(--asg-color-surface-muted);
+}
+
+.analysis-navigation {
+  min-width: 0;
+  padding-top: var(--asg-space-4);
+
+  &__tabs {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+
+    gap: var(--asg-space-1);
+    padding: var(--asg-space-1);
+
+    background: var(--asg-color-surface-default);
+    border: 1px solid #dce5ee;
+    border-radius: var(--asg-radius-card);
+  }
+
+  &__link {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    gap: var(--asg-space-2);
+
+    min-width: 0;
+    min-height: 44px;
+
+    padding: var(--asg-space-3);
+
+    border-radius: var(--asg-radius-sm);
+
+    color: var(--asg-color-text-muted);
+    font-size: var(--asg-font-size-sm);
+    font-weight: var(--asg-font-weight-medium);
+
+    text-decoration: none;
+    text-align: center;
+
+    transition:
+      background-color .2s ease,
+      color .2s ease;
+
+    i {
+      flex-shrink: 0;
+      font-size: var(--asg-font-size-md);
+    }
+
+    span {
+      min-width: 0;
+      overflow-wrap: anywhere;
+    }
+
+    &:hover {
+      background: #f0f5ee;
+      color: var(--asg-color-brand-primary);
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--asg-color-brand-primary);
+      outline-offset: -2px;
+    }
+
+    &.active {
+      background: #edf3fa;
+      color: var(--asg-color-brand-primary);
+      font-weight: var(--asg-font-weight-semibold);
+    }
+  }
+}
+
+@media (max-width: 575.98px) {
+
+  .analysis-navigation__link {
+    flex-direction: column;
+
+    gap: var(--asg-space-1);
+    padding: var(--asg-space-2);
+
+    font-size: var(--asg-font-size-xs);
+  }
+
+}
+
+@media (prefers-reduced-motion: reduce) {
+
+  .analysis-navigation__link {
+    transition: none;
+  }
+
+}

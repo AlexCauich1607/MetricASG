@@ -1758,4 +1758,337 @@ describe('CompanyMembersComponent', () => {
     );
   });
 
+  describe('immediate company context protection', () => {
+
+    const companyA: UserCompanyMembership = {
+      membership_id: 10,
+      company_id: 3,
+      company_name: 'Empresa A',
+      role: CompanyRole.COMPANY_ADMIN,
+      joined_at: '2026-11-09T10:00:00'
+    };
+
+    const companyB: UserCompanyMembership = {
+      membership_id: 20,
+      company_id: 7,
+      company_name: 'Empresa B',
+      role: CompanyRole.COMPANY_ADMIN,
+      joined_at: '2026-11-09T10:00:00'
+    };
+
+    const memberA: CompanyMember = {
+      membership_id: 15,
+      user_id: 5,
+      name: 'Ana',
+      lastname: 'López',
+      email: 'ana@example.com',
+      position: 'Gerente',
+      role: CompanyRole.COLLABORATOR,
+      status: CompanyMembershipStatus.ACTIVE,
+      joined_at: '2026-11-09T10:00:00'
+    };
+
+    const memberB: CompanyMember = {
+      ...memberA,
+      membership_id: 25,
+      user_id: 8,
+      name: 'Carlos',
+      lastname: 'García',
+      email: 'carlos@example.com'
+    };
+
+
+    let companyContext: CompanyContextService;
+
+    let membershipService: CompanyMembershipService;
+
+    let invitationService: CompanyInvitationService;
+
+
+    function synchronize(): void {
+
+      fixture.detectChanges();
+
+      TestBed.flushEffects();
+
+      fixture.detectChanges();
+
+    }
+
+
+    beforeEach(() => {
+
+      companyContext =
+        TestBed.inject(CompanyContextService);
+
+      membershipService =
+        TestBed.inject(CompanyMembershipService);
+
+      invitationService =
+        TestBed.inject(CompanyInvitationService);
+
+
+      spyOn(
+        membershipService,
+        'getMembers'
+      ).and.callFake(companyId =>
+
+        of(
+          companyId === 3
+            ? [memberA]
+            : [memberB]
+        )
+
+      );
+
+
+      companyContext.memberships.set([
+        companyA,
+        companyB
+      ]);
+
+      companyContext.selectedCompanyId.set(3);
+
+      synchronize();
+
+    });
+
+
+    it('should immediately hide members from the previous company', () => {
+
+      expect(component.members())
+        .toEqual([memberA]);
+
+      companyContext.selectedCompanyId.set(7);
+
+      // Sin sincronizar los efectos reactivos.
+
+      expect(component.members())
+        .toEqual([]);
+
+      expect(component.hasCurrentContext())
+        .toBeFalse();
+
+      expect(component.loading())
+        .toBeTrue();
+
+      expect(component.error())
+        .toBeFalse();
+
+      synchronize();
+
+      expect(component.members())
+        .toEqual([memberB]);
+
+      expect(component.hasCurrentContext())
+        .toBeTrue();
+
+      expect(component.loading())
+        .toBeFalse();
+
+    });
+
+
+    it('should block removal using the previous company context', () => {
+
+      const removeSpy = spyOn(
+        membershipService,
+        'removeMember'
+      ).and.returnValue(of(void 0));
+
+      const confirmSpy = spyOn(
+        window,
+        'confirm'
+      ).and.returnValue(true);
+
+
+      companyContext.selectedCompanyId.set(7);
+
+      component.removeMember(memberA);
+
+
+      expect(confirmSpy)
+        .not.toHaveBeenCalled();
+
+      expect(removeSpy)
+        .not.toHaveBeenCalled();
+
+    });
+
+
+    it('should block invitations using the previous company form', () => {
+
+      const invitationSpy = spyOn(
+        invitationService,
+        'createInvitation'
+      );
+
+      component.invitationEmail.set(
+        'nuevo@example.com'
+      );
+
+      component.invitationRole.set(
+        CompanyRole.ASG_MANAGER
+      );
+
+
+      companyContext.selectedCompanyId.set(7);
+
+      component.sendInvitation();
+
+
+      expect(invitationSpy)
+        .not.toHaveBeenCalled();
+
+      synchronize();
+
+      expect(component.invitationEmail())
+        .toBe('');
+
+      expect(component.invitationRole())
+        .toBe(CompanyRole.COLLABORATOR);
+
+    });
+
+
+    it('should invalidate the directory immediately when the role changes', () => {
+
+      companyContext.memberships.set([
+
+        {
+          ...companyA,
+          role: CompanyRole.AUDITOR
+        },
+
+        companyB
+
+      ]);
+
+
+      expect(component.hasCurrentContext())
+        .toBeFalse();
+
+      expect(component.members())
+        .toEqual([]);
+
+      expect(component.loading())
+        .toBeTrue();
+
+
+      synchronize();
+
+
+      expect(component.hasCurrentContext())
+        .toBeTrue();
+
+      expect(component.members())
+        .toEqual([memberA]);
+
+      expect(companyContext.selectedRole())
+        .toBe(CompanyRole.AUDITOR);
+
+    });
+
+
+    it('should ignore removal responses after an immediate company change', () => {
+
+      const pendingRemoval =
+        new Subject<void>();
+
+      spyOn(
+        membershipService,
+        'removeMember'
+      ).and.returnValue(
+        pendingRemoval.asObservable()
+      );
+
+      spyOn(
+        window,
+        'confirm'
+      ).and.returnValue(true);
+
+
+      component.removeMember(memberA);
+
+      expect(pendingRemoval.observed)
+        .toBeTrue();
+
+
+      companyContext.selectedCompanyId.set(7);
+
+      pendingRemoval.error(
+        new HttpErrorResponse({
+          status: 500
+        })
+      );
+
+
+      expect(component.removeError())
+        .toBeFalse();
+
+      expect(component.removeErrorMessage())
+        .toBeNull();
+
+
+      synchronize();
+
+
+      expect(component.members())
+        .toEqual([memberB]);
+
+    });
+
+
+    it('should ignore invitation errors from the previous company', () => {
+
+      const pendingInvitation =
+        new Subject<CompanyInvitation>();
+
+      spyOn(
+        invitationService,
+        'createInvitation'
+      ).and.returnValue(
+        pendingInvitation.asObservable()
+      );
+
+
+      component.invitationEmail.set(
+        'nuevo@example.com'
+      );
+
+      component.sendInvitation();
+
+      expect(pendingInvitation.observed)
+        .toBeTrue();
+
+
+      companyContext.selectedCompanyId.set(7);
+
+      pendingInvitation.error(
+        new HttpErrorResponse({
+          status: 409
+        })
+      );
+
+
+      expect(component.invitationErrorMessage())
+        .toBeNull();
+
+      expect(component.invitationSuccess())
+        .toBeFalse();
+
+
+      synchronize();
+
+
+      expect(component.invitationEmail())
+        .toBe('');
+
+      expect(component.members())
+        .toEqual([memberB]);
+
+    });
+
+  });
+
 });

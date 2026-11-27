@@ -1,203 +1,485 @@
 
-<section class="company-members-section">
+<section
+  class="company-members-section"
+  aria-labelledby="company-members-title">
 
-  <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
-    <div>
-      <h3 class="h5 fw-bold text-my-purple mb-1">
-        <i class="bi bi-people-fill me-2"></i>
+  <!-- Encabezado -->
+
+  <header class="members-header">
+
+    <span class="members-header__icon" aria-hidden="true">
+      <i class="bi bi-people"></i>
+    </span>
+
+    <div class="members-header__content">
+
+      <h2 id="company-members-title">
         Integrantes de la empresa
-      </h3>
-      <p class="text-muted mb-0">
+      </h2>
+
+      <p>
         Consulta los integrantes de la empresa seleccionada.
       </p>
+
     </div>
-  </div>
+
+  </header>
 
   @if (companyContext.selectedMembership(); as membership) {
 
-    @if (membership.role === 'COMPANY_ADMIN') {
-      <div class="card mb-4">
-        <div class="card-body">
-          <h4 class="h6 fw-bold text-my-purple mb-3">
-            <i class="bi bi-person-plus me-2"></i>
-            Invitar integrante
-          </h4>
+    <!-- Invitaciones -->
 
-          @if (invitationSuccess()) {
-            <div class="alert alert-success" role="status">
-              La invitación se envió correctamente.
-            </div>
-          }
+    @if (membership.role === 'COMPANY_ADMIN' && hasCurrentContext()) {
 
-          @if (invitationErrorMessage(); as message) {
-            <div class="alert alert-danger" role="alert">
-              {{ message }}
-            </div>
-          }
+      <section
+        class="members-invitation"
+        aria-labelledby="members-invitation-title">
 
-          <form (submit)="$event.preventDefault(); sendInvitation()">
-            <div class="row g-3 align-items-end">
-              <div class="col-12 col-lg-5">
-                <label for="invitationEmail" class="form-label">
-                  Correo electrónico
-                </label>
-                <input
-                  id="invitationEmail"
-                  type="email"
-                  class="form-control"
-                  placeholder="usuario@ejemplo.com"
-                  autocomplete="email"
-                  required
-                  [value]="invitationEmail()"
-                  [disabled]="sendingInvitation()"
-                  (input)="invitationEmail.set($any($event.target).value)" />
-              </div>
+        <h3 id="members-invitation-title">
 
-              <div class="col-12 col-lg-4">
-                <label for="invitationRole" class="form-label">
-                  Rol empresarial
-                </label>
-                <select
-                  id="invitationRole"
-                  class="form-select"
-                  [value]="invitationRole()"
-                  [disabled]="sendingInvitation()"
-                  (change)="invitationRole.set($any($event.target).value)">
-                  <option value="COMPANY_ADMIN">Administrador empresarial</option>
-                  <option value="ASG_MANAGER">Responsable ASG</option>
-                  <option value="COLLABORATOR">Colaborador</option>
-                  <option value="AUDITOR">Auditor</option>
-                </select>
-              </div>
+          <i class="bi bi-person-plus" aria-hidden="true"></i>
 
-              <div class="col-12 col-lg-3">
-                <button
-                  type="submit"
-                  class="btn btn-my-purple w-100"
-                  [disabled]="sendingInvitation() || !invitationEmail().trim()">
+          Invitar integrante
 
-                  @if (sendingInvitation()) {
-                    <span
-                      class="spinner-border spinner-border-sm me-1"
-                      aria-hidden="true">
-                    </span>
-                    Enviando...
-                  } @else {
-                    <i class="bi bi-send me-1"></i>
-                    Enviar invitación
-                  }
-                </button>
-              </div>
-            </div>
-          </form>
-        </div>
-      </div>
+        </h3>
+
+        <p class="members-invitation__description">
+          Agrega nuevos integrantes y asigna su rol empresarial.
+        </p>
+
+        @if (invitationSuccess()) {
+
+          <div
+            class="members-message members-message--success"
+            role="status">
+
+            La invitación se envió correctamente.
+
+          </div>
+
+        }
+
+        @if (invitationErrorMessage(); as message) {
+
+          <div
+            class="members-message members-message--error"
+            role="alert">
+
+            {{ message }}
+
+          </div>
+
+        }
+
+        <form
+          class="members-invitation__form"
+          (submit)="$event.preventDefault(); sendInvitation()">
+
+          <div class="members-field">
+
+            <label for="invitationEmail">
+              Correo electrónico
+            </label>
+
+            <input
+              id="invitationEmail"
+              type="email"
+              class="form-control"
+              placeholder="usuario@ejemplo.com"
+              autocomplete="email"
+              required
+              [value]="invitationEmail()"
+              [disabled]="sendingInvitation()"
+              (input)="invitationEmail.set($any($event.target).value)" />
+
+          </div>
+
+          <div class="members-field">
+
+            <label for="invitationRole">
+              Rol empresarial
+            </label>
+
+            <select
+              id="invitationRole"
+              class="form-select"
+              [value]="invitationRole()"
+              [disabled]="sendingInvitation()"
+              (change)="invitationRole.set($any($event.target).value)">
+
+              <option value="COMPANY_ADMIN">
+                Administrador empresarial
+              </option>
+
+              <option value="ASG_MANAGER">
+                Responsable ASG
+              </option>
+
+              <option value="COLLABORATOR">
+                Colaborador
+              </option>
+
+              <option value="AUDITOR">
+                Auditor
+              </option>
+
+            </select>
+
+          </div>
+
+          <button
+            type="submit"
+            class="asg-btn asg-btn--primary"
+            [disabled]="sendingInvitation() || !invitationEmail().trim()">
+
+            @if (sendingInvitation()) {
+
+              <span
+                class="spinner-border spinner-border-sm"
+                aria-hidden="true">
+              </span>
+
+              Enviando...
+
+            } @else {
+
+              <i class="bi bi-send" aria-hidden="true"></i>
+
+              Enviar invitación
+
+            }
+
+          </button>
+
+        </form>
+
+      </section>
+
     }
 
+    <!-- Estados de carga -->
+
     @if (loading()) {
-      <div class="text-center py-4" role="status">
-        <span class="spinner-border text-my-purple" aria-hidden="true"></span>
-        <p class="mt-3">Cargando integrantes...</p>
+
+      <span class="visually-hidden" role="status">
+        Cargando integrantes...
+      </span>
+
+      <div class="members-skeleton" aria-hidden="true">
+
+        @for (item of [1, 2, 3]; track item) {
+
+          <div class="members-skeleton__row">
+
+            <span class="members-skeleton__avatar"></span>
+            <span class="members-skeleton__line"></span>
+            <span class="members-skeleton__line"></span>
+            <span class="members-skeleton__line"></span>
+
+          </div>
+
+        }
+
       </div>
 
     } @else if (error()) {
-      <div class="alert alert-danger" role="alert">
-        No fue posible recuperar los integrantes de la empresa.
+
+      <div class="members-state" role="alert">
+
+        <span class="members-state__icon members-state__icon--error">
+          <i class="bi bi-exclamation-circle" aria-hidden="true"></i>
+        </span>
+
+        <h3>No pudimos cargar los integrantes</h3>
+
+        <p>
+          No fue posible recuperar los integrantes de la empresa.
+        </p>
+
+        <button
+          type="button"
+          class="asg-btn asg-btn--primary"
+          (click)="retryLoadMembers()">
+
+          <i class="bi bi-arrow-clockwise" aria-hidden="true"></i>
+
+          Reintentar
+
+        </button>
+
       </div>
-      <button
-        type="button"
-        class="btn btn-outline-danger"
-        (click)="retryLoadMembers()">
-        Reintentar
-      </button>
 
     } @else if (members().length === 0) {
-      <div class="alert alert-secondary">
-        No hay integrantes disponibles para mostrar.
+
+      <div class="members-state" role="status">
+
+        <span class="members-state__icon">
+          <i class="bi bi-people" aria-hidden="true"></i>
+        </span>
+
+        <h3>No hay integrantes disponibles</h3>
+
+        <p>No hay integrantes disponibles para mostrar.</p>
+
       </div>
 
     } @else {
 
+      <!-- Errores de eliminación -->
+
       @if (removeError()) {
-        <div class="alert alert-danger" role="alert">
+
+        <div
+          class="members-message members-message--error"
+          role="alert">
+
           {{ removeErrorMessage() }}
+
         </div>
+
       }
 
-      <div class="table-responsive">
-        <table class="table table-hover align-middle">
-          <thead>
-            <tr>
-              <th>Nombre</th>
-              <th>Correo electrónico</th>
-              <th>Cargo</th>
-              <th>Rol empresarial</th>
-              <th>Estado</th>
+      <!-- Directorio responsive -->
+
+      <div class="members-table-wrapper">
+
+        <table
+          class="members-table"
+          role="table"
+          aria-label="Directorio de integrantes">
+
+          <thead role="rowgroup">
+
+            <tr role="row">
+
+              <th scope="col" role="columnheader">Nombre</th>
+
+              <th scope="col" role="columnheader">
+                Correo electrónico
+              </th>
+
+              <th scope="col" role="columnheader">Cargo</th>
+
+              <th scope="col" role="columnheader">
+                Rol empresarial
+              </th>
+
+              <th scope="col" role="columnheader">Estado</th>
+
               @if (membership.role === 'COMPANY_ADMIN') {
-                <th>Acciones</th>
+
+                <th scope="col" role="columnheader">Acciones</th>
+
               }
+
             </tr>
+
           </thead>
-          <tbody>
+
+          <tbody role="rowgroup">
+
             @for (member of members(); track member.membership_id) {
-              <tr>
-                <td>{{ member.name }} {{ member.lastname }}</td>
-                <td>{{ member.email }}</td>
-                <td>{{ member.position || 'No especificado' }}</td>
-                <td>
-                  @switch (member.role) {
-                    @case ('COMPANY_ADMIN') { Administrador empresarial }
-                    @case ('ASG_MANAGER') { Responsable ASG }
-                    @case ('COLLABORATOR') { Colaborador }
-                    @case ('AUDITOR') { Auditor }
-                    @default { {{ member.role }} }
-                  }
-                </td>
-                <td>
-                  @switch (member.status) {
-                    @case ('ACTIVE') {
-                      <span class="badge text-bg-success">Activo</span>
-                    }
-                    @case ('INACTIVE') {
-                      <span class="badge text-bg-secondary">Inactivo</span>
-                    }
-                    @default { {{ member.status }} }
-                  }
+
+              <tr role="row">
+
+                <!-- Nombre -->
+
+                <td role="cell" class="members-name-cell">
+
+                  <div class="members-person">
+
+                    <span
+                      class="members-person__avatar"
+                      aria-hidden="true">
+
+                      <i class="bi bi-person"></i>
+
+                    </span>
+
+                    <span class="members-person__name">
+
+                      {{ member.name }} {{ member.lastname }}
+
+                    </span>
+
+                  </div>
+
                 </td>
 
+                <!-- Correo -->
+
+                <td role="cell" class="members-email-cell">
+
+                  {{ member.email }}
+
+                </td>
+
+                <!-- Cargo -->
+
+                <td role="cell" class="members-position-cell">
+
+                  <span
+                    class="members-mobile-label"
+                    aria-hidden="true">
+
+                    Cargo
+
+                  </span>
+
+                  {{ member.position || 'No especificado' }}
+
+                </td>
+
+                <!-- Rol -->
+
+                <td role="cell" class="members-role-cell">
+
+                  <span
+                    class="members-mobile-label"
+                    aria-hidden="true">
+
+                    Rol empresarial
+
+                  </span>
+
+                  <span class="members-role">
+
+                    @switch (member.role) {
+
+                      @case ('COMPANY_ADMIN') {
+                        Administrador empresarial
+                      }
+
+                      @case ('ASG_MANAGER') {
+                        Responsable ASG
+                      }
+
+                      @case ('COLLABORATOR') {
+                        Colaborador
+                      }
+
+                      @case ('AUDITOR') {
+                        Auditor
+                      }
+
+                      @default {
+                        {{ member.role }}
+                      }
+
+                    }
+
+                  </span>
+
+                </td>
+
+                <!-- Estado -->
+
+                <td role="cell" class="members-status-cell">
+
+                  @switch (member.status) {
+
+                    @case ('ACTIVE') {
+
+                      <span class="members-status members-status--active">
+
+                        <span class="members-status__dot" aria-hidden="true"></span>
+
+                        Activo
+
+                      </span>
+
+                    }
+
+                    @case ('INACTIVE') {
+
+                      <span class="members-status members-status--inactive">
+
+                        <span class="members-status__dot" aria-hidden="true"></span>
+
+                        Inactivo
+
+                      </span>
+
+                    }
+
+                    @default {
+
+                      <span class="members-status">
+                        {{ member.status }}
+                      </span>
+
+                    }
+
+                  }
+
+                </td>
+
+                <!-- Acciones administrativas -->
+
                 @if (membership.role === 'COMPANY_ADMIN') {
-                  <td>
+
+                  <td role="cell" class="members-actions-cell">
+
                     <button
                       type="button"
-                      class="btn btn-sm btn-outline-danger"
+                      class="members-remove-button"
                       [disabled]="removingMemberId() !== null"
                       (click)="removeMember(member)"
                       [attr.aria-label]="'Eliminar a ' + member.email">
 
                       @if (removingMemberId() === member.membership_id) {
+
                         <span
-                          class="spinner-border spinner-border-sm me-1"
+                          class="spinner-border spinner-border-sm"
                           aria-hidden="true">
                         </span>
+
                         Eliminando...
+
                       } @else {
-                        <i class="bi bi-trash me-1"></i>
+
+                        <i class="bi bi-trash" aria-hidden="true"></i>
+
                         Eliminar
+
                       }
+
                     </button>
+
                   </td>
+
                 }
+
               </tr>
+
             }
+
           </tbody>
+
         </table>
+
       </div>
+
     }
 
   } @else {
-    <div class="alert alert-warning" role="alert">
-      Selecciona una empresa para consultar sus integrantes.
+
+    <div class="members-state" role="alert">
+
+      <span class="members-state__icon">
+
+        <i class="bi bi-building" aria-hidden="true"></i>
+
+      </span>
+
+      <h3>Selecciona una empresa</h3>
+
+      <p>
+        Selecciona una empresa para consultar sus integrantes.
+      </p>
+
     </div>
+
   }
 
 </section>

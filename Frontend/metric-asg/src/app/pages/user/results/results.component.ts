@@ -18,7 +18,7 @@ import {
 import { ResultEvaluation } from '../../../models/evaluation_result';
 import { EvaluationService } from '../../../services/evaluation.service';
 import { SessionService } from '../../../shared/class/temporalStorage';
-import { FeedbackComponent } from '../../../shared/feedback/feedback.component';
+
 import { EvidenceService } from '../../../services/evidence.service';
 import { EvaluationEvidence } from '../../../models/evaluation_evidence';
 import { Router } from '@angular/router';
@@ -44,7 +44,6 @@ import {
   selector: 'app-results',
   standalone: true,
   imports: [
-    FeedbackComponent,
     AsgReportTemplateComponent,
     ResultsAiComponent,
     ResultsEvidencesComponent,
@@ -178,6 +177,21 @@ export class ResultsComponent {
 
   }
 
+  openRecommendations(): void {
+
+    if (
+      !this.results ||
+      this.companyContext.selectedCompanyId() === null
+    ) {
+      return;
+    }
+
+    void this.router.navigate([
+      '/user/improvement/recommendations'
+    ]);
+
+  }
+
 
   openImprovementPlan(): void {
     const evaluationId = this.results?.evaluation_id;
@@ -190,10 +204,9 @@ export class ResultsComponent {
       return;
     }
 
-    this.router.navigate([
-      '/user/evaluations',
-      evaluationId,
-      'improvement-plan'
+    void this.router.navigate([
+      '/user/improvement/plan',
+      evaluationId
     ]);
   }
 

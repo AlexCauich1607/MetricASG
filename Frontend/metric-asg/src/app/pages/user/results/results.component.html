@@ -99,34 +99,6 @@
 
     }
 
-
-    @if (results; as evaluation) {
-
-    <section class="results-recommendations" aria-labelledby="results-recommendations-title">
-
-      <header class="results-section-header">
-
-        <h2 id="results-recommendations-title">
-          Recomendaciones ASG
-        </h2>
-
-        <p>
-          Oportunidades de mejora identificadas
-          en cada ámbito de la evaluación.
-        </p>
-
-      </header>
-
-      <feedback-component variant="analysis" [ambits]="evaluation.ambits">
-
-      </feedback-component>
-
-    </section>
-
-    }
-
-
-
     @if (results) {
 
     <app-results-ai data-html2canvas-ignore [explanation]="aiExplanation" [generating]="generatingAIExplanation"
@@ -136,6 +108,51 @@
 
     }
 
+
+    @if (results) {
+
+    <section class="asg-card results-recommendations-link" aria-labelledby="results-recommendations-link-title"
+      data-html2canvas-ignore>
+
+      <div class="results-recommendations-link__identity">
+
+        <span class="results-recommendations-link__icon" aria-hidden="true">
+
+          <i class="bi bi-lightbulb"></i>
+
+        </span>
+
+        <div class="results-recommendations-link__content">
+
+          <h2 id="results-recommendations-link-title">
+
+            Recomendaciones ASG
+
+          </h2>
+
+          <p>
+
+            Consulta las oportunidades de mejora
+            identificadas en tu evaluación.
+
+          </p>
+
+        </div>
+
+      </div>
+
+      <button type="button" class="asg-btn asg-btn--primary" (click)="openRecommendations()">
+
+        Ver recomendaciones
+
+        <i class="bi bi-arrow-right" aria-hidden="true">
+        </i>
+
+      </button>
+
+    </section>
+
+    }
 
     @if (results) {
     <div class="mt-5" data-html2canvas-ignore>

@@ -569,7 +569,9 @@ describe('ResultsComponent', () => {
     expect(component.downloadingEvidenceId).toBeNull();
   });
 
+
   it('should navigate to the improvement plan for the loaded evaluation', () => {
+
     const router = TestBed.inject(Router);
     const navigateSpy = spyOn(router, 'navigate');
 
@@ -578,11 +580,12 @@ describe('ResultsComponent', () => {
     component.openImprovementPlan();
 
     expect(navigateSpy).toHaveBeenCalledOnceWith([
-      '/user/evaluations',
-      1,
-      'improvement-plan'
+      '/user/improvement/plan',
+      1
     ]);
+
   });
+
 
   it('should not navigate to the improvement plan without a valid evaluation ID', () => {
     const router = TestBed.inject(Router);
@@ -1290,6 +1293,81 @@ describe('ResultsComponent', () => {
         ambit => ambit.ambit_id
       )
     ).toEqual([3]);
+
+  });
+  it('should navigate to the recommendations page', () => {
+
+    const router = TestBed.inject(Router);
+    const navigateSpy = spyOn(router, 'navigate');
+
+    const companyContext =
+      TestBed.inject(CompanyContextService);
+
+    companyContext.selectedCompanyId.set(1);
+
+    component.results = mockResults;
+
+    component.openRecommendations();
+
+    expect(navigateSpy).toHaveBeenCalledOnceWith([
+      '/user/improvement/recommendations'
+    ]);
+
+  });
+
+  it('should not navigate to recommendations without results', () => {
+
+    const router = TestBed.inject(Router);
+    const navigateSpy = spyOn(router, 'navigate');
+
+    const companyContext =
+      TestBed.inject(CompanyContextService);
+
+    companyContext.selectedCompanyId.set(1);
+
+    component.results = null;
+
+    component.openRecommendations();
+
+    expect(navigateSpy).not.toHaveBeenCalled();
+
+  });
+
+  it('should not navigate to recommendations without a selected company', () => {
+
+    const router = TestBed.inject(Router);
+    const navigateSpy = spyOn(router, 'navigate');
+
+    const companyContext =
+      TestBed.inject(CompanyContextService);
+
+    companyContext.selectedCompanyId.set(null);
+
+    component.results = mockResults;
+
+    component.openRecommendations();
+
+    expect(navigateSpy).not.toHaveBeenCalled();
+
+  });
+
+  it('should not render detailed recommendations in the results page', () => {
+
+    component.results = mockResults;
+
+    fixture.detectChanges();
+
+    expect(
+      fixture.nativeElement.querySelector(
+        'feedback-component'
+      )
+    ).toBeNull();
+
+    expect(
+      fixture.nativeElement.querySelector(
+        '.results-recommendations-link'
+      )
+    ).not.toBeNull();
 
   });
 

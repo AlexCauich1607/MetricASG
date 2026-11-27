@@ -3,6 +3,7 @@ import {
   ChangeDetectionStrategy,
   DestroyRef,
   Injector,
+  computed,
   inject,
   OnInit,
   signal
@@ -23,7 +24,11 @@ import {
 
 import { CompanyContextService } from '../../../services/company-context.service';
 import { CompanyMembershipService } from '../../../services/company-membership.service';
-import { CompanyMember, CompanyRole } from '../../../models/company_membership';
+import {
+  CompanyMember,
+  CompanyRole,
+  UserCompanyMembership
+} from '../../../models/company_membership';
 import { CompanyInvitationService } from '../../../services/company-invitation.service';
 
 @Component({
@@ -37,9 +42,84 @@ import { CompanyInvitationService } from '../../../services/company-invitation.s
 export class CompanyMembersComponent implements OnInit {
   private readonly destroyRef = inject(DestroyRef);
   private readonly injector = inject(Injector);
-  readonly members = signal<CompanyMember[]>([]);
-  readonly loading = signal(false);
-  readonly error = signal(false);
+
+  private readonly membersState =
+    signal<CompanyMember[]>([]);
+
+  private readonly loadingState =
+    signal(false);
+
+  private readonly errorState =
+    signal(false);
+
+  private readonly loadedContextKey =
+    signal<string | null>(null);
+
+
+  private getContextKey(
+    membership: UserCompanyMembership | null
+  ): string | null {
+
+    if (!membership) {
+      return null;
+    }
+
+    return [
+      membership.company_id,
+      membership.membership_id,
+      membership.role
+    ].join(':');
+
+  }
+
+
+  private readonly currentContextKey = computed(() =>
+
+    this.getContextKey(
+      this.companyContext.selectedMembership()
+    )
+
+  );
+
+
+  readonly hasCurrentContext = computed(() =>
+
+    this.currentContextKey() !== null &&
+
+    this.loadedContextKey() ===
+    this.currentContextKey()
+
+  );
+
+
+  readonly members = computed(() =>
+
+    this.hasCurrentContext()
+      ? this.membersState()
+      : []
+
+  );
+
+
+  readonly loading = computed(() =>
+
+    this.currentContextKey() !== null &&
+
+    (
+      !this.hasCurrentContext() ||
+      this.loadingState()
+    )
+
+  );
+
+
+  readonly error = computed(() =>
+
+    this.hasCurrentContext() &&
+    this.errorState()
+
+  );
+
   private readonly retryRequests$ = new Subject<void>();
   readonly removingMemberId = signal<number | null>(null);
   readonly removeError = signal(false);
@@ -70,72 +150,140 @@ export class CompanyMembersComponent implements OnInit {
     private invitationService: CompanyInvitationService
   ) { }
 
+
   ngOnInit(): void {
-    toObservable(this.companyContext.selectedMembership, {
-      injector: this.injector
-    })
+
+    toObservable(
+      this.companyContext.selectedMembership,
+      {
+        injector: this.injector
+      }
+    )
       .pipe(
+
         distinctUntilChanged(
           (previous, current) =>
-            previous?.company_id === current?.company_id &&
-            previous?.role === current?.role
+            this.getContextKey(previous) ===
+            this.getContextKey(current)
         ),
 
         switchMap(membership => {
+
           this.cancelRemoval$.next();
+
           this.cancelInvitation$.next();
+
           this.sendingInvitation.set(false);
+
           this.invitationEmail.set('');
-          this.invitationRole.set(CompanyRole.COLLABORATOR);
+
+          this.invitationRole.set(
+            CompanyRole.COLLABORATOR
+          );
+
           this.invitationSuccess.set(false);
+
           this.invitationErrorMessage.set(null);
+
           this.removingMemberId.set(null);
+
           this.removeError.set(false);
+
           this.removeErrorMessage.set(null);
-          this.members.set([]);
-          this.error.set(false);
+
+
+          this.membersState.set([]);
+
+          this.errorState.set(false);
+
+          this.loadingState.set(
+            membership !== null
+          );
+
+          this.loadedContextKey.set(
+            this.getContextKey(membership)
+          );
+
 
           if (!membership) {
-            this.loading.set(false);
+
             return of(null);
+
           }
 
+
           return this.retryRequests$.pipe(
+
             startWith(void 0),
+
             switchMap(() => {
-              this.members.set([]);
-              this.error.set(false);
-              this.loading.set(true);
+
+              this.membersState.set([]);
+
+              this.errorState.set(false);
+
+              this.loadingState.set(true);
 
               return this.membershipService
+
                 .getMembers(membership.company_id)
+
                 .pipe(
+
                   catchError(() => {
-                    this.error.set(true);
+
+                    if (this.hasCurrentContext()) {
+
+                      this.errorState.set(true);
+
+                    }
+
                     return of(null);
+
                   })
+
                 );
+
             })
+
           );
+
         }),
 
         takeUntilDestroyed(this.destroyRef)
+
       )
       .subscribe(members => {
-        if (members !== null) {
-          this.members.set(members);
+
+        if (!this.hasCurrentContext()) {
+
+          return;
+
         }
 
-        this.loading.set(false);
+        if (members !== null) {
+
+          this.membersState.set(members);
+
+        }
+
+        this.loadingState.set(false);
+
       });
+
   }
 
+
   retryLoadMembers(): void {
-    if (!this.companyContext.selectedMembership()) {
+
+    if (!this.hasCurrentContext()) {
+
       return;
+
     }
 
     this.retryRequests$.next();
+
   }
 
 
@@ -144,6 +292,7 @@ export class CompanyMembersComponent implements OnInit {
 
     if (
       !membership ||
+      !this.hasCurrentContext() ||
       membership.role !== CompanyRole.COMPANY_ADMIN ||
       this.removingMemberId() !== null ||
       !this.members().some(
@@ -155,6 +304,15 @@ export class CompanyMembersComponent implements OnInit {
 
     const companyId = membership.company_id;
 
+    const operationContextKey =
+      this.getContextKey(membership);
+
+    const isCurrentOperation = (): boolean =>
+
+      this.hasCurrentContext() &&
+
+      this.currentContextKey() === operationContextKey;
+
     const confirmed = window.confirm(
       `¿Deseas eliminar a ${member.email} de esta empresa?`
     );
@@ -165,8 +323,12 @@ export class CompanyMembersComponent implements OnInit {
 
     // Evitar operaciones sobre una empresa diferente.
     if (
+      !isCurrentOperation() ||
       this.companyContext.selectedCompanyId() !== companyId ||
-      this.companyContext.selectedRole() !== CompanyRole.COMPANY_ADMIN
+      this.companyContext.selectedRole() !== CompanyRole.COMPANY_ADMIN ||
+      !this.members().some(
+        item => item.membership_id === member.membership_id
+      )
     ) {
       return;
     }
@@ -186,7 +348,12 @@ export class CompanyMembersComponent implements OnInit {
       )
       .subscribe({
         next: () => {
-          this.members.update(current =>
+
+          if (!isCurrentOperation()) {
+            return;
+          }
+
+          this.membersState.update(current =>
             current.filter(
               item => item.membership_id !== member.membership_id
             )
@@ -208,6 +375,11 @@ export class CompanyMembersComponent implements OnInit {
           }
         },
         error: (err: HttpErrorResponse) => {
+
+          if (!isCurrentOperation()) {
+            return;
+          }
+
           this.removeError.set(true);
 
           if (
@@ -245,6 +417,7 @@ export class CompanyMembersComponent implements OnInit {
 
     if (
       !membership ||
+      !this.hasCurrentContext() ||
       membership.role !== CompanyRole.COMPANY_ADMIN ||
       this.sendingInvitation() ||
       !validEmail ||
@@ -254,6 +427,15 @@ export class CompanyMembersComponent implements OnInit {
     }
 
     const companyId = membership.company_id;
+
+    const operationContextKey =
+      this.getContextKey(membership);
+
+    const isCurrentOperation = (): boolean =>
+
+      this.hasCurrentContext() &&
+
+      this.currentContextKey() === operationContextKey;
 
     this.invitationSuccess.set(false);
     this.invitationErrorMessage.set(null);
@@ -274,11 +456,20 @@ export class CompanyMembersComponent implements OnInit {
       )
       .subscribe({
         next: () => {
+
+          if (!isCurrentOperation()) {
+            return;
+          }
+
           this.invitationSuccess.set(true);
           this.invitationEmail.set('');
           this.invitationRole.set(CompanyRole.COLLABORATOR);
         },
         error: (err: HttpErrorResponse) => {
+
+          if (!isCurrentOperation()) {
+            return;
+          }
           if (err.status === 409) {
             this.invitationErrorMessage.set(
               'No se pudo crear la invitación porque existe un conflicto con el usuario o una invitación pendiente.'

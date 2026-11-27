@@ -293,32 +293,6 @@ describe('HistoryComponent', () => {
     );
   });
 
-  it('should navigate to the improvement plan for a valid evaluation', () => {
-    const router = TestBed.inject(Router);
-    const navigateSpy = spyOn(router, 'navigate');
-
-    component.openImprovementPlan(10);
-
-    expect(navigateSpy).toHaveBeenCalledOnceWith([
-      '/user/evaluations',
-      10,
-      'improvement-plan'
-    ]);
-  });
-
-  it('should reject invalid evaluation IDs when opening the improvement plan', () => {
-    const router = TestBed.inject(Router);
-    const navigateSpy = spyOn(router, 'navigate');
-
-    const invalidIds = [0, -1, 1.5, Number.NaN];
-
-    invalidIds.forEach(evaluationId => {
-      component.openImprovementPlan(evaluationId);
-    });
-
-    expect(navigateSpy).not.toHaveBeenCalled();
-  });
-
   it('should cancel pending requests and reset state when switching companies', () => {
     const pendingHistory = new Subject<EvaluationHistory>();
     const pendingDashboard = new Subject<EvaluationDashboard>();
@@ -346,7 +320,6 @@ describe('HistoryComponent', () => {
     // Seleccionar evaluaciones de Empresa A.
     component.evaluationId1 = 10;
     component.evaluationId2 = 11;
-    component.improvementEvaluationId = 10;
 
     // Preparar las respuestas de Empresa B.
     historySpy.and.returnValue(of({
@@ -375,7 +348,6 @@ describe('HistoryComponent', () => {
     // Las selecciones anteriores deben desaparecer.
     expect(component.evaluationId1).toBeNull();
     expect(component.evaluationId2).toBeNull();
-    expect(component.improvementEvaluationId).toBeNull();
 
     // El nuevo dashboard debe corresponder a la segunda consulta.
     expect(component.dashboard?.history).toEqual([]);
@@ -594,5 +566,4 @@ describe('HistoryComponent', () => {
       'No fue posible exportar el historial.'
     );
   });
-
 });

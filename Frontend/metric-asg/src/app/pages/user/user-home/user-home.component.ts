@@ -658,7 +658,7 @@ export class UserHomeComponent {
 
   goToResults(): void {
     if (this.hasCurrentResults) {
-      this.router.navigate(['/user/results']);
+      this.router.navigate(['/user/analysis/results']);
     }
   }
 }

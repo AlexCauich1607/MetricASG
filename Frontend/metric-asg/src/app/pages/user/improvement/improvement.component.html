@@ -1,0 +1,46 @@
+
+<div class="improvement-shell">
+
+  <div class="container improvement-navigation">
+
+    <nav
+      class="improvement-navigation__tabs"
+      aria-label="Secciones de Mejora ASG">
+
+      <a
+        class="improvement-navigation__link"
+        routerLink="/user/improvement/recommendations"
+        routerLinkActive="active"
+        ariaCurrentWhenActive="page">
+
+        <i
+          class="bi bi-lightbulb"
+          aria-hidden="true">
+        </i>
+
+        <span>Recomendaciones</span>
+
+      </a>
+
+      <a
+        class="improvement-navigation__link"
+        routerLink="/user/improvement/plan"
+        routerLinkActive="active"
+        ariaCurrentWhenActive="location">
+
+        <i
+          class="bi bi-clipboard-check"
+          aria-hidden="true">
+        </i>
+
+        <span>Plan de mejora</span>
+
+      </a>
+
+    </nav>
+
+  </div>
+
+  <router-outlet></router-outlet>
+
+</div>

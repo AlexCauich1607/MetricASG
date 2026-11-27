@@ -235,3 +235,92 @@
     }
 
 }
+
+
+/* Acceso contextual a Recomendaciones ASG */
+
+.results-recommendations-link {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+
+  gap: var(--asg-space-4);
+  min-width: 0;
+
+  &__identity {
+    display: flex;
+    align-items: center;
+
+    flex: 1 1 320px;
+
+    gap: var(--asg-space-3);
+    min-width: 0;
+  }
+
+  &__icon {
+    display: grid;
+    place-items: center;
+
+    flex-shrink: 0;
+
+    width: 48px;
+    height: 48px;
+
+    background: #e6efde;
+    border-radius: var(--asg-radius-sm);
+
+    color: var(--asg-color-action-success);
+    font-size: 1.5rem;
+  }
+
+  &__content {
+    min-width: 0;
+
+    h2 {
+      margin: 0 0 var(--asg-space-1);
+
+      color: var(--asg-color-brand-primary);
+      font-size: var(--asg-font-size-lg);
+      font-weight: var(--asg-font-weight-semibold);
+
+      overflow-wrap: anywhere;
+    }
+
+    p {
+      margin: 0;
+
+      color: var(--asg-color-text-muted);
+      font-size: var(--asg-font-size-sm);
+      line-height: 1.6;
+
+      overflow-wrap: anywhere;
+    }
+  }
+
+  .asg-btn {
+    min-height: 44px;
+    white-space: normal;
+  }
+}
+
+@media (max-width: 767.98px) {
+
+  .results-recommendations-link {
+    padding: var(--asg-space-4);
+
+    .asg-btn {
+      width: 100%;
+    }
+  }
+
+}
+
+@media (max-width: 575.98px) {
+
+  .results-recommendations-link__icon {
+    width: 40px;
+    height: 40px;
+  }
+
+}

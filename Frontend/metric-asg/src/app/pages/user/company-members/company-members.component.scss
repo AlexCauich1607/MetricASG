@@ -1,0 +1,514 @@
+
+:host {
+  display: block;
+  min-width: 0;
+}
+
+.company-members-section {
+  display: grid;
+  gap: var(--asg-space-5, 20px);
+  min-width: 0;
+}
+
+/* Encabezado */
+
+.members-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+
+  &__icon {
+    display: grid;
+    place-items: center;
+    flex-shrink: 0;
+
+    width: 48px;
+    height: 48px;
+
+    border-radius: var(--asg-radius-sm, 8px);
+    background: #e1ebf6;
+    color: var(--asg-color-brand-primary);
+
+    font-size: 1.5rem;
+  }
+
+  &__content {
+    min-width: 0;
+  }
+
+  h2 {
+    margin: 0 0 4px;
+    color: var(--asg-color-brand-primary);
+    font-size: var(--asg-font-size-lg, 1.125rem);
+    font-weight: 600;
+  }
+
+  p {
+    margin: 0;
+    color: var(--asg-color-text-muted);
+    font-size: var(--asg-font-size-sm, 0.875rem);
+    line-height: 1.5;
+  }
+}
+
+/* Invitaciones */
+
+.members-invitation {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+
+  min-width: 0;
+
+  background: #f5f8fc;
+  border: 1px solid #dce5ee;
+  border-radius: var(--asg-radius-sm, 8px);
+
+  h3 {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+
+    margin: 0;
+    color: var(--asg-color-brand-primary);
+    font-size: 1rem;
+    font-weight: 600;
+  }
+
+  &__description {
+    margin: 0;
+    color: var(--asg-color-text-muted);
+    font-size: 0.875rem;
+  }
+
+  &__form {
+    display: grid;
+    grid-template-columns:
+      minmax(0, 1.4fr)
+      minmax(0, 1fr)
+      auto;
+
+    align-items: end;
+    gap: 12px;
+
+    .asg-btn {
+      min-height: 44px;
+      white-space: normal;
+    }
+  }
+}
+
+.members-field {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+
+  label {
+    color: var(--asg-color-brand-primary);
+    font-size: 0.875rem;
+    font-weight: 500;
+  }
+
+  input,
+  select {
+    width: 100%;
+    min-width: 0;
+    min-height: 44px;
+    font-size: 0.875rem;
+    border-color: #cbd5e1;
+    border-radius: var(--asg-radius-sm, 8px);
+  }
+}
+
+/* Mensajes */
+
+.members-message {
+  padding: 12px 16px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  overflow-wrap: anywhere;
+
+  &--success {
+    background: #e7f5ec;
+    border-color: #cde8d7;
+    color: #18794e;
+  }
+
+  &--error {
+    background: #fdf0f0;
+    border-color: #f0cece;
+    color: #b42318;
+  }
+}
+
+/* Directorio */
+
+.members-table-wrapper {
+  min-width: 0;
+  overflow-x: auto;
+}
+
+.members-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 0.875rem;
+
+  th {
+    padding: 12px;
+    background: #f5f8fc;
+    color: var(--asg-color-text-muted);
+    font-weight: 600;
+  }
+
+  td {
+    padding: 14px 12px;
+    border-bottom: 1px solid #e2e8f0;
+    vertical-align: middle;
+    color: var(--asg-color-brand-primary);
+    overflow-wrap: anywhere;
+  }
+
+  tbody tr:last-child td {
+    border-bottom: 0;
+  }
+
+  tbody tr:hover {
+    background: #f8fafc;
+  }
+}
+
+.members-person {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+
+  &__avatar {
+    display: grid;
+    place-items: center;
+    flex-shrink: 0;
+
+    width: 36px;
+    height: 36px;
+
+    border-radius: 50%;
+    background: #e1ebf6;
+    color: var(--asg-color-brand-primary);
+
+    font-size: 1.1rem;
+  }
+
+  &__name {
+    min-width: 0;
+    font-weight: 600;
+    overflow-wrap: anywhere;
+  }
+}
+
+.members-mobile-label {
+  display: none;
+}
+
+.members-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+
+  padding: 5px 10px;
+
+  border-radius: 999px;
+  background: #f1f5f9;
+  color: #526174;
+
+  font-size: 0.75rem;
+  font-weight: 500;
+
+  &__dot {
+    width: 7px;
+    height: 7px;
+    flex-shrink: 0;
+    border-radius: 50%;
+    background: currentColor;
+  }
+
+  &--active {
+    background: #e7f5ec;
+    color: #18794e;
+  }
+
+  &--inactive {
+    background: #eef1f5;
+    color: #526174;
+  }
+}
+
+.members-remove-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+
+  min-height: 44px;
+  padding: 8px 12px;
+
+  background: #fff;
+  border: 1px solid #e6b8b8;
+  border-radius: 8px;
+  color: #b42318;
+
+  font-size: 0.875rem;
+  cursor: pointer;
+
+  &:hover:not(:disabled) {
+    background: #fdf0f0;
+  }
+
+  &:focus-visible {
+    outline: 2px solid #b42318;
+    outline-offset: 2px;
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+}
+
+/* Estados de interfaz */
+
+.members-state {
+  display: grid;
+  justify-items: center;
+  gap: 12px;
+
+  padding: 24px 16px;
+  text-align: center;
+
+  &__icon {
+    display: grid;
+    place-items: center;
+    width: 56px;
+    height: 56px;
+
+    border-radius: 8px;
+    background: #e1ebf6;
+    color: var(--asg-color-brand-primary);
+    font-size: 1.75rem;
+
+    &--error {
+      background: #fdf0f0;
+      color: #b42318;
+    }
+  }
+
+  h3 {
+    margin: 0;
+    color: var(--asg-color-brand-primary);
+    font-size: 1.125rem;
+    font-weight: 600;
+  }
+
+  p {
+    max-width: 50ch;
+    margin: 0;
+    color: var(--asg-color-text-muted);
+    line-height: 1.6;
+  }
+
+  .asg-btn {
+    min-height: 44px;
+  }
+}
+
+/* Skeleton */
+
+.members-skeleton {
+  display: grid;
+  gap: 12px;
+
+  &__row {
+    display: grid;
+    grid-template-columns: 36px repeat(3, minmax(0, 1fr));
+    align-items: center;
+    gap: 16px;
+
+    padding: 16px;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+  }
+
+  &__avatar,
+  &__line {
+    display: block;
+
+    background: linear-gradient(
+      90deg,
+      #e8edf3 25%,
+      #f4f7fa 50%,
+      #e8edf3 75%
+    );
+
+    background-size: 200% 100%;
+    animation: members-shimmer 1.6s ease-in-out infinite;
+  }
+
+  &__avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+  }
+
+  &__line {
+    height: 14px;
+    border-radius: 6px;
+  }
+}
+
+@keyframes members-shimmer {
+  from {
+    background-position: 200% 0;
+  }
+
+  to {
+    background-position: -200% 0;
+  }
+}
+
+/* Formulario adaptable */
+
+@media (max-width: 1199.98px) {
+  .members-invitation__form {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+
+    .asg-btn {
+      grid-column: 1 / -1;
+    }
+  }
+}
+
+/* Directorio mediante tarjetas en móvil */
+
+@media (max-width: 767.98px) {
+
+  .company-members-section {
+    gap: 16px;
+  }
+
+  .members-header {
+    &__icon {
+      width: 40px;
+      height: 40px;
+      font-size: 1.25rem;
+    }
+  }
+
+  .members-invitation__form {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .members-table-wrapper {
+    overflow: visible;
+  }
+
+  .members-table,
+  .members-table tbody {
+    display: block;
+    width: 100%;
+  }
+
+  .members-table thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .members-table tbody {
+    display: grid;
+    gap: 12px;
+  }
+
+  .members-table tbody tr {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 8px 12px;
+
+    min-width: 0;
+    padding: 14px;
+
+    background: #fff;
+    border: 1px solid #dce5ee;
+    border-radius: 10px;
+  }
+
+  .members-table td {
+    display: block;
+    padding: 0;
+    min-width: 0;
+    border: 0;
+  }
+
+  .members-name-cell {
+    grid-column: 1;
+    grid-row: 1;
+    align-self: center;
+  }
+
+  .members-email-cell {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+
+  .members-status-cell {
+    grid-column: 2;
+    grid-row: 1;
+    align-self: center;
+  }
+
+  .members-position-cell {
+    grid-column: 1 / -1;
+    padding-top: 12px !important;
+    border-top: 1px solid #e2e8f0 !important;
+  }
+
+  .members-role-cell,
+  .members-actions-cell {
+    grid-column: 1 / -1;
+  }
+
+  .members-mobile-label {
+    display: block;
+    margin-bottom: 4px;
+    color: var(--asg-color-text-muted);
+    font-size: 0.75rem;
+  }
+
+  .members-remove-button {
+    width: 100%;
+    margin-top: 6px;
+  }
+
+  .members-state .asg-btn {
+    width: 100%;
+  }
+
+  .members-skeleton__row {
+    grid-template-columns: 36px minmax(0, 1fr);
+  }
+
+  .members-skeleton__line:nth-child(n + 3) {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .members-skeleton__avatar,
+  .members-skeleton__line {
+    animation: none;
+  }
+}

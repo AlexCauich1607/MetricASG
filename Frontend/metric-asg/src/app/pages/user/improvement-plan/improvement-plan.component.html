@@ -55,7 +55,7 @@
                 }
             </div>
         </div>
-
+        @if (evaluationId !== null) {
         <div class="bg-white rounded border shadow-sm p-4 mb-4">
             <h5 class="text-my-purple fw-bold mb-4">
                 <i class="bi bi-graph-up-arrow me-2"></i>
@@ -143,21 +143,46 @@
             </p>
             }
         </div>
-
+        }
         @if (loading) {
         <div class="bg-white rounded border shadow-sm p-4 text-center">
             <div class="spinner-border text-primary mb-3" role="status">
                 <span class="visually-hidden">Cargando...</span>
             </div>
             <p class="text-muted mb-0">
+                @if (validatingEvaluation) {
+                Verificando evaluación...
+                } @else {
                 Cargando acciones de mejora...
+                }
             </p>
         </div>
+
         } @else if (errorMessage) {
+
         <div class="alert alert-danger" role="alert">
-            {{ errorMessage }}
+
+            <p class="mb-0">
+                {{ errorMessage }}
+            </p>
+
+            @if (evaluationValidationError) {
+
+            <button type="button" class="btn btn-outline-danger btn-sm mt-3" (click)="retryEvaluationValidation()">
+
+                <i class="bi bi-arrow-clockwise me-1" aria-hidden="true">
+                </i>
+
+                Reintentar
+
+            </button>
+
+            }
+
         </div>
-        } @else if (actions.length === 0) {
+
+        }
+        @else if (actions.length === 0) {
         <div class="bg-white rounded border shadow-sm p-4 text-center">
             <i class="bi bi-clipboard-x fs-1 text-my-purple"></i>
 
