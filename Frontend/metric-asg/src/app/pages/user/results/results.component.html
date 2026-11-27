@@ -11,23 +11,34 @@
     <!-- Encabezado de resultados -->
 
 
+
+
     <header class="results-header">
 
       <p class="results-header__eyebrow d-inline-flex align-items-center gap-2">
+
         <i class="bi bi-clipboard-data" aria-hidden="true"></i>
+
         Última evaluación ASG
+
       </p>
 
       <h1 class="results-header__title">
+
         Resultados de tu evaluación ASG
+
       </h1>
 
       <p class="results-header__description">
+
         Conoce el desempeño de tu empresa y descubre
         oportunidades para seguir mejorando.
+
       </p>
 
     </header>
+
+
 
 
     @if (results; as evaluation) {
@@ -84,6 +95,40 @@
 
       </div>
 
+      <div class="results-company__actions" data-html2canvas-ignore>
+
+        <button type="button" class="asg-btn asg-btn--primary results-report-button" (click)="downloadAsgReport()"
+          [disabled]="generatingAsgReport || !results" [attr.aria-busy]="generatingAsgReport">
+
+          @if (generatingAsgReport) {
+
+          <span class="spinner-border spinner-border-sm" aria-hidden="true">
+          </span>
+
+          Generando reporte...
+
+          } @else {
+
+          <i class="bi bi-download" aria-hidden="true"></i>
+
+          Descargar reporte ASG
+
+          }
+
+        </button>
+
+        @if (asgReportError) {
+
+        <p class="results-company__export-error" role="alert">
+
+          {{ asgReportError }}
+
+        </p>
+
+        }
+
+      </div>
+
     </section>
 
 
@@ -108,83 +153,6 @@
 
     }
 
-
-    @if (results) {
-
-    <section class="asg-card results-recommendations-link" aria-labelledby="results-recommendations-link-title"
-      data-html2canvas-ignore>
-
-      <div class="results-recommendations-link__identity">
-
-        <span class="results-recommendations-link__icon" aria-hidden="true">
-
-          <i class="bi bi-lightbulb"></i>
-
-        </span>
-
-        <div class="results-recommendations-link__content">
-
-          <h2 id="results-recommendations-link-title">
-
-            Recomendaciones ASG
-
-          </h2>
-
-          <p>
-
-            Consulta las oportunidades de mejora
-            identificadas en tu evaluación.
-
-          </p>
-
-        </div>
-
-      </div>
-
-      <button type="button" class="asg-btn asg-btn--primary" (click)="openRecommendations()">
-
-        Ver recomendaciones
-
-        <i class="bi bi-arrow-right" aria-hidden="true">
-        </i>
-
-      </button>
-
-    </section>
-
-    }
-
-    @if (results) {
-    <div class="mt-5" data-html2canvas-ignore>
-      <p class="text-my-purple fw-bold fs-5 mb-4">
-        <span class="bg-white py-2 px-3 rounded-5 shadow-sm border">
-          <i class="bi bi-clipboard-check me-2"></i>
-          Plan de mejora
-        </span>
-      </p>
-
-      <div class="bg-white border rounded shadow-sm p-4">
-        <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
-          <div>
-            <h5 class="text-my-purple fw-bold mb-2">
-              Da seguimiento a tus acciones de mejora
-            </h5>
-
-            <p class="text-muted mb-0">
-              Registra acciones para atender las áreas de oportunidad
-              identificadas en esta evaluación y consulta su avance.
-            </p>
-          </div>
-
-          <button type="button" class="btn btn-primary" (click)="openImprovementPlan()">
-            <i class="bi bi-arrow-right-circle me-2"></i>
-            Ver plan de mejora
-          </button>
-        </div>
-      </div>
-    </div>
-    }
-
     @if (results; as evaluation) {
 
     @for (
@@ -203,30 +171,98 @@
     }
 
 
+    @if (results; as evaluation) {
 
-    <div class="d-flex align-items-center justify-content-center mt-4" data-html2canvas-ignore>
+    <section class="results-next-steps" aria-labelledby="results-next-steps-title" data-html2canvas-ignore>
 
-      <div class="d-flex flex-column align-items-center gap-2">
-        <button type="button" class="btn-my-purple" (click)="downloadAsgReport()"
-          [disabled]="generatingAsgReport || !results" [attr.aria-busy]="generatingAsgReport">
-          @if (generatingAsgReport) {
-          <span class="spinner-border spinner-border-sm me-2" aria-hidden="true">
-          </span>
-          Generando reporte...
-          } @else {
-          <i class="bi bi-download me-1"></i>
-          Descargar reporte ASG
-          }
-        </button>
+      <div class="results-section-header">
 
-        @if (asgReportError) {
-        <p class="text-danger text-center mb-0" role="alert">
-          {{ asgReportError }}
+        <h2 id="results-next-steps-title">
+          ¿Qué sigue?
+        </h2>
+
+        <p>
+          Transforma los resultados de tu evaluación
+          en acciones concretas de mejora.
         </p>
-        }
+
       </div>
 
-    </div>
+      <div class="results-next-steps__grid">
+
+        <!-- Recomendaciones ASG -->
+
+        <article class="asg-card results-next-card">
+
+          <span class="results-next-card__icon results-next-card__icon--recommendations" aria-hidden="true">
+
+            <i class="bi bi-lightbulb"></i>
+
+          </span>
+
+          <div class="results-next-card__content">
+
+            <h3>Recomendaciones ASG</h3>
+
+            <p>
+              Consulta las oportunidades de mejora
+              identificadas en tu evaluación y descubre
+              cómo fortalecer el desempeño de tu empresa.
+            </p>
+
+          </div>
+
+          <button type="button" class="asg-btn results-next-card__button results-next-card__button--secondary"
+            (click)="openRecommendations()">
+
+            Ver recomendaciones
+
+            <i class="bi bi-arrow-right" aria-hidden="true">
+            </i>
+
+          </button>
+
+        </article>
+
+        <!-- Plan de mejora -->
+
+        <article class="asg-card results-next-card">
+
+          <span class="results-next-card__icon results-next-card__icon--plan" aria-hidden="true">
+
+            <i class="bi bi-clipboard-check"></i>
+
+          </span>
+
+          <div class="results-next-card__content">
+
+            <h3>Plan de mejora</h3>
+
+            <p>
+              Registra acciones para atender las áreas
+              de oportunidad identificadas en esta evaluación
+              y consulta su avance.
+            </p>
+
+          </div>
+
+          <button type="button" class="asg-btn asg-btn--primary results-next-card__button"
+            (click)="openImprovementPlan()">
+
+            Ver plan de mejora
+
+            <i class="bi bi-arrow-right" aria-hidden="true">
+            </i>
+
+          </button>
+
+        </article>
+
+      </div>
+
+    </section>
+
+    }
   </div>
 </div>
 

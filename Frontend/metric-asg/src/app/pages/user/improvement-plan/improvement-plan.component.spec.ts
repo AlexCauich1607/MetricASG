@@ -1483,4 +1483,102 @@ describe('ImprovementPlanComponent', () => {
 
   });
 
+
+  it('should route card edit and delete clicks to the parent', () => {
+    improvementActionService.getActions.and.returnValue(of([action]));
+    routeParams.next(convertToParamMap({ evaluationId: '10' }));
+    fixture.detectChanges();
+    const el: HTMLElement = fixture.nativeElement;
+    el.querySelector<HTMLButtonElement>('.plan-edit-button')!.click();
+    fixture.detectChanges();
+    expect(component.activeModal).toBe('edit');
+    expect(component.editingActionId).toBe(action.id);
+    el.querySelector<HTMLButtonElement>('.plan-modal .btn-close')!.click();
+    fixture.detectChanges();
+    expect(component.activeModal).toBeNull();
+    el.querySelector<HTMLButtonElement>('.plan-action-card__footer .plan-action-button--danger')!.click();
+    fixture.detectChanges();
+    expect(component.confirmDeleteActionId).toBe(action.id);
+    el.querySelector<HTMLButtonElement>('.plan-delete-confirmation__actions .plan-action-button')!.click();
+    fixture.detectChanges();
+    expect(component.confirmDeleteActionId).toBeNull();
+    expect(improvementActionService.deleteAction).not.toHaveBeenCalled();
+  });
+
+  it('should retry progress through the extracted dashboard', () => {
+    improvementActionService.getProgressMetrics.and.returnValues(
+      throwError(() => new Error('Request failed')),
+      of({ evaluation_id: 10, total: 1, pending: 1, in_progress: 0,
+        completed: 0, cancelled: 0, progress_percentage: 0 })
+    );
+    routeParams.next(convertToParamMap({ evaluationId: '10' }));
+    fixture.detectChanges();
+    const el: HTMLElement = fixture.nativeElement;
+    el.querySelector<HTMLButtonElement>('app-plan-progress button')!.click();
+    fixture.detectChanges();
+    expect(component.progress?.total).toBe(1);
+    expect(component.progressError).toBeNull();
+  });
+
+  it('should render valid modal accessible names and preserve form references', () => {
+    routeParams.next(convertToParamMap({ evaluationId: '10' }));
+    component.toggleCreateForm();
+    fixture.detectChanges();
+    const el: HTMLElement = fixture.nativeElement;
+    const modal = el.querySelector<HTMLElement>('[role="dialog"]')!;
+    expect(modal.querySelector('#' + modal.getAttribute('aria-labelledby'))).not.toBeNull();
+    expect(modal.querySelectorAll('.plan-form-section[aria-label]').length).toBe(2);
+    expect(modal.querySelector('#gapDescription')).not.toBeNull();
+    component.toggleCreateForm();
+    fixture.detectChanges();
+    expect(el.querySelector('[role="dialog"]')).toBeNull();
+  });
+
+  it('should submit the extracted create form with current field values', async () => {
+    routeParams.next(convertToParamMap({ evaluationId: '10' }));
+    improvementActionService.createAction.and.returnValue(of(action));
+    component.toggleCreateForm();
+    component.newAction = {
+      indicator_id: null,
+      gap_description: action.gap_description,
+      description: action.description,
+      priority: action.priority,
+      responsible: action.responsible,
+      target_date: action.target_date
+    };
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    const el: HTMLElement = fixture.nativeElement;
+    const responsible = el.querySelector<HTMLInputElement>('#responsible')!;
+    responsible.value = 'Administración';
+    responsible.dispatchEvent(new Event('input', { bubbles: true }));
+    fixture.detectChanges();
+    expect(component.newAction.responsible).toBe('Administración');
+    const submit = el.querySelector<HTMLButtonElement>('.plan-modal-submit')!;
+    expect(submit.disabled).toBeFalse();
+    // Dispatch submit explicitly so this test does not depend on native browser validation.
+    el.querySelector<HTMLFormElement>('.plan-modal form')!.dispatchEvent(
+      new Event('submit', { bubbles: true, cancelable: true })
+    );
+    fixture.detectChanges();
+    expect(improvementActionService.createAction).toHaveBeenCalledOnceWith(10,
+      jasmine.objectContaining({ responsible: 'Administración' }));
+    expect(component.activeModal).toBeNull();
+  });
+
+  it('should forward the deletion confirmation to the parent', () => {
+    improvementActionService.getActions.and.returnValues(of([action]), of([]));
+    improvementActionService.deleteAction.and.returnValue(of(undefined));
+    routeParams.next(convertToParamMap({ evaluationId: '10' }));
+    fixture.detectChanges();
+    const el: HTMLElement = fixture.nativeElement;
+    el.querySelector<HTMLButtonElement>('.plan-action-card__footer .plan-action-button--danger')!.click();
+    fixture.detectChanges();
+    el.querySelector<HTMLButtonElement>('.plan-delete-confirmation .plan-action-button--danger-solid')!.click();
+    fixture.detectChanges();
+    expect(improvementActionService.deleteAction).toHaveBeenCalledOnceWith(10, 5);
+    expect(component.actions).toEqual([]);
+  });
+
 });

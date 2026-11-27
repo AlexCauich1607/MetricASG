@@ -8,13 +8,11 @@ import {
   inject,
   DestroyRef
 } from '@angular/core';
-import { CdkTrapFocus } from '@angular/cdk/a11y';
 import {
   ActivatedRoute,
   Router
 } from '@angular/router';
 import { ImprovementActionService } from '../../../services/improvement-action.service';
-import { FormsModule } from '@angular/forms';
 import {
   ImprovementAction,
   ImprovementActionCreate,
@@ -22,7 +20,7 @@ import {
   ImprovementPriority,
   ImprovementStatus
 } from '../../../models/improvement_action';
-import { DOCUMENT, DatePipe, DecimalPipe, NgClass } from '@angular/common';
+import { DOCUMENT } from '@angular/common';
 import { ImprovementProgress } from '../../../models/improvement_progress';
 import { AdvancedExportService } from '../../../services/advanced-export.service';
 
@@ -44,10 +42,14 @@ import { CompanyContextService } from
 import { EvaluationService } from
   '../../../services/evaluation.service';
 
+import { PlanProgressComponent } from './plan-progress/plan-progress.component';
+import { PlanActionCardComponent } from './plan-action-card/plan-action-card.component';
+import { PlanActionModalComponent } from './plan-action-modal/plan-action-modal.component';
+
 @Component({
   selector: 'app-improvement-plan',
   standalone: true,
-  imports: [DatePipe, DecimalPipe, NgClass, FormsModule, CdkTrapFocus],
+  imports: [PlanProgressComponent, PlanActionCardComponent, PlanActionModalComponent],
   templateUrl: './improvement-plan.component.html',
   styleUrl: './improvement-plan.component.scss',
   changeDetection: ChangeDetectionStrategy.Eager

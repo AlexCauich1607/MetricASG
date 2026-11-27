@@ -1,0 +1,190 @@
+<article class="asg-card plan-action-card" [attr.data-status]="action.status">
+
+    <div class="plan-action-card__body">
+
+        <!-- Estado y prioridad -->
+
+
+        <header class="plan-action-card__header">
+
+            <div class="plan-action-card__identity">
+
+                <span class="plan-action-card__icon" aria-hidden="true">
+
+                    <i class="bi bi-clipboard-check"></i>
+
+                </span>
+
+                <span class="plan-action-card__eyebrow">
+                    Acción de mejora
+                </span>
+
+            </div>
+
+            <span class="plan-action-badge plan-action-badge--status" [attr.data-status]="action.status">
+
+                @switch (action.status) {
+
+                @case ('PENDING') {
+                <i class="bi bi-clock" aria-hidden="true"></i>
+                }
+
+                @case ('IN_PROGRESS') {
+                <i class="bi bi-arrow-repeat" aria-hidden="true"></i>
+                }
+
+                @case ('COMPLETED') {
+                <i class="bi bi-check-circle" aria-hidden="true"></i>
+                }
+
+                @case ('CANCELLED') {
+                <i class="bi bi-x-circle" aria-hidden="true"></i>
+                }
+
+                }
+
+                {{ statusLabel }}
+
+            </span>
+
+        </header>
+
+
+
+        <div class="plan-action-card__content">
+
+            <h3 class="plan-action-card__title">
+                {{ action.description }}
+            </h3>
+
+            <div class="plan-action-card__priority">
+
+                <span class="plan-action-badge plan-action-badge--priority"
+                    [attr.data-priority]="action.priority">
+
+                    <i class="bi bi-flag" aria-hidden="true"></i>
+
+                    Prioridad:
+                    {{ priorityLabel }}
+
+                </span>
+
+            </div>
+
+        </div>
+
+        <!-- Acción propuesta -->
+
+        <div class="plan-action-card__content">
+
+
+            <dl class="plan-action-card__details">
+
+                <!-- Responsable -->
+
+                <div class="plan-action-detail">
+
+                    <span class="plan-action-detail__icon" aria-hidden="true">
+
+                        <i class="bi bi-person"></i>
+
+                    </span>
+
+                    <div class="plan-action-detail__content">
+
+                        <dt>Responsable</dt>
+
+                        <dd>
+                            {{ action.responsible }}
+                        </dd>
+
+                    </div>
+
+                </div>
+
+                <!-- Fecha objetivo -->
+
+                <div class="plan-action-detail">
+
+                    <span class="plan-action-detail__icon" aria-hidden="true">
+
+                        <i class="bi bi-calendar-event"></i>
+
+                    </span>
+
+                    <div class="plan-action-detail__content">
+
+                        <dt>Fecha objetivo</dt>
+
+                        <dd>
+                            {{ action.target_date | date:'dd MMM yyyy':'UTC' }}
+                        </dd>
+
+                    </div>
+
+                </div>
+
+            </dl>
+
+
+
+            <div class="plan-action-card__gap">
+
+                <span class="plan-action-card__gap-label">
+
+                    <i class="bi bi-shield-exclamation" aria-hidden="true"></i>
+
+                    Brecha identificada
+
+                </span>
+
+                <p>
+                    {{ action.gap_description }}
+                </p>
+
+            </div>
+
+
+        </div>
+    </div>
+
+    <!-- Operaciones -->
+
+
+    <footer class="plan-action-card__footer">
+
+        <button type="button" class="asg-btn plan-action-button plan-action-button--danger"
+            [disabled]="updating || saving || deletingActionId !== null" (click)="deleteRequested.emit(action.id)">
+
+            <i class="bi bi-trash" aria-hidden="true"></i>
+
+            Eliminar
+
+        </button>
+
+        <button type="button" class="asg-btn asg-btn--primary plan-edit-button"
+            [disabled]="updating || saving || deletingActionId !== null" (click)="editRequested.emit(action)">
+
+            <i class="bi bi-pencil-square" aria-hidden="true"></i>
+
+            Editar acción
+
+        </button>
+
+    </footer>
+
+
+    <!-- Confirmación de eliminación -->
+
+    @if (confirmDeleteActionId === action.id) {
+
+    <app-plan-delete-confirmation
+        [actionId]="action.id"
+        [deletingActionId]="deletingActionId"
+        [deleteError]="deleteError"
+        (cancelled)="deleteCancelled.emit()"
+        (confirmed)="deleteConfirmed.emit()">
+    </app-plan-delete-confirmation>
+    }
+
+</article>

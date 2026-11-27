@@ -1,0 +1,265 @@
+:host { display: block; min-width: 0; }
+/* Encabezados de tarjetas */
+
+.plan-section-header {
+    display: flex;
+    align-items: center;
+
+    gap: var(--asg-space-3);
+
+    min-width: 0;
+
+    &__icon {
+        display: grid;
+        place-items: center;
+
+        flex-shrink: 0;
+
+        width: 48px;
+        height: 48px;
+
+        background: var(--asg-color-surface-blue);
+
+        color: var(--asg-color-brand-primary);
+
+        border-radius: var(--asg-radius-sm);
+
+        font-size: 1.5rem;
+    }
+
+    &__content {
+        min-width: 0;
+
+        h2 {
+            margin: 0 0 var(--asg-space-1);
+
+            color: var(--asg-color-brand-primary);
+
+            font-size: var(--asg-font-size-lg);
+            font-weight: var(--asg-font-weight-semibold);
+
+            overflow-wrap: anywhere;
+        }
+
+        p {
+            margin: 0;
+
+            color: var(--asg-color-text-muted);
+
+            font-size: var(--asg-font-size-sm);
+            line-height: 1.5;
+        }
+    }
+}
+
+
+/* Progreso del plan */
+
+.plan-progress {
+    display: grid;
+
+    gap: var(--asg-space-6);
+
+    padding: var(--asg-space-6, 1.5rem);
+
+    min-width: 0;
+}
+
+.plan-metrics {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+
+    gap: var(--asg-space-3);
+
+    margin: 0;
+}
+
+.plan-metric {
+    display: flex;
+    flex-direction: column;
+
+    gap: var(--asg-space-2);
+
+    padding: var(--asg-space-4);
+
+    min-width: 0;
+
+    border: 1px solid #e2e8f0;
+    border-radius: var(--asg-radius-sm);
+
+    background: #f5f7fa;
+
+    color: var(--asg-color-text-muted);
+
+    i {
+        font-size: 1.375rem;
+    }
+
+    dt {
+        font-size: var(--asg-font-size-sm);
+        font-weight: var(--asg-font-weight-semibold);
+
+        overflow-wrap: anywhere;
+    }
+
+    dd {
+        margin: 0;
+
+        font-size: clamp(1.5rem, 3vw, 2rem);
+        font-weight: var(--asg-font-weight-bold);
+
+        line-height: 1.15;
+
+        font-variant-numeric: tabular-nums;
+
+        overflow-wrap: anywhere;
+    }
+
+    &--total {
+        background: var(--asg-color-surface-blue);
+
+        border-color: #dce7f1;
+
+        color: var(--asg-color-brand-primary);
+    }
+
+    &--in-progress {
+        background: #edf5ff;
+
+        border-color: #dbe8f8;
+
+        color: #1769be;
+    }
+
+    &--completed {
+        background: #eff6e8;
+
+        border-color: #d7e7ca;
+
+        color: #487c29;
+    }
+}
+
+
+/* Barra de cumplimiento */
+
+.plan-completion {
+    display: grid;
+
+    gap: var(--asg-space-2);
+
+    &__header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+
+        gap: var(--asg-space-3);
+
+        color: var(--asg-color-brand-primary);
+
+        font-size: var(--asg-font-size-sm);
+        font-weight: var(--asg-font-weight-semibold);
+
+        strong {
+            flex-shrink: 0;
+
+            color: #487c29;
+
+            font-size: var(--asg-font-size-lg);
+            font-variant-numeric: tabular-nums;
+        }
+    }
+
+    &__track {
+        height: 12px;
+
+        background: #e2e8f0;
+        border-radius: 999px;
+
+        overflow: hidden;
+
+        .progress-bar {
+            background: var(--asg-color-action-success);
+
+            border-radius: inherit;
+        }
+    }
+
+    &__description {
+        margin: 0;
+
+        color: var(--asg-color-text-muted);
+
+        font-size: var(--asg-font-size-xs);
+        line-height: 1.5;
+    }
+}
+
+
+/* Estados existentes */
+
+.plan-state {
+    display: grid;
+    justify-items: center;
+
+    gap: var(--asg-space-3);
+
+    padding: var(--asg-space-6);
+
+    color: var(--asg-color-brand-primary);
+
+    p {
+        margin: 0;
+
+        color: var(--asg-color-text-muted);
+
+        font-size: var(--asg-font-size-sm);
+    }
+}
+
+
+/* Responsive: tablet */
+
+@media (max-width: 991.98px) {
+
+    .plan-metrics {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+}
+
+
+
+@media (max-width: 767.98px) {
+    .plan-progress {
+        padding: var(--asg-space-4);
+
+        gap: var(--asg-space-4);
+    }
+
+    .plan-metrics {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .plan-metric {
+        padding: var(--asg-space-3);
+
+        &--total {
+            grid-column: 1 / -1;
+        }
+    }
+
+    .plan-section-header__icon {
+        width: 40px;
+        height: 40px;
+
+        font-size: 1.25rem;
+    }
+
+
+}
+@media (prefers-reduced-motion: reduce) {
+
+    .plan-completion .progress-bar {
+        transition: none;
+    }
+}

@@ -1351,25 +1351,41 @@ describe('ResultsComponent', () => {
 
   });
 
-  it('should not render detailed recommendations in the results page', () => {
+
+  it('should render contextual actions without detailed recommendations', () => {
 
     component.results = mockResults;
 
     fixture.detectChanges();
 
+    const element = fixture.nativeElement as HTMLElement;
+
+    // Evitar duplicación de recomendaciones detalladas.
     expect(
-      fixture.nativeElement.querySelector(
-        'feedback-component'
-      )
+      element.querySelector('feedback-component')
     ).toBeNull();
 
-    expect(
-      fixture.nativeElement.querySelector(
-        '.results-recommendations-link'
-      )
-    ).not.toBeNull();
+    // Verificar la nueva sección de acciones contextuales.
+    const nextSteps = element.querySelector(
+      '.results-next-steps'
+    );
+
+    expect(nextSteps).not.toBeNull();
+
+    // Verificar que existen exactamente dos tarjetas.
+    const cards = nextSteps?.querySelectorAll(
+      '.results-next-card'
+    );
+
+    expect(cards?.length).toBe(2);
+
+    // Verificar el contenido de ambas tarjetas.
+    expect(cards?.[0]?.textContent)
+      .toContain('Recomendaciones ASG');
+
+    expect(cards?.[1]?.textContent)
+      .toContain('Plan de mejora');
 
   });
-
 
 });

@@ -1,0 +1,140 @@
+<section class="asg-card plan-progress" aria-labelledby="plan-progress-title">
+
+    <header class="plan-section-header">
+
+        <span class="plan-section-header__icon" aria-hidden="true">
+
+            <i class="bi bi-graph-up-arrow"></i>
+
+        </span>
+
+        <div class="plan-section-header__content">
+
+            <h2 id="plan-progress-title">
+                Progreso del plan de mejora
+            </h2>
+
+            <p>
+                Consulta el estado de las acciones
+                registradas en esta evaluación.
+            </p>
+
+        </div>
+
+    </header>
+
+    @if (loadingProgress) {
+
+    <div class="plan-state" role="status">
+
+        <div class="spinner-border" aria-hidden="true">
+        </div>
+
+        <p>
+            Cargando métricas de progreso...
+        </p>
+
+    </div>
+
+    } @else if (progressError) {
+
+    <div class="alert alert-danger mb-0" role="alert">
+
+        {{ progressError }}
+
+        <button type="button" class="btn btn-outline-danger btn-sm ms-2" (click)="retry.emit()">
+
+            Reintentar
+
+        </button>
+
+    </div>
+
+    } @else if (progress; as metrics) {
+
+    <dl class="plan-metrics">
+
+        <div class="plan-metric plan-metric--total">
+
+            <i class="bi bi-list-check" aria-hidden="true"></i>
+
+            <dt>Total</dt>
+
+            <dd>{{ metrics.total }}</dd>
+
+        </div>
+
+        <div class="plan-metric plan-metric--pending">
+
+            <i class="bi bi-clock" aria-hidden="true"></i>
+
+            <dt>Pendientes</dt>
+
+            <dd>{{ metrics.pending }}</dd>
+
+        </div>
+
+        <div class="plan-metric plan-metric--in-progress">
+
+            <i class="bi bi-arrow-repeat" aria-hidden="true"></i>
+
+            <dt>En progreso</dt>
+
+            <dd>{{ metrics.in_progress }}</dd>
+
+        </div>
+
+        <div class="plan-metric plan-metric--completed">
+
+            <i class="bi bi-check-circle" aria-hidden="true"></i>
+
+            <dt>Completadas</dt>
+
+            <dd>{{ metrics.completed }}</dd>
+
+        </div>
+
+        <div class="plan-metric plan-metric--cancelled">
+
+            <i class="bi bi-x-circle" aria-hidden="true"></i>
+
+            <dt>Canceladas</dt>
+
+            <dd>{{ metrics.cancelled }}</dd>
+
+        </div>
+
+    </dl>
+
+    <div class="plan-completion">
+
+        <div class="plan-completion__header">
+
+            <span>
+                Avance de acciones activas
+            </span>
+
+            <strong>
+                {{ metrics.progress_percentage | number:'1.0-2' }}%
+            </strong>
+
+        </div>
+
+        <div class="progress plan-completion__track" role="progressbar" aria-label="Avance del plan de mejora"
+            aria-valuemin="0" aria-valuemax="100" [attr.aria-valuenow]="metrics.progress_percentage">
+
+            <div class="progress-bar" [style.width.%]="metrics.progress_percentage">
+            </div>
+
+        </div>
+
+        <p class="plan-completion__description">
+            El porcentaje se calcula excluyendo
+            las acciones canceladas.
+        </p>
+
+    </div>
+
+    }
+
+</section>
