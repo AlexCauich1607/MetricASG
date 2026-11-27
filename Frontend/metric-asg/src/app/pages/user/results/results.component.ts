@@ -13,7 +13,9 @@ import {
   ChangeDetectorRef,
   Injector,
   DestroyRef,
-  afterNextRender
+  afterNextRender,
+  inject,
+  ElementRef
 } from '@angular/core';
 import { ResultEvaluation } from '../../../models/evaluation_result';
 import { EvaluationService } from '../../../services/evaluation.service';
@@ -39,6 +41,9 @@ import {
 import {
   isValidAsgScore
 } from '../../../shared/utils/asg-score.utils';
+
+import { AsgReportAssetsService } from '../../../services/asg-report-assets.service';
+
 
 @Component({
   selector: 'app-results',
@@ -85,6 +90,15 @@ export class ResultsComponent {
 
   private aiExplanationRequest?: Subscription;
 
+  private readonly asgReportAssets =
+    inject(AsgReportAssetsService);
+
+  private readonly hostElement =
+    inject<ElementRef<HTMLElement>>(ElementRef);
+
+  private reportContextVersion = 0;
+
+  private componentDestroyed = false;
 
   get highestScoringAmbits() {
 
@@ -136,10 +150,17 @@ export class ResultsComponent {
     private companyContext: CompanyContextService,
     private destroyRef: DestroyRef
   ) {
-
+    this.destroyRef.onDestroy(() => {
+      this.componentDestroyed = true;
+      this.reportContextVersion++;
+    });
     toObservable(this.companyContext.selectedCompanyId)
       .pipe(
         tap(() => {
+          // Invalidar exportaciones pertenecientes
+          // al contexto empresarial anterior.
+          this.reportContextVersion++;
+
           this.evidenceRequest?.unsubscribe();
           this.evidenceDownloadRequest?.unsubscribe();
           this.aiExplanationRequest?.unsubscribe();
@@ -394,10 +415,20 @@ export class ResultsComponent {
 
   }
 
-  async exportAsgReport(): Promise<void> {
-    const reportElement = document.querySelector<HTMLElement>(
-      '.asg-report-export [data-pdf-root]'
-    );
+  async exportAsgReport(
+    shouldContinue: () => boolean = () =>
+      !this.componentDestroyed
+  ): Promise<void> {
+
+    if (!shouldContinue()) {
+      return;
+    }
+
+    const reportElement =
+      this.hostElement.nativeElement
+        .querySelector<HTMLElement>(
+          '.asg-report-export [data-pdf-root]'
+        );
 
     if (!reportElement || !this.asgReport) {
       throw new Error(
@@ -405,39 +436,142 @@ export class ResultsComponent {
       );
     }
 
+    const evaluationId =
+      this.asgReport.evaluation.evaluation_id;
+
+    await this.asgReportAssets.waitForAssets(
+      reportElement
+    );
+
+    // El usuario pudo cambiar de empresa
+    // mientras se preparaban los recursos.
+    if (!shouldContinue()) {
+      return;
+    }
+
     const { workspace, pages } =
       this.asgReportPaginator.paginate(reportElement);
 
     try {
+
+      if (!shouldContinue()) {
+        return;
+      }
+
       await this.asgPdfService.generatePdf(
         pages,
-        `reporte-asg-${this.asgReport.evaluation.evaluation_id}.pdf`
+        `reporte-asg-${evaluationId}.pdf`,
+        shouldContinue
       );
+
     } finally {
       workspace.remove();
     }
   }
 
-  private waitForReportRender(): Promise<void> {
-    return new Promise<void>((resolve) => {
-      afterNextRender(
-        {
-          read: () => resolve()
-        },
-        {
-          injector: this.injector
-        }
-      );
+  private waitForReportRender(
+    timeoutMs = 10000
+  ): Promise<void> {
 
-      this.cdr.markForCheck();
+    if (this.componentDestroyed) {
+      return Promise.resolve();
+    }
+
+    return new Promise<void>((resolve, reject) => {
+
+      let settled = false;
+
+      let renderRef:
+        ReturnType<typeof afterNextRender> | undefined;
+
+      let timeoutId:
+        ReturnType<typeof setTimeout> | undefined;
+
+      let unregisterDestroy:
+        (() => void) | undefined;
+
+      const cleanup = (): void => {
+
+        if (timeoutId !== undefined) {
+          clearTimeout(timeoutId);
+        }
+
+        renderRef?.destroy();
+
+        unregisterDestroy?.();
+      };
+
+      const finish = (error?: Error): void => {
+
+        if (settled) {
+          return;
+        }
+
+        settled = true;
+
+        cleanup();
+
+        if (error) {
+          reject(error);
+        } else {
+          resolve();
+        }
+      };
+
+      try {
+
+        unregisterDestroy =
+          this.destroyRef.onDestroy(() => {
+
+            unregisterDestroy = undefined;
+
+            finish();
+          });
+
+        timeoutId = setTimeout(() => {
+
+          finish(
+            new Error(
+              'Se agotó el tiempo de renderización del reporte ASG.'
+            )
+          );
+
+        }, timeoutMs);
+
+        renderRef = afterNextRender(
+          {
+            read: () => finish()
+          },
+          {
+            injector: this.injector
+          }
+        );
+
+        this.cdr.markForCheck();
+
+      } catch (error) {
+
+        finish(
+          error instanceof Error
+            ? error
+            : new Error(
+              'No se pudo renderizar el reporte ASG.'
+            )
+        );
+      }
     });
   }
 
   async downloadAsgReport(): Promise<void> {
-    const evaluationId = this.results?.evaluation_id;
-    const companyId = this.companyContext.selectedCompanyId();
+
+    const evaluationId =
+      this.results?.evaluation_id;
+
+    const companyId =
+      this.companyContext.selectedCompanyId();
 
     if (
+      this.componentDestroyed ||
       evaluationId === undefined ||
       companyId === null ||
       !Number.isSafeInteger(evaluationId) ||
@@ -446,6 +580,18 @@ export class ResultsComponent {
     ) {
       return;
     }
+
+    const contextVersion =
+      this.reportContextVersion;
+
+    const shouldContinue = (): boolean => {
+      return (
+        !this.componentDestroyed &&
+        this.reportContextVersion === contextVersion &&
+        this.companyContext.selectedCompanyId() === companyId &&
+        this.results?.evaluation_id === evaluationId
+      );
+    };
 
     this.generatingAsgReport = true;
     this.asgReportError = null;
@@ -457,11 +603,7 @@ export class ResultsComponent {
         this.asgReportService.getReport(evaluationId)
       );
 
-      // Verificar que seguimos en la misma empresa y evaluación.
-      if (
-        this.companyContext.selectedCompanyId() !== companyId ||
-        this.results?.evaluation_id !== evaluationId
-      ) {
+      if (!shouldContinue()) {
         return;
       }
 
@@ -469,28 +611,35 @@ export class ResultsComponent {
 
       await this.waitForReportRender();
 
-      // Verificar nuevamente antes de generar el PDF.
-      if (
-        this.companyContext.selectedCompanyId() !== companyId ||
-        this.results?.evaluation_id !== evaluationId
-      ) {
+      if (!shouldContinue()) {
         return;
       }
 
-      await this.exportAsgReport();
-
+      await this.exportAsgReport(shouldContinue);
 
     } catch (error) {
-      console.error('Error al generar el reporte ASG:', error);
 
-      this.asgReportError =
-        'No se pudo generar el reporte ASG. Inténtalo nuevamente.';
+      // Una exportación invalidada no debe
+      // mostrar errores en el nuevo contexto.
+      if (shouldContinue()) {
+        console.error(
+          'Error al generar el reporte ASG:',
+          error
+        );
+
+        this.asgReportError =
+          'No se pudo generar el reporte ASG. Inténtalo nuevamente.';
+      }
 
     } finally {
+
       this.asgReport = null;
       this.generatingAsgReport = false;
-      this.cdr.markForCheck();
+
+      if (!this.componentDestroyed) {
+        this.cdr.markForCheck();
+      }
+
     }
   }
-
 }

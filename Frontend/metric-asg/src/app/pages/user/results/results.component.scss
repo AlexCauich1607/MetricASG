@@ -1,12 +1,6 @@
-/* Estilos exclusivos de exportación PDF.
-   Conservar hasta HU-058 / T04. */
-
-.solo-pdf {
-  position: absolute;
-  left: -10000px;
-  top: 0;
-  width: 794px;
-}
+/* Contenedor temporal exclusivo de exportación PDF.
+   Debe permanecer renderizado fuera del viewport
+   para permitir la medición y captura del documento. */
 
 .asg-report-export {
   position: fixed;

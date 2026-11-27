@@ -1,7 +1,6 @@
 import { signal, computed } from '@angular/core';
 import { CompanyContextService } from '../../../services/company-context.service';
 import { CompanyRole, UserCompanyMembership } from '../../../models/company_membership';
-import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { of, Subject, throwError } from 'rxjs';
 import { EvidenceService } from '../../../services/evidence.service';
 import { EvaluationEvidence } from '../../../models/evaluation_evidence';
@@ -13,6 +12,13 @@ import { AsgReportService } from '../../../services/asg-report.service';
 import { AsgReport } from '../../../models/asg_report';
 import { AsgReportPaginatorService } from '../../../services/asg-report-paginator.service';
 import { AsgPdfService } from '../../../services/asg-pdf.service';
+import { AsgReportAssetsService } from '../../../services/asg-report-assets.service';
+import {
+  ComponentFixture,
+  TestBed,
+  fakeAsync,
+  tick
+} from '@angular/core/testing';
 
 describe('ResultsComponent', () => {
   let component: ResultsComponent;
@@ -85,6 +91,41 @@ describe('ResultsComponent', () => {
     }
   ];
 
+  function createTemporaryReportDom(): HTMLElement {
+
+    const exportContainer =
+      document.createElement('div');
+
+    exportContainer.className =
+      'asg-report-export';
+
+    exportContainer.setAttribute(
+      'aria-hidden',
+      'true'
+    );
+
+    exportContainer.setAttribute(
+      'inert',
+      ''
+    );
+
+    const reportElement =
+      document.createElement('div');
+
+    reportElement.setAttribute(
+      'data-pdf-root',
+      ''
+    );
+
+    exportContainer.appendChild(reportElement);
+
+    const host =
+      fixture.nativeElement as HTMLElement;
+
+    host.appendChild(exportContainer);
+
+    return exportContainer;
+  }
 
   beforeEach(async () => {
     evaluationServiceSpy = jasmine.createSpyObj(
@@ -624,7 +665,8 @@ describe('ResultsComponent', () => {
     const exportContainer = document.createElement('div');
     exportContainer.className = 'asg-report-export';
     exportContainer.appendChild(reportElement);
-    document.body.appendChild(exportContainer);
+    (fixture.nativeElement as HTMLElement)
+      .appendChild(exportContainer);
 
     const workspace = document.createElement('div');
     document.body.appendChild(workspace);
@@ -653,7 +695,8 @@ describe('ResultsComponent', () => {
       expect(asgPdfServiceSpy.generatePdf)
         .toHaveBeenCalledOnceWith(
           [page],
-          'reporte-asg-1.pdf'
+          'reporte-asg-1.pdf',
+          jasmine.any(Function)
         );
 
       expect(workspace.isConnected).toBeFalse();
@@ -670,7 +713,8 @@ describe('ResultsComponent', () => {
     const exportContainer = document.createElement('div');
     exportContainer.className = 'asg-report-export';
     exportContainer.appendChild(reportElement);
-    document.body.appendChild(exportContainer);
+    (fixture.nativeElement as HTMLElement)
+      .appendChild(exportContainer);
 
     const workspace = document.createElement('div');
     document.body.appendChild(workspace);
@@ -703,7 +747,8 @@ describe('ResultsComponent', () => {
       expect(asgPdfServiceSpy.generatePdf)
         .toHaveBeenCalledOnceWith(
           [page],
-          'reporte-asg-1.pdf'
+          'reporte-asg-1.pdf',
+          jasmine.any(Function)
         );
 
       expect(workspace.isConnected).toBeFalse();
@@ -1387,5 +1432,805 @@ describe('ResultsComponent', () => {
       .toContain('Plan de mejora');
 
   });
+  it('should not render the temporary PDF container without a report', () => {
+    component.asgReport = null;
 
+    fixture.detectChanges();
+
+    const element = fixture.nativeElement as HTMLElement;
+
+    expect(
+      element.querySelector('.asg-report-export')
+    ).toBeNull();
+
+    expect(
+      element.querySelector('[data-pdf-root]')
+    ).toBeNull();
+  });
+  it('should isolate the temporary PDF container and remove it when the report is cleared', async () => {
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    const report: AsgReport = {
+      company: {
+        id: 3,
+        name: 'Empresa A'
+      },
+      evaluation: mockResults,
+      comparison: null,
+      improvement_actions: [],
+      improvement_progress: {
+        evaluation_id: 1,
+        total: 0,
+        pending: 0,
+        in_progress: 0,
+        completed: 0,
+        cancelled: 0,
+        progress_percentage: 0
+      }
+    };
+
+    component.asgReport = report;
+    component.generatingAsgReport = true;
+
+    fixture.changeDetectorRef.markForCheck();
+    fixture.detectChanges();
+
+    const element = fixture.nativeElement as HTMLElement;
+
+    const exportContainer =
+      element.querySelector<HTMLElement>(
+        '.asg-report-export'
+      );
+
+    expect(exportContainer).not.toBeNull();
+
+    expect(
+      exportContainer?.getAttribute('aria-hidden')
+    ).toBe('true');
+
+    expect(
+      exportContainer?.hasAttribute('inert')
+    ).toBeTrue();
+
+    expect(exportContainer?.inert).toBeTrue();
+
+    const reportRoot =
+      exportContainer?.querySelector<HTMLElement>(
+        '[data-pdf-root]'
+      );
+
+    expect(reportRoot).toBeTruthy();
+
+    if (exportContainer && reportRoot) {
+      const styles = getComputedStyle(exportContainer);
+      const bounds = reportRoot.getBoundingClientRect();
+
+      expect(styles.display).not.toBe('none');
+      expect(styles.visibility).not.toBe('hidden');
+      expect(styles.opacity).not.toBe('0');
+
+      expect(bounds.width).toBeGreaterThan(0);
+      expect(bounds.height).toBeGreaterThan(0);
+    }
+
+    component.asgReport = null;
+    component.generatingAsgReport = false;
+
+    fixture.changeDetectorRef.markForCheck();
+    fixture.detectChanges();
+
+    expect(
+      element.querySelector('.asg-report-export')
+    ).toBeNull();
+
+    expect(
+      element.querySelector('[data-pdf-root]')
+    ).toBeNull();
+  });
+  it('should remove the temporary PDF container when export fails', async () => {
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    const report: AsgReport = {
+      company: {
+        id: 3,
+        name: 'Empresa A'
+      },
+      evaluation: mockResults,
+      comparison: null,
+      improvement_actions: [],
+      improvement_progress: {
+        evaluation_id: 1,
+        total: 0,
+        pending: 0,
+        in_progress: 0,
+        completed: 0,
+        cancelled: 0,
+        progress_percentage: 0
+      }
+    };
+
+    component.results = mockResults;
+
+    asgReportServiceSpy.getReport.and.returnValue(
+      of(report)
+    );
+
+    spyOn(
+      component as any,
+      'waitForReportRender'
+    ).and.callFake(async () => {
+      fixture.changeDetectorRef.markForCheck();
+      fixture.detectChanges();
+    });
+
+    const element = fixture.nativeElement as HTMLElement;
+
+    const exportSpy = spyOn(
+      component,
+      'exportAsgReport'
+    ).and.callFake(async () => {
+      expect(
+        element.querySelector('.asg-report-export')
+      ).not.toBeNull();
+
+      throw new Error('Error simulado de exportación');
+    });
+
+    spyOn(console, 'error');
+
+    await component.downloadAsgReport();
+
+    fixture.detectChanges();
+
+    expect(exportSpy).toHaveBeenCalledTimes(1);
+
+    expect(component.asgReport).toBeNull();
+    expect(component.generatingAsgReport).toBeFalse();
+
+    expect(component.asgReportError).toBe(
+      'No se pudo generar el reporte ASG. Inténtalo nuevamente.'
+    );
+
+    expect(
+      element.querySelector('.asg-report-export')
+    ).toBeNull();
+
+    expect(
+      element.querySelector('[data-pdf-root]')
+    ).toBeNull();
+  });
+
+  it('should not paginate a report cancelled during asset preparation', async () => {
+    const assetsService = TestBed.inject(
+      AsgReportAssetsService
+    );
+
+    const exportContainer = createTemporaryReportDom();
+
+    try {
+      component.asgReport = {
+        company: {
+          id: 3,
+          name: 'Empresa A'
+        },
+        evaluation: mockResults,
+        comparison: null,
+        improvement_actions: [],
+        improvement_progress: {
+          evaluation_id: 1,
+          total: 0,
+          pending: 0,
+          in_progress: 0,
+          completed: 0,
+          cancelled: 0,
+          progress_percentage: 0
+        }
+      };
+
+      component.generatingAsgReport = true;
+
+      let active = true;
+
+      let resolveAssets!: () => void;
+
+      const assetsReady = new Promise<void>(
+        resolve => {
+          resolveAssets = resolve;
+        }
+      );
+
+      const assetsSpy = spyOn(
+        assetsService,
+        'waitForAssets'
+      ).and.returnValue(assetsReady);
+
+      const exportPromise = component.exportAsgReport(
+        () => active
+      );
+
+      expect(assetsSpy).toHaveBeenCalledTimes(1);
+
+      // Invalidar la exportación durante
+      // la preparación de recursos.
+      active = false;
+
+      resolveAssets();
+
+      await exportPromise;
+
+      expect(
+        asgReportPaginatorSpy.paginate
+      ).not.toHaveBeenCalled();
+
+      expect(
+        asgPdfServiceSpy.generatePdf
+      ).not.toHaveBeenCalled();
+
+    } finally {
+      exportContainer.remove();
+
+      component.asgReport = null;
+      component.generatingAsgReport = false;
+    }
+  });
+  it('should remove the PDF workspace after a cancelled export', async () => {
+    const assetsService = TestBed.inject(
+      AsgReportAssetsService
+    );
+
+    spyOn(
+      assetsService,
+      'waitForAssets'
+    ).and.resolveTo();
+
+    const exportContainer = createTemporaryReportDom();
+
+    const workspace = document.createElement('div');
+
+    workspace.setAttribute(
+      'data-pdf-workspace',
+      ''
+    );
+
+    const page = document.createElement('div');
+
+    workspace.appendChild(page);
+
+    exportContainer.appendChild(workspace);
+
+    try {
+      component.asgReport = {
+        company: {
+          id: 3,
+          name: 'Empresa A'
+        },
+        evaluation: mockResults,
+        comparison: null,
+        improvement_actions: [],
+        improvement_progress: {
+          evaluation_id: 1,
+          total: 0,
+          pending: 0,
+          in_progress: 0,
+          completed: 0,
+          cancelled: 0,
+          progress_percentage: 0
+        }
+      };
+
+      component.generatingAsgReport = true;
+
+      let active = true;
+
+      asgReportPaginatorSpy.paginate.and.returnValue({
+        workspace,
+        pages: [page]
+      });
+
+      asgPdfServiceSpy.generatePdf.and.callFake(
+        async (_pages, _filename, shouldContinue) => {
+
+          expect(workspace.isConnected).toBeTrue();
+
+          expect(shouldContinue?.()).toBeTrue();
+
+          // Invalidar la exportación durante
+          // la generación del PDF.
+          active = false;
+
+          expect(shouldContinue?.()).toBeFalse();
+        }
+      );
+
+      await component.exportAsgReport(
+        () => active
+      );
+
+      expect(
+        asgReportPaginatorSpy.paginate
+      ).toHaveBeenCalledTimes(1);
+
+      expect(
+        asgPdfServiceSpy.generatePdf
+      ).toHaveBeenCalledTimes(1);
+
+      expect(workspace.isConnected).toBeFalse();
+
+      expect(
+        exportContainer.querySelector(
+          '[data-pdf-workspace]'
+        )
+      ).toBeNull();
+
+    } finally {
+      workspace.remove();
+      exportContainer.remove();
+
+      component.asgReport = null;
+      component.generatingAsgReport = false;
+    }
+  });
+  it('should invalidate a pending ASG report after switching companies and returning to the original company', async () => {
+    const pendingReport = new Subject<AsgReport>();
+
+    const companyBResults: ResultEvaluation = {
+      ...mockResults,
+      evaluation_id: 2
+    };
+
+    evaluationServiceSpy.getLastEvaluationResult.and.returnValues(
+      of(mockResults),
+      of(companyBResults),
+      of(mockResults)
+    );
+
+    asgReportServiceSpy.getReport.and.returnValue(
+      pendingReport.asObservable()
+    );
+
+    const renderSpy = spyOn(
+      component as any,
+      'waitForReportRender'
+    ).and.resolveTo();
+
+    const exportSpy = spyOn(
+      component,
+      'exportAsgReport'
+    ).and.resolveTo();
+
+    // Inicializar el contexto de Empresa A.
+    fixture.detectChanges();
+    TestBed.flushEffects();
+    fixture.detectChanges();
+
+    expect(selectedCompanyId()).toBe(3);
+    expect(component.results?.evaluation_id).toBe(1);
+
+    // Iniciar la descarga en Empresa A.
+    const downloadPromise = component.downloadAsgReport();
+
+    expect(component.generatingAsgReport).toBeTrue();
+
+    expect(asgReportServiceSpy.getReport)
+      .toHaveBeenCalledOnceWith(1);
+
+    // Cambiar a Empresa B.
+    selectedCompanyId.set(7);
+
+    fixture.detectChanges();
+    TestBed.flushEffects();
+    fixture.detectChanges();
+
+    expect(selectedCompanyId()).toBe(7);
+    expect(component.results?.evaluation_id).toBe(2);
+
+    // Regresar a Empresa A.
+    selectedCompanyId.set(3);
+
+    fixture.detectChanges();
+    TestBed.flushEffects();
+    fixture.detectChanges();
+
+    expect(selectedCompanyId()).toBe(3);
+    expect(component.results?.evaluation_id).toBe(1);
+
+    // Recibir tardíamente el reporte original.
+    pendingReport.next({
+      evaluation: mockResults
+    } as AsgReport);
+
+    pendingReport.complete();
+
+    await downloadPromise;
+
+    expect(renderSpy).not.toHaveBeenCalled();
+    expect(exportSpy).not.toHaveBeenCalled();
+
+    expect(
+      asgReportPaginatorSpy.paginate
+    ).not.toHaveBeenCalled();
+
+    expect(
+      asgPdfServiceSpy.generatePdf
+    ).not.toHaveBeenCalled();
+
+    expect(component.asgReport).toBeNull();
+    expect(component.generatingAsgReport).toBeFalse();
+    expect(component.asgReportError).toBeNull();
+  });
+  it('should invalidate a pending ASG report when the component is destroyed', async () => {
+    const pendingReport = new Subject<AsgReport>();
+
+    asgReportServiceSpy.getReport.and.returnValue(
+      pendingReport.asObservable()
+    );
+
+    fixture.detectChanges();
+    TestBed.flushEffects();
+    fixture.detectChanges();
+
+    expect(component.results?.evaluation_id).toBe(1);
+
+    const renderSpy = spyOn(
+      component as any,
+      'waitForReportRender'
+    ).and.resolveTo();
+
+    const exportSpy = spyOn(
+      component,
+      'exportAsgReport'
+    ).and.resolveTo();
+
+    const consoleErrorSpy = spyOn(
+      console,
+      'error'
+    );
+
+    const downloadPromise = component.downloadAsgReport();
+
+    expect(component.generatingAsgReport).toBeTrue();
+
+    expect(asgReportServiceSpy.getReport)
+      .toHaveBeenCalledOnceWith(1);
+
+    // Simular la destrucción del componente
+    // mientras se espera la respuesta del reporte.
+    fixture.destroy();
+
+    pendingReport.next({
+      evaluation: mockResults
+    } as AsgReport);
+
+    pendingReport.complete();
+
+    await downloadPromise;
+
+    expect(renderSpy).not.toHaveBeenCalled();
+    expect(exportSpy).not.toHaveBeenCalled();
+
+    expect(
+      asgReportPaginatorSpy.paginate
+    ).not.toHaveBeenCalled();
+
+    expect(
+      asgPdfServiceSpy.generatePdf
+    ).not.toHaveBeenCalled();
+
+    expect(consoleErrorSpy).not.toHaveBeenCalled();
+
+    expect(component.asgReport).toBeNull();
+    expect(component.generatingAsgReport).toBeFalse();
+    expect(component.asgReportError).toBeNull();
+  });
+  it('should suppress ASG export errors after switching companies', async () => {
+    const companyBResults: ResultEvaluation = {
+      ...mockResults,
+      evaluation_id: 2
+    };
+
+    evaluationServiceSpy.getLastEvaluationResult.and.returnValues(
+      of(mockResults),
+      of(companyBResults)
+    );
+
+    const report = {
+      evaluation: mockResults
+    } as AsgReport;
+
+    asgReportServiceSpy.getReport.and.returnValue(
+      of(report)
+    );
+
+    fixture.detectChanges();
+    TestBed.flushEffects();
+    fixture.detectChanges();
+
+    expect(component.results?.evaluation_id).toBe(1);
+
+    spyOn(
+      component as any,
+      'waitForReportRender'
+    ).and.resolveTo();
+
+    const consoleErrorSpy = spyOn(
+      console,
+      'error'
+    );
+
+    let rejectExport!: (reason: Error) => void;
+
+    const pendingExport = new Promise<void>(
+      (_, reject) => {
+        rejectExport = reject;
+      }
+    );
+
+    let notifyExportStarted!: () => void;
+
+    const exportStarted = new Promise<void>(
+      resolve => {
+        notifyExportStarted = resolve;
+      }
+    );
+
+    let exportGuard: (() => boolean) | undefined;
+
+    const exportSpy = spyOn(
+      component,
+      'exportAsgReport'
+    ).and.callFake((shouldContinue) => {
+      exportGuard = shouldContinue;
+
+      notifyExportStarted();
+
+      return pendingExport;
+    });
+
+    const downloadPromise = component.downloadAsgReport();
+
+    // Esperar explícitamente el inicio de la exportación.
+    await exportStarted;
+
+    expect(exportSpy).toHaveBeenCalledTimes(1);
+    expect(exportGuard?.()).toBeTrue();
+
+    // Cambiar a Empresa B durante la exportación.
+    selectedCompanyId.set(7);
+
+    fixture.detectChanges();
+    TestBed.flushEffects();
+    fixture.detectChanges();
+
+    expect(component.results?.evaluation_id).toBe(2);
+    expect(exportGuard?.()).toBeFalse();
+
+    // Simular un error tardío de la exportación anterior.
+    rejectExport(
+      new Error('Error de exportación de Empresa A')
+    );
+
+    await downloadPromise;
+
+    expect(component.asgReportError).toBeNull();
+    expect(consoleErrorSpy).not.toHaveBeenCalled();
+
+    expect(component.asgReport).toBeNull();
+    expect(component.generatingAsgReport).toBeFalse();
+
+    // Los resultados de Empresa B deben conservarse.
+    expect(component.results?.evaluation_id).toBe(2);
+    expect(selectedCompanyId()).toBe(7);
+  });
+  it('should ignore PDF templates outside the component host', async () => {
+
+    const externalContainer = document.createElement('div');
+
+    externalContainer.className = 'asg-report-export';
+
+    const externalReport = document.createElement('div');
+
+    externalReport.setAttribute('data-pdf-root', '');
+
+    externalContainer.appendChild(externalReport);
+
+    document.body.appendChild(externalContainer);
+
+    const assetsService = TestBed.inject(
+      AsgReportAssetsService
+    );
+
+    const assetsSpy = spyOn(
+      assetsService,
+      'waitForAssets'
+    ).and.resolveTo();
+
+    try {
+
+      component.asgReport = {
+        evaluation: mockResults
+      } as AsgReport;
+
+      await expectAsync(
+        component.exportAsgReport()
+      ).toBeRejectedWithError(
+        'La plantilla del reporte ASG no está disponible.'
+      );
+
+      expect(assetsSpy).not.toHaveBeenCalled();
+
+      expect(
+        asgReportPaginatorSpy.paginate
+      ).not.toHaveBeenCalled();
+
+      expect(
+        asgPdfServiceSpy.generatePdf
+      ).not.toHaveBeenCalled();
+
+    } finally {
+
+      externalContainer.remove();
+
+      component.asgReport = null;
+    }
+  });
+  it('should select only the PDF template belonging to the component host', async () => {
+
+    const externalContainer = document.createElement('div');
+
+    externalContainer.className = 'asg-report-export';
+
+    const externalReport = document.createElement('div');
+
+    externalReport.setAttribute('data-pdf-root', '');
+
+    externalContainer.appendChild(externalReport);
+
+    document.body.prepend(externalContainer);
+
+    const exportContainer = createTemporaryReportDom();
+
+    const ownReport =
+      exportContainer.querySelector<HTMLElement>(
+        '[data-pdf-root]'
+      )!;
+
+    const workspace = document.createElement('div');
+
+    workspace.setAttribute('data-pdf-workspace', '');
+
+    const page = document.createElement('div');
+
+    workspace.appendChild(page);
+
+    exportContainer.appendChild(workspace);
+
+    const assetsService = TestBed.inject(
+      AsgReportAssetsService
+    );
+
+    const assetsSpy = spyOn(
+      assetsService,
+      'waitForAssets'
+    ).and.resolveTo();
+
+    asgReportPaginatorSpy.paginate.and.returnValue({
+      workspace,
+      pages: [page]
+    });
+
+    asgPdfServiceSpy.generatePdf.and.resolveTo();
+
+    try {
+
+      component.asgReport = {
+        evaluation: mockResults
+      } as AsgReport;
+
+      await component.exportAsgReport();
+
+      expect(assetsSpy)
+  .toHaveBeenCalledTimes(1);
+
+expect(asgReportPaginatorSpy.paginate)
+  .toHaveBeenCalledTimes(1);
+
+const preparedReport =
+  assetsSpy.calls.mostRecent().args[0];
+
+const paginatedReport =
+  asgReportPaginatorSpy.paginate
+    .calls.mostRecent().args[0];
+
+// Comprobar identidad de referencia.
+expect(preparedReport).toBe(ownReport);
+expect(paginatedReport).toBe(ownReport);
+
+// Confirmar que no se utilizó la plantilla externa.
+expect(preparedReport).not.toBe(externalReport);
+expect(paginatedReport).not.toBe(externalReport);
+
+      expect(asgPdfServiceSpy.generatePdf)
+        .toHaveBeenCalledOnceWith(
+          [page],
+          'reporte-asg-1.pdf',
+          jasmine.any(Function)
+        );
+
+      expect(workspace.isConnected).toBeFalse();
+
+      expect(externalContainer.isConnected).toBeTrue();
+
+    } finally {
+
+      workspace.remove();
+
+      exportContainer.remove();
+
+      externalContainer.remove();
+
+      component.asgReport = null;
+    }
+  });
+  it('should reject when report rendering exceeds the timeout', fakeAsync(() => {
+
+    let capturedError: Error | undefined;
+
+    let resolved = false;
+
+    const rendering: Promise<void> =
+      (component as any).waitForReportRender(100);
+
+    rendering.then(
+      () => {
+        resolved = true;
+      },
+      (error: Error) => {
+        capturedError = error;
+      }
+    );
+
+    // No ejecutar fixture.detectChanges(),
+    // para mantener pendiente la renderización.
+
+    tick(100, {
+      processNewMacroTasksSynchronously: false
+    });
+
+    expect(resolved).toBeFalse();
+
+    expect(capturedError?.message).toBe(
+      'Se agotó el tiempo de renderización del reporte ASG.'
+    );
+
+  }));
+  it('should release pending report rendering when the component is destroyed', fakeAsync(() => {
+
+    let resolved = false;
+
+    let capturedError: Error | undefined;
+
+    const rendering: Promise<void> =
+      (component as any).waitForReportRender(10000);
+
+    rendering.then(
+      () => {
+        resolved = true;
+      },
+      (error: Error) => {
+        capturedError = error;
+      }
+    );
+
+    // Destruir el componente antes de renderizar.
+    fixture.destroy();
+
+    tick(0);
+
+    expect(resolved).toBeTrue();
+
+    expect(capturedError).toBeUndefined();
+
+  }));
 });

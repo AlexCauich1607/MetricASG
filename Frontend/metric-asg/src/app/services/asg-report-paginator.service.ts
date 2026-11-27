@@ -117,7 +117,35 @@ export class AsgReportPaginatorService {
                     });
                 });
 
-                for (const content of elements) {
+                for (let index = 0; index < elements.length; index++) {
+                    const content = elements[index];
+                    const nextContent = elements[index + 1];
+
+                    if (
+                        content.matches('h2, h3') &&
+                        nextContent
+                    ) {
+                        currentPage = this.keepHeadingWithNext(
+                            content,
+                            nextContent,
+                            section,
+                            currentPage,
+                            workspace,
+                            pages
+                        );
+                    }
+                    if (content.classList.contains('report-action')) {
+                        currentPage = this.appendAction(
+                            content,
+                            section,
+                            currentPage,
+                            workspace,
+                            pages
+                        );
+
+                        continue;
+                    }
+
                     if (content.classList.contains('report-observation')) {
                         currentPage = this.appendObservation(
                             content,
@@ -176,6 +204,76 @@ export class AsgReportPaginatorService {
             throw error;
         }
     }
+    private keepHeadingWithNext(
+        heading: HTMLElement,
+        nextContent: HTMLElement,
+        sourceSection: HTMLElement,
+        currentPage: HTMLElement,
+        workspace: HTMLElement,
+        pages: HTMLElement[]
+    ): HTMLElement {
+        // No generar otra página si la actual todavía está vacía.
+        if (currentPage.children.length === 0) {
+            return currentPage;
+        }
+
+        const headingClone =
+            heading.cloneNode(true) as HTMLElement;
+
+        const contentClone =
+            nextContent.cloneNode(true) as HTMLElement;
+
+        // Para tablas, únicamente necesitamos comprobar
+        // el encabezado y la primera fila.
+        if (contentClone instanceof HTMLTableElement) {
+            const body = contentClone.tBodies.item(0);
+
+            if (body) {
+                Array.from(body.rows)
+                    .slice(1)
+                    .forEach(row => row.remove());
+            }
+        }
+
+        const fitsTogether = (page: HTMLElement): boolean => {
+            page.append(headingClone, contentClone);
+
+            try {
+                return this.fitsInPage(page);
+            } finally {
+                headingClone.remove();
+                contentClone.remove();
+            }
+        };
+
+        // Si ambos elementos caben, conservar la página.
+        if (fitsTogether(currentPage)) {
+            return currentPage;
+        }
+
+        // Comprobar si ambos pueden trasladarse juntos
+        // a una página completamente disponible.
+        const candidatePage = this.createPage(sourceSection);
+
+        workspace.appendChild(candidatePage);
+
+        try {
+            if (fitsTogether(candidatePage)) {
+                pages.push(candidatePage);
+
+                return candidatePage;
+            }
+        } catch (error) {
+            candidatePage.remove();
+            throw error;
+        }
+
+        // Si el conjunto supera una página completa,
+        // conservar el procesamiento especializado existente.
+        candidatePage.remove();
+
+        return currentPage;
+    }
 
     private appendTable(
         sourceTable: HTMLTableElement,
@@ -193,13 +291,17 @@ export class AsgReportPaginatorService {
         }
 
         const createTable = (page: HTMLElement) => {
-            const table = sourceTable.cloneNode(false) as HTMLTableElement;
+            const table =
+                sourceTable.cloneNode(false) as HTMLTableElement;
 
             if (sourceTable.tHead) {
-                table.appendChild(sourceTable.tHead.cloneNode(true));
+                table.appendChild(
+                    sourceTable.tHead.cloneNode(true)
+                );
             }
 
-            const tbody = sourceBody.cloneNode(false) as HTMLTableSectionElement;
+            const tbody =
+                sourceBody.cloneNode(false) as HTMLTableSectionElement;
 
             table.appendChild(tbody);
             page.appendChild(table);
@@ -207,22 +309,33 @@ export class AsgReportPaginatorService {
             return { table, tbody };
         };
 
-        const fits = (page: HTMLElement): boolean =>
-            this.fitsInPage(page);
+        const createNextPage = (): HTMLElement => {
+            const page = this.createPage(sourceSection);
+
+            workspace.appendChild(page);
+            pages.push(page);
+
+            return page;
+        };
 
         let output = createTable(currentPage);
 
-        // Si el encabezado no cabe, iniciamos una nueva página.
-        if (!fits(currentPage)) {
+        // Comprobar que el encabezado cabe en la página.
+        if (!this.fitsInPage(currentPage)) {
             output.table.remove();
 
-            currentPage = this.createPage(sourceSection);
-            workspace.appendChild(currentPage);
-            pages.push(currentPage);
+            // Evitar generar una página vacía.
+            if (currentPage.children.length === 0) {
+                throw new Error(
+                    'El encabezado de la tabla supera el espacio disponible.'
+                );
+            }
+
+            currentPage = createNextPage();
 
             output = createTable(currentPage);
 
-            if (!fits(currentPage)) {
+            if (!this.fitsInPage(currentPage)) {
                 throw new Error(
                     'El encabezado de la tabla supera el espacio disponible.'
                 );
@@ -230,24 +343,36 @@ export class AsgReportPaginatorService {
         }
 
         for (const row of Array.from(sourceBody.rows)) {
-            const clonedRow = row.cloneNode(true) as HTMLTableRowElement;
+            const clonedRow =
+                row.cloneNode(true) as HTMLTableRowElement;
 
             output.tbody.appendChild(clonedRow);
 
-            if (fits(currentPage)) {
+            if (this.fitsInPage(currentPage)) {
                 continue;
             }
 
             clonedRow.remove();
 
-            currentPage = this.createPage(sourceSection);
-            workspace.appendChild(currentPage);
-            pages.push(currentPage);
+            // Si todavía no existen filas, retirar también
+            // el encabezado para evitar una tabla huérfana.
+            if (output.tbody.rows.length === 0) {
+                output.table.remove();
+
+                if (currentPage.children.length === 0) {
+                    throw new Error(
+                        'Una fila de la tabla supera la altura disponible de una página A4.'
+                    );
+                }
+            }
+
+            currentPage = createNextPage();
 
             output = createTable(currentPage);
+
             output.tbody.appendChild(clonedRow);
 
-            if (!fits(currentPage)) {
+            if (!this.fitsInPage(currentPage)) {
                 throw new Error(
                     'Una fila de la tabla supera la altura disponible de una página A4.'
                 );
@@ -260,8 +385,35 @@ export class AsgReportPaginatorService {
     private fitsInPage(page: HTMLElement): boolean {
         const pageRect = page.getBoundingClientRect();
 
-        const contentTop = pageRect.top + this.pagePadding;
-        const contentBottom = pageRect.bottom - this.pagePadding;
+        const styles = getComputedStyle(page);
+
+        const paddingTop =
+            parseFloat(styles.paddingTop) || 0;
+
+        const paddingBottom =
+            parseFloat(styles.paddingBottom) || 0;
+
+        const paddingLeft =
+            parseFloat(styles.paddingLeft) || 0;
+
+        const paddingRight =
+            parseFloat(styles.paddingRight) || 0;
+
+        const printableTop =
+            pageRect.top + paddingTop;
+
+        const printableBottom =
+            pageRect.bottom - paddingBottom;
+
+        const printableLeft =
+            pageRect.left + paddingLeft;
+
+        const printableRight =
+            pageRect.right - paddingRight;
+
+        // Tolerancia para diferencias de renderización
+        // y redondeo de coordenadas subpíxel.
+        const tolerance = 1;
 
         const elements = Array.from(
             page.querySelectorAll<HTMLElement>('*')
@@ -270,17 +422,68 @@ export class AsgReportPaginatorService {
         return elements.every(element => {
             const rect = element.getBoundingClientRect();
 
+            // Ignorar elementos sin representación visual.
             if (rect.width === 0 && rect.height === 0) {
                 return true;
             }
 
-            return (
-                rect.top >= contentTop - 1 &&
-                rect.bottom <= contentBottom + 1
-            );
+            const fitsVertically =
+                rect.top >= printableTop - tolerance &&
+                rect.bottom <= printableBottom + tolerance;
+
+            const fitsHorizontally =
+                rect.left >= printableLeft - tolerance &&
+                rect.right <= printableRight + tolerance;
+
+            return fitsVertically && fitsHorizontally;
         });
     }
 
+    private appendAction(
+        sourceAction: HTMLElement,
+        sourceSection: HTMLElement,
+        currentPage: HTMLElement,
+        workspace: HTMLElement,
+        pages: HTMLElement[]
+    ): HTMLElement {
+        // Intentar conservar la acción completa en la página actual.
+        const action = sourceAction.cloneNode(true) as HTMLElement;
+
+        currentPage.appendChild(action);
+
+        if (this.fitsInPage(currentPage)) {
+            return currentPage;
+        }
+
+        action.remove();
+
+        // Si la página contiene información previa,
+        // intentar colocar la acción completa en una nueva página.
+        if (currentPage.children.length > 0) {
+            currentPage = this.createPage(sourceSection);
+
+            workspace.appendChild(currentPage);
+            pages.push(currentPage);
+
+            currentPage.appendChild(action);
+
+            if (this.fitsInPage(currentPage)) {
+                return currentPage;
+            }
+
+            action.remove();
+        }
+
+        // Si la acción tampoco cabe en una página completa,
+        // reutilizar el mecanismo de división de contenido.
+        return this.appendObservation(
+            sourceAction,
+            sourceSection,
+            currentPage,
+            workspace,
+            pages
+        );
+    }
 
     private appendObservation(
         sourceObservation: HTMLElement,
@@ -333,8 +536,11 @@ export class AsgReportPaginatorService {
             }
 
             if (
-                clonedChild instanceof HTMLParagraphElement &&
-                clonedChild.childElementCount === 0
+                clonedChild instanceof HTMLElement &&
+                clonedChild.matches('p, h4') &&
+                Array.from(clonedChild.children).every(
+                    element => element.matches('strong, b, em, span')
+                )
             ) {
                 const result = this.appendLongParagraph(
                     clonedChild,
@@ -353,7 +559,7 @@ export class AsgReportPaginatorService {
             }
 
             throw new Error(
-                'Un elemento de la observación supera la altura de una página A4.'
+                'Un elemento del reporte supera la altura de una página A4.'
             );
         }
 
@@ -361,7 +567,7 @@ export class AsgReportPaginatorService {
     }
 
     private appendLongParagraph(
-        paragraph: HTMLParagraphElement,
+        paragraph: HTMLElement,
         sourceObservation: HTMLElement,
         sourceSection: HTMLElement,
         currentPage: HTMLElement,
@@ -373,13 +579,91 @@ export class AsgReportPaginatorService {
         observation: HTMLElement;
     } {
         const text = paragraph.textContent ?? '';
-        const words = text.match(/\S+\s*/g) ?? [];
+        const words = text.match(/\s*\S+\s*|\s+/g) ?? [];
 
-        if (words.length === 0) {
+        if (words.length === 0 || !text.trim()) {
             throw new Error(
-                'El párrafo no contiene texto divisible.'
+                'El elemento no contiene texto divisible.'
             );
         }
+
+        // Registrar las posiciones de las palabras en el texto original.
+        const offsets: number[] = [0];
+
+        for (const word of words) {
+            offsets.push(
+                offsets[offsets.length - 1] + word.length
+            );
+        }
+
+        const walker = document.createTreeWalker(
+            paragraph,
+            NodeFilter.SHOW_TEXT
+        );
+
+        const textNodes: Text[] = [];
+
+        let node = walker.nextNode();
+
+        while (node) {
+            textNodes.push(node as Text);
+            node = walker.nextNode();
+        }
+
+        const resolvePosition = (offset: number): {
+            node: Text;
+            offset: number;
+        } => {
+            let remaining = offset;
+
+            for (const textNode of textNodes) {
+                if (remaining <= textNode.length) {
+                    return {
+                        node: textNode,
+                        offset: remaining
+                    };
+                }
+
+                remaining -= textNode.length;
+            }
+
+            const lastNode = textNodes[textNodes.length - 1];
+
+            return {
+                node: lastNode,
+                offset: lastNode.length
+            };
+        };
+
+        const setFragmentContent = (
+            fragment: HTMLElement,
+            start: number,
+            length: number
+        ): void => {
+            const startPosition = resolvePosition(
+                offsets[start]
+            );
+
+            const endPosition = resolvePosition(
+                offsets[start + length]
+            );
+
+            const range = document.createRange();
+
+            range.setStart(
+                startPosition.node,
+                startPosition.offset
+            );
+
+            range.setEnd(
+                endPosition.node,
+                endPosition.offset
+            );
+
+            fragment.replaceChildren(
+                range.cloneContents()
+            );
+        };
 
         let position = 0;
         let page = currentPage;
@@ -387,6 +671,7 @@ export class AsgReportPaginatorService {
 
         const createContinuation = (): void => {
             page = this.createPage(sourceSection);
+
             workspace.appendChild(page);
             pages.push(page);
 
@@ -397,7 +682,8 @@ export class AsgReportPaginatorService {
         };
 
         while (position < words.length) {
-            const fragment = paragraph.cloneNode(false) as HTMLParagraphElement;
+            const fragment =
+                paragraph.cloneNode(false) as HTMLElement;
 
             observation.appendChild(fragment);
 
@@ -405,12 +691,16 @@ export class AsgReportPaginatorService {
             let high = words.length - position;
             let best = 0;
 
+            // Determinar la mayor cantidad de palabras
+            // que cabe en el espacio disponible.
             while (low <= high) {
                 const middle = Math.floor((low + high) / 2);
 
-                fragment.textContent = words
-                    .slice(position, position + middle)
-                    .join('');
+                setFragmentContent(
+                    fragment,
+                    position,
+                    middle
+                );
 
                 if (this.fitsInPage(page)) {
                     best = middle;
@@ -429,7 +719,7 @@ export class AsgReportPaginatorService {
 
                 if (!hasOtherContent) {
                     throw new Error(
-                        'Una palabra del párrafo supera el espacio disponible.'
+                        'Una palabra del elemento supera el espacio disponible.'
                     );
                 }
 
@@ -438,13 +728,15 @@ export class AsgReportPaginatorService {
                 }
 
                 createContinuation();
+
                 continue;
             }
 
-            fragment.textContent = words
-                .slice(position, position + best)
-                .join('')
-                .trimEnd();
+            setFragmentContent(
+                fragment,
+                position,
+                best
+            );
 
             position += best;
 
@@ -453,7 +745,10 @@ export class AsgReportPaginatorService {
             }
         }
 
-        return { page, observation };
+        return {
+            page,
+            observation
+        };
     }
 
 }

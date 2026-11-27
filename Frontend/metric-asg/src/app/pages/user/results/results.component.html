@@ -1,12 +1,6 @@
 <div class="results-shell">
   <div class="container results-container">
 
-    <p class="d-flex align-items-center mb-5 solo-pdf">
-      <img src="assets/logo.png" alt="MetricASG" height="38" class="me-2">
-      <span class="text-my-purple mb-1 font-logo fs-4">
-        MetricASG
-      </span>
-    </p>
 
     <!-- Encabezado de resultados -->
 
@@ -268,7 +262,9 @@
 
 <!-- Plantilla temporal para generar el reporte ASG -->
 @if (asgReport) {
-<div class="asg-report-export">
+<div class="asg-report-export"
+     aria-hidden="true"
+     inert>
   <app-asg-report-template [report]="asgReport">
   </app-asg-report-template>
 </div>
