@@ -78,6 +78,8 @@ export class HistoricalTrendChartComponent
 
     this.chart?.destroy();
 
+    // HU-059 / T02.3 - Adaptive historical presentation
+
     const config: ChartConfiguration<
       'line',
       HistoricalTrendPoint[],
@@ -107,7 +109,17 @@ export class HistoricalTrendChartComponent
         plugins: {
           legend: {
             display: true,
-            position: 'bottom'
+            position: 'bottom',
+
+            labels: {
+              boxWidth: 12,
+              boxHeight: 10,
+              padding: 12,
+
+              font: context => ({
+                size: context.chart.width < 360 ? 10 : 12
+              })
+            }
           },
 
           tooltip: {
@@ -135,23 +147,72 @@ export class HistoricalTrendChartComponent
           y: {
             min: 0,
             max: 10,
+
             title: {
               display: true,
-              text: 'Puntuación'
+              text: 'Puntuación',
+
+              font: () => ({
+                size: canvas.clientWidth < 360 ? 10 : 12
+              })
+            },
+
+            ticks: {
+              stepSize: 2,
+              padding: 4,
+
+              font: context => ({
+                size: context.chart.width < 360 ? 10 : 12
+              })
             }
           },
 
           x: {
             type: 'linear',
+
             title: {
               display: true,
-              text: 'Fecha de evaluación'
+              text: 'Fecha de evaluación',
+
+              font: () => ({
+                size: canvas.clientWidth < 360 ? 10 : 12
+              })
             },
+
             ticks: {
-              callback: (value) => {
+              autoSkip: true,
+              maxTicksLimit: 8,
+              minRotation: 0,
+              maxRotation: 0,
+              padding: 4,
+
+              font: context => ({
+                size: context.chart.width < 360 ? 10 : 12
+              }),
+
+              callback: function (value) {
+
                 const timestamp = Number(value);
 
-                return new Date(timestamp).toLocaleDateString('es-MX');
+                if (!Number.isFinite(timestamp)) {
+                  return '';
+                }
+
+                const date = new Date(timestamp);
+
+                if (!Number.isFinite(date.getTime())) {
+                  return '';
+                }
+
+                if (this.chart.width < 360) {
+                  return date.toLocaleDateString('es-MX', {
+                    day: '2-digit',
+                    month: '2-digit',
+                    year: '2-digit'
+                  });
+                }
+
+                return date.toLocaleDateString('es-MX');
               }
             }
           }
@@ -167,4 +228,65 @@ export class HistoricalTrendChartComponent
     this.chart?.destroy();
     this.chart = null;
   }
+
+  // HU-059 / T03 - Accessible historical data
+
+  get hasAccessibleHistoricalData(): boolean {
+
+    return this.datasets.some(
+      dataset => dataset.data.length > 0
+    );
+
+  }
+
+  formatAccessibleHistoricalDate(
+    timestamp: number
+  ): string {
+
+    const date = new Date(timestamp);
+
+    if (
+      !Number.isFinite(timestamp) ||
+      !Number.isFinite(date.getTime())
+    ) {
+      return 'Fecha no disponible';
+    }
+
+    return date.toLocaleDateString('es-MX', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric'
+    });
+
+  }
+
+  formatAccessibleHistoricalScore(
+    score: number | null | undefined
+  ): string {
+
+    if (
+      typeof score !== 'number' ||
+      !Number.isFinite(score)
+    ) {
+      return 'N/D';
+    }
+
+    return `${score.toFixed(1)} / 10`;
+
+  }
+
+  get accessibleHistoricalDescription(): string {
+
+    if (!this.hasAccessibleHistoricalData) {
+      return 'Gráfica de evolución ASG. Sin datos históricos disponibles.';
+    }
+
+    const series = this.datasets.map(
+      dataset => dataset.label
+    ).join(', ');
+
+    return `Gráfica de evolución ASG. Series: ${series}. Puntuaciones de 0 a 10. Consulta los datos históricos para conocer las fechas y valores.`;
+
+  }
+
 }

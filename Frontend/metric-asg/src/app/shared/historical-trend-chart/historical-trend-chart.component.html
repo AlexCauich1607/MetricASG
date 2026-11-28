@@ -1,3 +1,103 @@
 <div class="historical-chart-container">
-  <canvas #chartCanvas></canvas>
+  <!-- HU-059 / T03 - Historical canvas label -->
+<canvas #chartCanvas [attr.aria-label]="accessibleHistoricalDescription" role="img"></canvas>
 </div>
+
+<!-- HU-059 / T03 - Accessible historical alternative -->
+
+<details class="chart-data-alternative">
+
+  <summary class="chart-data-alternative__summary">
+
+  <span
+    class="chart-data-alternative__icon"
+    aria-hidden="true">
+
+    <i class="bi bi-table"></i>
+
+  </span>
+
+  <span class="chart-data-alternative__label">
+
+    <span class="chart-data-alternative__label--closed">
+      Consultar datos históricos
+    </span>
+
+    <span class="chart-data-alternative__label--open">
+      Ocultar datos históricos
+    </span>
+
+  </span>
+
+  <span
+    class="chart-data-alternative__chevron"
+    aria-hidden="true">
+
+    <i class="bi bi-chevron-down"></i>
+
+  </span>
+
+</summary>
+
+  <div class="chart-data-alternative__content">
+
+    @if (hasAccessibleHistoricalData) {
+
+      @for (dataset of datasets; track $index) {
+
+        <table class="chart-data-alternative__table">
+
+          <caption>
+            {{ dataset.label }}
+          </caption>
+
+          <thead>
+            <tr>
+              <th scope="col">Fecha</th>
+              <th scope="col">Puntuación</th>
+            </tr>
+          </thead>
+
+          <tbody>
+
+            @for (point of dataset.data; track $index) {
+
+              <tr>
+
+                <th scope="row">
+                  {{ formatAccessibleHistoricalDate(point.x) }}
+                </th>
+
+                <td>
+                  {{ formatAccessibleHistoricalScore(point.y) }}
+                </td>
+
+              </tr>
+
+            } @empty {
+
+              <tr>
+                <td colspan="2">
+                  No hay datos disponibles para esta serie.
+                </td>
+              </tr>
+
+            }
+
+          </tbody>
+
+        </table>
+
+      }
+
+    } @else {
+
+      <p class="chart-data-alternative__empty">
+        No hay datos históricos disponibles.
+      </p>
+
+    }
+
+  </div>
+
+</details>
