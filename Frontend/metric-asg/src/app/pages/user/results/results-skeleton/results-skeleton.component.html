@@ -1,0 +1,384 @@
+
+<!-- HU-058-T05.4 — Skeleton de Resultados -->
+
+<section
+  class="results-loading"
+  aria-label="Cargando resultados de evaluación">
+
+  <!-- Mensaje accesible de carga -->
+
+  <div class="results-loading__status" role="status">
+
+    <span
+      class="spinner-border spinner-border-sm"
+      aria-hidden="true">
+    </span>
+
+    <span>
+      Cargando resultados de tu evaluación...
+    </span>
+
+  </div>
+
+  <!-- Los placeholders son exclusivamente decorativos -->
+
+  <div
+    class="results-loading__content"
+    aria-hidden="true">
+
+    <!-- Contexto empresarial -->
+
+    <div class="asg-card sk-company">
+
+      <div class="sk-row">
+
+        <span class="sk sk--icon"></span>
+
+        <div class="sk-content">
+
+          <span class="sk w-50"></span>
+
+          <span class="sk sk--title w-75"></span>
+
+        </div>
+
+      </div>
+
+      <div class="sk-row sk-period">
+
+        <span class="sk sk--icon"></span>
+
+        <div class="sk-content">
+
+          <span class="sk w-50"></span>
+
+          <span class="sk sk--title w-100"></span>
+
+        </div>
+
+      </div>
+
+      <div class="sk-company-action">
+
+        <span class="sk sk--button"></span>
+
+      </div>
+
+    </div>
+
+    <!-- Desempeño ASG -->
+
+    <div>
+
+      <header class="sk-section-header">
+
+        <h2>Desempeño ASG</h2>
+
+        <p>
+          Puntuaciones y niveles de madurez
+          de tu organización.
+        </p>
+
+      </header>
+
+      <div class="sk-performance-grid">
+
+        @for (item of cards; track item) {
+
+          <div
+            class="asg-card sk-card"
+            [class.sk-card--featured]="item === 0">
+
+            <span class="sk sk--icon"></span>
+
+            <span class="sk w-75"></span>
+
+            <span class="sk sk--score w-50"></span>
+
+            <span class="sk sk--progress"></span>
+
+            <span class="sk sk--pill w-75"></span>
+
+          </div>
+
+        }
+
+      </div>
+
+    </div>
+
+    <!-- Análisis de desempeño -->
+
+    <div>
+
+      <header class="sk-section-header">
+
+        <h2>Análisis de desempeño</h2>
+
+        <p>
+          Compara las puntuaciones y el equilibrio
+          entre los ámbitos ASG.
+        </p>
+
+      </header>
+
+      <div class="sk-analysis-grid">
+
+        <!-- Gráfica de barras -->
+
+        <div class="asg-card sk-chart">
+
+          <div class="sk-row">
+
+            <div class="sk-content">
+
+              <span class="sk sk--title w-75"></span>
+
+              <span class="sk w-100"></span>
+
+            </div>
+
+            <span class="sk sk--icon"></span>
+
+          </div>
+
+          <div class="sk-chart-body">
+
+            <svg
+              class="sk-chart-figure"
+              viewBox="0 0 320 220"
+              focusable="false">
+
+              <!-- Cuadrícula -->
+
+              <g class="sk-chart-grid">
+
+                <path d="M30 20 H300"></path>
+                <path d="M30 65 H300"></path>
+                <path d="M30 110 H300"></path>
+                <path d="M30 155 H300"></path>
+                <path d="M30 200 H300"></path>
+
+              </g>
+
+              <!-- Ejes -->
+
+              <path
+                class="sk-chart-axis"
+                d="M30 20 V200 H300">
+              </path>
+
+              <!-- Barras decorativas -->
+
+              <g class="sk-chart-fill">
+
+                <rect
+                  x="60" y="48"
+                  width="48" height="152"
+                  rx="4">
+                </rect>
+
+                <rect
+                  x="140" y="48"
+                  width="48" height="152"
+                  rx="4">
+                </rect>
+
+                <rect
+                  x="220" y="48"
+                  width="48" height="152"
+                  rx="4">
+                </rect>
+
+              </g>
+
+            </svg>
+
+          </div>
+
+        </div>
+
+        <!-- Gráfica de radar -->
+
+        <div class="asg-card sk-chart">
+
+          <div class="sk-row">
+
+            <div class="sk-content">
+
+              <span class="sk sk--title w-50"></span>
+
+              <span class="sk w-100"></span>
+
+            </div>
+
+            <span class="sk sk--icon"></span>
+
+          </div>
+
+          <div class="sk-chart-body">
+
+            <svg
+              class="sk-chart-figure"
+              viewBox="0 0 320 220"
+              focusable="false">
+
+              <g class="sk-chart-grid">
+
+                <polygon
+                  points="160,20 275,190 45,190">
+                </polygon>
+
+                <polygon
+                  points="160,45 246,172 74,172">
+                </polygon>
+
+                <polygon
+                  points="160,70 217,155 103,155">
+                </polygon>
+
+                <polygon
+                  points="160,95 189,137 131,137">
+                </polygon>
+
+              </g>
+
+              <path
+                class="sk-chart-axis"
+                d="M160 120 V20
+                   M160 120 L275 190
+                   M160 120 L45 190">
+              </path>
+
+            </svg>
+
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- Resumen de desempeño -->
+
+    <div class="asg-card sk-summary">
+
+      <span class="sk sk--title w-50"></span>
+
+      <div class="sk-summary-grid">
+
+        @for (item of summaryItems; track item) {
+
+          <div class="sk-row">
+
+            <span class="sk sk--icon"></span>
+
+            <div class="sk-content">
+
+              <span class="sk w-75"></span>
+
+              <span class="sk sk--title w-50"></span>
+
+            </div>
+
+            <span class="sk sk--summary-score"></span>
+
+          </div>
+
+        }
+
+      </div>
+
+    </div>
+
+    <!-- Asistente inteligente IA -->
+
+    <div class="asg-card sk-ai">
+
+      <span class="sk w-25"></span>
+
+      <span class="sk sk--title w-50"></span>
+
+      <span class="sk sk--title w-50"></span>
+
+      <span class="sk w-75"></span>
+
+      <span class="sk w-50"></span>
+
+      <span class="sk sk--button"></span>
+
+      <div class="sk-ai__disclaimer">
+
+        <span class="sk w-100"></span>
+
+      </div>
+
+    </div>
+
+    <!-- Evidencias registradas -->
+
+    <div class="asg-card sk-evidences">
+
+      <div class="sk-row">
+
+        <span class="sk sk--icon"></span>
+
+        <div class="sk-content">
+
+          <span class="sk sk--title w-50"></span>
+
+          <span class="sk w-75"></span>
+
+        </div>
+
+        <span class="sk sk--small"></span>
+
+      </div>
+
+    </div>
+
+    <!-- Siguientes pasos -->
+
+    <div>
+
+      <header class="sk-section-header">
+
+        <h2>¿Qué sigue?</h2>
+
+        <p>
+          Transforma los resultados de tu evaluación
+          en acciones concretas de mejora.
+        </p>
+
+      </header>
+
+      <div class="sk-next-grid">
+
+        @for (item of nextSteps; track item) {
+
+          <div class="asg-card sk-next-card">
+
+            <span class="sk sk--icon"></span>
+
+            <span class="sk sk--title w-75"></span>
+
+            <span class="sk w-100"></span>
+
+            <span class="sk w-100"></span>
+
+            <span class="sk w-75"></span>
+
+            <span class="sk sk--button"></span>
+
+          </div>
+
+        }
+
+      </div>
+
+    </div>
+
+  </div>
+
+</section>

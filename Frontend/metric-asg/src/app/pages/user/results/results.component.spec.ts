@@ -1,7 +1,12 @@
 import { signal, computed } from '@angular/core';
 import { CompanyContextService } from '../../../services/company-context.service';
 import { CompanyRole, UserCompanyMembership } from '../../../models/company_membership';
-import { of, Subject, throwError } from 'rxjs';
+import {
+  EMPTY,
+  of,
+  Subject,
+  throwError
+} from 'rxjs';
 import { EvidenceService } from '../../../services/evidence.service';
 import { EvaluationEvidence } from '../../../models/evaluation_evidence';
 import { ResultsComponent } from './results.component';
@@ -13,6 +18,7 @@ import { AsgReport } from '../../../models/asg_report';
 import { AsgReportPaginatorService } from '../../../services/asg-report-paginator.service';
 import { AsgPdfService } from '../../../services/asg-pdf.service';
 import { AsgReportAssetsService } from '../../../services/asg-report-assets.service';
+import { HttpErrorResponse } from '@angular/common/http';
 import {
   ComponentFixture,
   TestBed,
@@ -256,17 +262,6 @@ describe('ResultsComponent', () => {
     expect(component.results?.ambits)
       .toEqual(mockResults.ambits);
   });
-
-  it('should calculate the current and previous evaluation periods', () => {
-    component.getPeriodo('2026-09-15T12:00:00');
-
-    expect(component.mesActual).toBe('Septiembre');
-    expect(component.anioActual).toBe('2026');
-
-    expect(component.mesAnterior).toBe('Marzo');
-    expect(component.anioAnterior).toBe('2026');
-  });
-
 
   it('should calculate the current and previous evaluation periods', () => {
     component.getPeriodo('2026-09-15T12:00:00');
@@ -2131,25 +2126,25 @@ describe('ResultsComponent', () => {
       await component.exportAsgReport();
 
       expect(assetsSpy)
-  .toHaveBeenCalledTimes(1);
+        .toHaveBeenCalledTimes(1);
 
-expect(asgReportPaginatorSpy.paginate)
-  .toHaveBeenCalledTimes(1);
+      expect(asgReportPaginatorSpy.paginate)
+        .toHaveBeenCalledTimes(1);
 
-const preparedReport =
-  assetsSpy.calls.mostRecent().args[0];
+      const preparedReport =
+        assetsSpy.calls.mostRecent().args[0];
 
-const paginatedReport =
-  asgReportPaginatorSpy.paginate
-    .calls.mostRecent().args[0];
+      const paginatedReport =
+        asgReportPaginatorSpy.paginate
+          .calls.mostRecent().args[0];
 
-// Comprobar identidad de referencia.
-expect(preparedReport).toBe(ownReport);
-expect(paginatedReport).toBe(ownReport);
+      // Comprobar identidad de referencia.
+      expect(preparedReport).toBe(ownReport);
+      expect(paginatedReport).toBe(ownReport);
 
-// Confirmar que no se utilizó la plantilla externa.
-expect(preparedReport).not.toBe(externalReport);
-expect(paginatedReport).not.toBe(externalReport);
+      // Confirmar que no se utilizó la plantilla externa.
+      expect(preparedReport).not.toBe(externalReport);
+      expect(paginatedReport).not.toBe(externalReport);
 
       expect(asgPdfServiceSpy.generatePdf)
         .toHaveBeenCalledOnceWith(
@@ -2233,4 +2228,1147 @@ expect(paginatedReport).not.toBe(externalReport);
     expect(capturedError).toBeUndefined();
 
   }));
+  it('should remain idle when no company is selected', () => {
+
+    selectedCompanyId.set(null);
+
+    fixture.detectChanges();
+    TestBed.flushEffects();
+    fixture.detectChanges();
+
+    expect(component.resultsLoadState).toBe('idle');
+    expect(component.results).toBeNull();
+    expect(component.resultsLoadError).toBeNull();
+
+    expect(
+      evaluationServiceSpy.getLastEvaluationResult
+    ).not.toHaveBeenCalled();
+
+    expect(
+      evidenceServiceSpy.getEvidences
+    ).not.toHaveBeenCalled();
+
+    const element: HTMLElement = fixture.nativeElement;
+
+    expect(
+      element.querySelector('#results-idle-title')?.textContent
+    ).toContain('Selecciona una empresa');
+
+    expect(
+      element.querySelector('app-results-skeleton')
+    ).toBeNull();
+
+    expect(
+      element.querySelector('app-results-performance')
+    ).toBeNull();
+
+    expect(
+      element.querySelector('.results-state--empty')
+    ).toBeNull();
+
+    expect(
+      element.querySelector('.results-state--error')
+    ).toBeNull();
+
+    expect(
+      element.querySelector('.results-state button')
+    ).toBeNull();
+
+  });
+
+  it('should remain loading while evaluation results are pending', () => {
+
+    const pendingResults =
+      new Subject<ResultEvaluation>();
+
+    evaluationServiceSpy.getLastEvaluationResult
+      .and.returnValue(
+        pendingResults.asObservable()
+      );
+
+    component.loadResults();
+
+    expect(component.resultsLoadState).toBe('loading');
+
+    expect(component.results).toBeNull();
+
+    expect(component.resultsLoadError).toBeNull();
+
+    expect(
+      evaluationServiceSpy.getLastEvaluationResult
+    ).toHaveBeenCalledTimes(1);
+
+    expect(
+      evidenceServiceSpy.getEvidences
+    ).not.toHaveBeenCalled();
+
+    expect(pendingResults.observed).toBeTrue();
+    fixture.detectChanges();
+
+    const element: HTMLElement = fixture.nativeElement;
+
+    expect(
+      element.querySelector('app-results-skeleton')
+    ).not.toBeNull();
+
+    expect(
+      element.querySelector('app-results-performance')
+    ).toBeNull();
+
+    expect(
+      element.querySelector('app-results-ai')
+    ).toBeNull();
+
+    expect(
+      element.querySelector('app-results-evidences')
+    ).toBeNull();
+
+    expect(
+      element.querySelector('.results-company')
+    ).toBeNull();
+
+    expect(
+      element.querySelector('.results-next-steps')
+    ).toBeNull();
+
+    expect(
+      element.querySelector('.results-header')
+    ).not.toBeNull();
+  });
+
+  it('should transition from loading to success when results arrive', () => {
+
+    // Preparar la solicitud pendiente antes
+    // de iniciar el ciclo de detección de cambios.
+
+    const pendingResults =
+      new Subject<ResultEvaluation>();
+
+    evaluationServiceSpy.getLastEvaluationResult
+      .and.returnValue(
+        pendingResults.asObservable()
+      );
+
+    // Iniciar la carga de resultados.
+
+    component.loadResults();
+
+    fixture.detectChanges();
+
+    const element: HTMLElement =
+      fixture.nativeElement;
+
+    // Verificar el estado de carga.
+
+    expect(component.resultsLoadState)
+      .toBe('loading');
+
+    expect(component.results).toBeNull();
+
+    expect(
+      element.querySelector('app-results-skeleton')
+    ).not.toBeNull();
+
+    expect(
+      element.querySelector('app-results-performance')
+    ).toBeNull();
+
+    expect(
+      evidenceServiceSpy.getEvidences
+    ).not.toHaveBeenCalled();
+
+    // Simular la respuesta satisfactoria.
+
+    pendingResults.next(mockResults);
+    pendingResults.complete();
+
+    fixture.detectChanges();
+
+    // Verificar el estado final.
+
+    expect(component.resultsLoadState)
+      .toBe('success');
+
+    expect(component.results)
+      .toEqual(mockResults);
+
+    expect(component.resultsLoadError)
+      .toBeNull();
+
+    expect(component.mesActual)
+      .toBe('Septiembre');
+
+    expect(component.anioActual)
+      .toBe('2026');
+
+    // El skeleton debe desaparecer.
+
+    expect(
+      element.querySelector('app-results-skeleton')
+    ).toBeNull();
+
+    // Los componentes reales deben aparecer.
+
+    expect(
+      element.querySelector('app-results-performance')
+    ).not.toBeNull();
+
+    expect(
+      element.querySelector('app-results-ai')
+    ).not.toBeNull();
+
+    expect(
+      element.querySelector('app-results-evidences')
+    ).not.toBeNull();
+
+    expect(
+      element.querySelector('.results-company')
+    ).not.toBeNull();
+
+    expect(
+      element.querySelector('.results-next-steps')
+    ).not.toBeNull();
+
+    // Verificar que no se duplican las solicitudes.
+
+    expect(
+      evaluationServiceSpy.getLastEvaluationResult
+    ).toHaveBeenCalledTimes(1);
+
+    expect(
+      evidenceServiceSpy.getEvidences
+    ).toHaveBeenCalledOnceWith(
+      mockResults.evaluation_id
+    );
+
+  });
+
+
+  it('should show an empty state when no completed evaluations exist', () => {
+
+    const router = TestBed.inject(Router);
+
+    const navigateSpy = spyOn(router, 'navigate')
+      .and.returnValue(Promise.resolve(true));
+
+    evaluationServiceSpy.getLastEvaluationResult
+      .and.returnValue(
+        throwError(() => new HttpErrorResponse({
+          status: 404,
+          statusText: 'Not Found',
+          error: {
+            detail: 'No evaluations found'
+          }
+        }))
+      );
+
+    component.loadResults();
+
+    fixture.detectChanges();
+
+    expect(component.resultsLoadState).toBe('empty');
+    expect(component.results).toBeNull();
+    expect(component.resultsLoadError).toBeNull();
+    expect(component.evidences).toEqual([]);
+    expect(component.loadingEvidences).toBeFalse();
+
+    expect(
+      evidenceServiceSpy.getEvidences
+    ).not.toHaveBeenCalled();
+
+    const element: HTMLElement = fixture.nativeElement;
+
+    const emptyState = element.querySelector(
+      '.results-state--empty'
+    );
+
+    expect(emptyState).not.toBeNull();
+
+    expect(emptyState?.textContent).toContain(
+      'Comienza a medir tu desempeño ASG.'
+    );
+
+    expect(
+      element.querySelector('app-results-skeleton')
+    ).toBeNull();
+
+    expect(
+      element.querySelector('app-results-performance')
+    ).toBeNull();
+
+    expect(
+      element.querySelector('.results-state--error')
+    ).toBeNull();
+
+    expect(
+      element.querySelector('#results-idle-title')
+    ).toBeNull();
+
+    const button = emptyState?.querySelector(
+      'button'
+    ) as HTMLButtonElement;
+
+    expect(button).not.toBeNull();
+    expect(button.textContent).toContain('Ir a evaluación');
+
+    button.click();
+
+    expect(navigateSpy).toHaveBeenCalledOnceWith([
+      '/user/evaluation'
+    ]);
+
+  });
+
+  const resultsErrorCases = [
+    {
+      description: 'an unrelated HTTP 404 error',
+      status: 404,
+      detail: 'Resource not found',
+      expectedMessage:
+        'No fue posible cargar los resultados ASG. Inténtalo nuevamente.'
+    },
+    {
+      description: 'a network connection error',
+      status: 0,
+      detail: 'Network error',
+      expectedMessage:
+        'No fue posible conectar con el servidor. Verifica tu conexión e inténtalo nuevamente.'
+    },
+    {
+      description: 'an authentication error',
+      status: 401,
+      detail: 'Unauthorized',
+      expectedMessage:
+        'Tu sesión no es válida o ha expirado.'
+    },
+    {
+      description: 'an authorization error',
+      status: 403,
+      detail: 'Forbidden',
+      expectedMessage:
+        'No tienes permisos para consultar los resultados de esta empresa.'
+    },
+    {
+      description: 'an internal server error',
+      status: 500,
+      detail: 'Internal Server Error',
+      expectedMessage:
+        'No fue posible cargar los resultados ASG. Inténtalo nuevamente.'
+    }
+  ];
+
+  for (const testCase of resultsErrorCases) {
+
+
+    it(`should handle ${testCase.description}`, () => {
+
+      evaluationServiceSpy.getLastEvaluationResult
+        .and.returnValue(
+          throwError(() => new HttpErrorResponse({
+            status: testCase.status,
+            error: {
+              detail: testCase.detail
+            }
+          }))
+        );
+
+      component.loadResults();
+
+      fixture.detectChanges();
+
+      expect(component.resultsLoadState).toBe('error');
+
+      expect(component.resultsLoadError)
+        .toBe(testCase.expectedMessage);
+
+      expect(component.results).toBeNull();
+      expect(component.evidences).toEqual([]);
+      expect(component.loadingEvidences).toBeFalse();
+
+      expect(
+        evidenceServiceSpy.getEvidences
+      ).not.toHaveBeenCalled();
+
+      const element: HTMLElement = fixture.nativeElement;
+
+      const errorState = element.querySelector(
+        '.results-state--error'
+      );
+
+      expect(errorState).not.toBeNull();
+
+      const alert = errorState?.querySelector('[role="alert"]');
+
+      expect(alert).not.toBeNull();
+
+      expect(alert?.textContent).toContain(
+        'No pudimos cargar tus resultados.'
+      );
+
+      expect(alert?.textContent).toContain(
+        testCase.expectedMessage
+      );
+
+      expect(
+        errorState?.querySelector('button')?.textContent
+      ).toContain('Reintentar');
+
+      expect(
+        element.querySelector('app-results-skeleton')
+      ).toBeNull();
+
+      expect(
+        element.querySelector('app-results-performance')
+      ).toBeNull();
+
+      expect(
+        element.querySelector('.results-state--empty')
+      ).toBeNull();
+
+      expect(
+        element.querySelector('#results-idle-title')
+      ).toBeNull();
+
+    });
+
+
+  }
+
+  it('should recover successfully after retrying a failed results request', () => {
+
+    const pendingResults =
+      new Subject<ResultEvaluation>();
+
+    evaluationServiceSpy.getLastEvaluationResult
+      .and.returnValues(
+
+        throwError(() => new HttpErrorResponse({
+          status: 500
+        })),
+
+        pendingResults.asObservable()
+
+      );
+
+    // Primera solicitud: error.
+
+    component.loadResults();
+
+    fixture.detectChanges();
+
+    expect(component.resultsLoadState).toBe('error');
+
+    expect(component.resultsLoadError)
+      .not.toBeNull();
+
+    const element: HTMLElement = fixture.nativeElement;
+
+    const retryButton = element.querySelector(
+      '.results-state--error button'
+    ) as HTMLButtonElement;
+
+    expect(retryButton).not.toBeNull();
+
+    expect(retryButton.textContent)
+      .toContain('Reintentar');
+
+    // Reintentar desde la interfaz real.
+
+    retryButton.click();
+
+    fixture.detectChanges();
+
+    expect(component.resultsLoadState)
+      .toBe('loading');
+
+    expect(component.resultsLoadError)
+      .toBeNull();
+
+    expect(component.results).toBeNull();
+
+    expect(
+      element.querySelector('app-results-skeleton')
+    ).not.toBeNull();
+
+    expect(
+      element.querySelector('.results-state--error')
+    ).toBeNull();
+
+    expect(
+      element.querySelector('app-results-performance')
+    ).toBeNull();
+
+    expect(
+      evidenceServiceSpy.getEvidences
+    ).not.toHaveBeenCalled();
+
+    // Segunda solicitud: respuesta satisfactoria.
+
+    pendingResults.next(mockResults);
+    pendingResults.complete();
+
+    fixture.detectChanges();
+
+    expect(component.resultsLoadState)
+      .toBe('success');
+
+    expect(component.resultsLoadError)
+      .toBeNull();
+
+    expect(component.results)
+      .toEqual(mockResults);
+
+    expect(
+      element.querySelector('app-results-skeleton')
+    ).toBeNull();
+
+    expect(
+      element.querySelector('.results-state')
+    ).toBeNull();
+
+    expect(
+      element.querySelector('app-results-performance')
+    ).not.toBeNull();
+
+    expect(
+      element.querySelector('app-results-ai')
+    ).not.toBeNull();
+
+    expect(
+      element.querySelector('app-results-evidences')
+    ).not.toBeNull();
+
+    expect(
+      evaluationServiceSpy.getLastEvaluationResult
+    ).toHaveBeenCalledTimes(2);
+
+    expect(
+      evidenceServiceSpy.getEvidences
+    ).toHaveBeenCalledOnceWith(
+      mockResults.evaluation_id
+    );
+
+  });
+
+  it('should handle a results request that completes without emitting data', () => {
+
+    evaluationServiceSpy.getLastEvaluationResult
+      .and.returnValue(EMPTY);
+
+    component.loadResults();
+
+    expect(component.resultsLoadState).toBe('error');
+
+    expect(component.results).toBeNull();
+
+    expect(component.resultsLoadError).toBe(
+      'No fue posible cargar los resultados ASG. Inténtalo nuevamente.'
+    );
+
+    expect(
+      evidenceServiceSpy.getEvidences
+    ).not.toHaveBeenCalled();
+
+  });
+  it('should cancel the previous results request when retrying', () => {
+
+    const firstRequest =
+      new Subject<ResultEvaluation>();
+
+    const secondRequest =
+      new Subject<ResultEvaluation>();
+
+    const updatedResults: ResultEvaluation = {
+      ...mockResults,
+      evaluation_id: 2,
+      global_score: 9.2
+    };
+
+    evaluationServiceSpy.getLastEvaluationResult
+      .and.returnValues(
+        firstRequest.asObservable(),
+        secondRequest.asObservable()
+      );
+
+    component.loadResults();
+
+    expect(firstRequest.observed).toBeTrue();
+
+    expect(component.resultsLoadState)
+      .toBe('loading');
+
+    // Iniciar una segunda solicitud.
+    component.loadResults();
+
+    expect(firstRequest.observed).toBeFalse();
+
+    expect(secondRequest.observed).toBeTrue();
+
+    // Simular una respuesta tardía de la primera.
+    firstRequest.next(mockResults);
+    firstRequest.complete();
+
+    expect(component.results).toBeNull();
+
+    expect(component.resultsLoadState)
+      .toBe('loading');
+
+    // Resolver la solicitud vigente.
+    secondRequest.next(updatedResults);
+    secondRequest.complete();
+
+    expect(component.results).toEqual(updatedResults);
+
+    expect(component.resultsLoadState)
+      .toBe('success');
+
+    expect(
+      evaluationServiceSpy.getLastEvaluationResult
+    ).toHaveBeenCalledTimes(2);
+
+    expect(
+      evidenceServiceSpy.getEvidences
+    ).toHaveBeenCalledOnceWith(2);
+
+  });
+  it('should cancel pending results when switching companies', () => {
+
+    const companyARequest =
+      new Subject<ResultEvaluation>();
+
+    const companyBRequest =
+      new Subject<ResultEvaluation>();
+
+    const companyBResults: ResultEvaluation = {
+      ...mockResults,
+      evaluation_id: 2,
+      global_score: 7.8
+    };
+
+    evaluationServiceSpy.getLastEvaluationResult
+      .and.returnValues(
+        companyARequest.asObservable(),
+        companyBRequest.asObservable()
+      );
+
+    // Inicializar Empresa A.
+    fixture.detectChanges();
+    TestBed.flushEffects();
+    fixture.detectChanges();
+
+    expect(companyARequest.observed).toBeTrue();
+
+    expect(component.resultsLoadState)
+      .toBe('loading');
+
+    // Cambiar a Empresa B.
+    selectedCompanyId.set(7);
+
+    fixture.detectChanges();
+    TestBed.flushEffects();
+    fixture.detectChanges();
+
+    expect(companyARequest.observed).toBeFalse();
+
+    expect(companyBRequest.observed).toBeTrue();
+
+    // Respuesta tardía de Empresa A.
+    companyARequest.next(mockResults);
+    companyARequest.complete();
+
+    expect(component.results).toBeNull();
+
+    expect(component.resultsLoadState)
+      .toBe('loading');
+    fixture.detectChanges();
+
+    expect(
+      fixture.nativeElement.querySelector(
+        'app-results-skeleton'
+      )
+    ).not.toBeNull();
+
+    expect(
+      fixture.nativeElement.querySelector(
+        'app-results-performance'
+      )
+    ).toBeNull();
+    // Respuesta de Empresa B.
+    companyBRequest.next(companyBResults);
+    companyBRequest.complete();
+
+    expect(component.results)
+      .toEqual(companyBResults);
+
+    expect(component.resultsLoadState)
+      .toBe('success');
+
+    expect(
+      evidenceServiceSpy.getEvidences
+    ).toHaveBeenCalledOnceWith(2);
+
+    expect(selectedCompanyId()).toBe(7);
+
+    fixture.detectChanges();
+
+    expect(
+      fixture.nativeElement.querySelector(
+        'app-results-skeleton'
+      )
+    ).toBeNull();
+
+    expect(
+      fixture.nativeElement.querySelector(
+        'app-results-performance'
+      )
+    ).not.toBeNull();
+
+  });
+  it('should cancel pending results when the component is destroyed', () => {
+
+    const pendingResults =
+      new Subject<ResultEvaluation>();
+
+    evaluationServiceSpy.getLastEvaluationResult
+      .and.returnValue(
+        pendingResults.asObservable()
+      );
+
+    fixture.detectChanges();
+    TestBed.flushEffects();
+    fixture.detectChanges();
+
+    expect(component.resultsLoadState)
+      .toBe('loading');
+
+    expect(pendingResults.observed).toBeTrue();
+
+    // Abandonar la pantalla de Resultados.
+    fixture.destroy();
+
+    expect(pendingResults.observed).toBeFalse();
+
+    // Simular una respuesta posterior.
+    pendingResults.next(mockResults);
+    pendingResults.complete();
+
+    expect(component.results).toBeNull();
+
+    expect(
+      evidenceServiceSpy.getEvidences
+    ).not.toHaveBeenCalled();
+
+    // No permitir otra carga tras la destrucción.
+    component.loadResults();
+
+    expect(
+      evaluationServiceSpy.getLastEvaluationResult
+    ).toHaveBeenCalledTimes(1);
+
+  });
+  it('should reset evaluation-dependent states when reloading results', () => {
+
+    const pendingResults =
+      new Subject<ResultEvaluation>();
+
+    evaluationServiceSpy.getLastEvaluationResult
+      .and.returnValues(
+        of(mockResults),
+        pendingResults.asObservable()
+      );
+
+    component.loadResults();
+
+    expect(component.resultsLoadState)
+      .toBe('success');
+
+    // Simular estados de la evaluación anterior.
+    component.aiExplanation =
+      'Explicación de la evaluación anterior';
+
+    component.generatingAIExplanation = true;
+
+    component.aiExplanationError =
+      'Error anterior de IA';
+
+    component.evidences = mockEvidences;
+
+    component.loadingEvidences = true;
+
+    component.evidencesError = true;
+
+    component.downloadingEvidenceId = 3;
+
+    component.evidenceDownloadError =
+      'Error anterior de descarga';
+
+    component.asgReportError =
+      'Error anterior del reporte';
+
+    // Recargar resultados.
+    component.loadResults();
+
+    expect(component.resultsLoadState)
+      .toBe('loading');
+
+    expect(component.results).toBeNull();
+
+    // Estados IA.
+    expect(component.aiExplanation).toBeNull();
+
+    expect(component.generatingAIExplanation)
+      .toBeFalse();
+
+    expect(component.aiExplanationError)
+      .toBeNull();
+
+    // Estados de evidencias.
+    expect(component.evidences).toEqual([]);
+
+    expect(component.loadingEvidences)
+      .toBeFalse();
+
+    expect(component.evidencesError)
+      .toBeFalse();
+
+    expect(component.downloadingEvidenceId)
+      .toBeNull();
+
+    expect(component.evidenceDownloadError)
+      .toBeNull();
+
+    // Periodos anteriores.
+    expect(component.mesActual).toBe('');
+
+    expect(component.anioActual).toBe('');
+
+    expect(component.mesAnterior).toBe('');
+
+    expect(component.anioAnterior).toBe('');
+
+    // Estado del reporte.
+    expect(component.asgReportError).toBeNull();
+
+    pendingResults.next(mockResults);
+    pendingResults.complete();
+
+    expect(component.resultsLoadState)
+      .toBe('success');
+
+  });
+  it('should invalidate a pending ASG report when reloading the same evaluation', async () => {
+
+    const pendingReport =
+      new Subject<AsgReport>();
+
+    asgReportServiceSpy.getReport
+      .and.returnValue(
+        pendingReport.asObservable()
+      );
+
+    evaluationServiceSpy.getLastEvaluationResult
+      .and.returnValue(
+        of(mockResults)
+      );
+
+    // Inicializar el contexto.
+    fixture.detectChanges();
+    TestBed.flushEffects();
+    fixture.detectChanges();
+
+    expect(component.resultsLoadState)
+      .toBe('success');
+
+    const renderSpy = spyOn(
+      component as any,
+      'waitForReportRender'
+    ).and.resolveTo();
+
+    const exportSpy = spyOn(
+      component,
+      'exportAsgReport'
+    ).and.resolveTo();
+
+    // Iniciar generación del reporte.
+    const downloadPromise =
+      component.downloadAsgReport();
+
+    expect(component.generatingAsgReport)
+      .toBeTrue();
+
+    expect(asgReportServiceSpy.getReport)
+      .toHaveBeenCalledOnceWith(1);
+
+    // Recargar la misma evaluación.
+    component.loadResults();
+
+    expect(component.resultsLoadState)
+      .toBe('success');
+
+    expect(component.results?.evaluation_id)
+      .toBe(1);
+
+    expect(selectedCompanyId()).toBe(3);
+
+    // La exportación sigue bloqueada hasta
+    // finalizar la operación pendiente.
+    expect(component.generatingAsgReport)
+      .toBeTrue();
+
+    // Respuesta tardía del reporte original.
+    pendingReport.next({
+      evaluation: mockResults
+    } as AsgReport);
+
+    pendingReport.complete();
+
+    await downloadPromise;
+
+    expect(renderSpy).not.toHaveBeenCalled();
+
+    expect(exportSpy).not.toHaveBeenCalled();
+
+    expect(
+      asgPdfServiceSpy.generatePdf
+    ).not.toHaveBeenCalled();
+
+    expect(component.asgReport).toBeNull();
+
+    expect(component.generatingAsgReport)
+      .toBeFalse();
+
+    expect(component.asgReportError).toBeNull();
+
+    expect(component.resultsLoadState)
+      .toBe('success');
+
+  });
+  it('should not duplicate the initial request after an early manual load', () => {
+
+    const pendingResults =
+      new Subject<ResultEvaluation>();
+
+    evaluationServiceSpy.getLastEvaluationResult
+      .and.returnValue(
+        pendingResults.asObservable()
+      );
+
+    // Solicitar resultados antes de la primera
+    // emisión automática del contexto.
+    component.loadResults();
+
+    expect(
+      evaluationServiceSpy.getLastEvaluationResult
+    ).toHaveBeenCalledTimes(1);
+
+    expect(pendingResults.observed).toBeTrue();
+
+    // Procesar la emisión inicial del contexto.
+    fixture.detectChanges();
+    TestBed.flushEffects();
+    fixture.detectChanges();
+
+    // No debe iniciarse otra solicitud.
+    expect(
+      evaluationServiceSpy.getLastEvaluationResult
+    ).toHaveBeenCalledTimes(1);
+
+    expect(component.resultsLoadState)
+      .toBe('loading');
+
+    pendingResults.next(mockResults);
+    pendingResults.complete();
+
+    expect(component.resultsLoadState)
+      .toBe('success');
+
+    expect(component.results).toEqual(mockResults);
+
+    expect(
+      evidenceServiceSpy.getEvidences
+    ).toHaveBeenCalledOnceWith(1);
+
+  });
+
+  it('should recover from AI unavailability after a successful retry', () => {
+
+    component.results = mockResults;
+
+    evaluationServiceSpy.generateAIExplanation
+      .and.returnValues(
+
+        throwError(() => new HttpErrorResponse({
+          status: 503
+        })),
+
+        of({
+          evaluation_id: mockResults.evaluation_id,
+          explanation: 'Interpretación recuperada.',
+          generated_by_ai: true
+        })
+
+      );
+
+    component.generateAIExplanation();
+
+    expect(component.aiExplanationUnavailable)
+      .toBeTrue();
+
+    component.generateAIExplanation();
+
+    expect(component.aiExplanationUnavailable)
+      .toBeFalse();
+
+    expect(component.aiExplanationError)
+      .toBeNull();
+
+    expect(component.generatingAIExplanation)
+      .toBeFalse();
+
+    expect(component.aiExplanation)
+      .toBe('Interpretación recuperada.');
+
+    expect(
+      evaluationServiceSpy.generateAIExplanation
+    ).toHaveBeenCalledTimes(2);
+
+  });
+  it('should handle an AI explanation request that completes without data', () => {
+
+    component.results = mockResults;
+
+    evaluationServiceSpy.generateAIExplanation
+      .and.returnValue(EMPTY);
+
+    component.generateAIExplanation();
+
+    expect(component.generatingAIExplanation)
+      .toBeFalse();
+
+    expect(component.aiExplanation)
+      .toBeNull();
+
+    expect(component.aiExplanationUnavailable)
+      .toBeFalse();
+
+    expect(component.aiExplanationError)
+      .toBe('No se recibió una explicación válida.');
+
+  });
+  it('should distinguish generic AI errors from service unavailability', () => {
+
+    component.results = mockResults;
+
+    evaluationServiceSpy.generateAIExplanation
+      .and.returnValue(
+        throwError(() => new HttpErrorResponse({
+          status: 500
+        }))
+      );
+
+    component.generateAIExplanation();
+
+    expect(component.aiExplanationUnavailable)
+      .toBeFalse();
+
+    expect(component.generatingAIExplanation)
+      .toBeFalse();
+
+    expect(component.aiExplanationError)
+      .toBe(
+        'No fue posible generar la explicación. Inténtalo nuevamente.'
+      );
+
+  });
+  it('should reset AI unavailability when reloading evaluation results', () => {
+
+    evaluationServiceSpy.getLastEvaluationResult
+      .and.returnValue(of(mockResults));
+
+    component.loadResults();
+
+    component.aiExplanationUnavailable = true;
+
+    component.aiExplanationError =
+      'Servicio IA no disponible.';
+
+    component.loadResults();
+
+    expect(component.aiExplanationUnavailable)
+      .toBeFalse();
+
+    expect(component.aiExplanationError)
+      .toBeNull();
+
+    expect(component.aiExplanation)
+      .toBeNull();
+
+    expect(component.resultsLoadState)
+      .toBe('success');
+
+  });
+
+  it('should expose AI unavailability when the service returns HTTP 503', () => {
+
+    component.results = mockResults;
+
+    evaluationServiceSpy.generateAIExplanation
+      .and.returnValue(
+        throwError(() => new HttpErrorResponse({
+          status: 503,
+          statusText: 'Service Unavailable'
+        }))
+      );
+
+    component.generateAIExplanation();
+
+    expect(component.aiExplanationUnavailable)
+      .toBeTrue();
+
+    expect(component.generatingAIExplanation)
+      .toBeFalse();
+
+    expect(component.aiExplanation)
+      .toBeNull();
+
+    expect(component.aiExplanationError)
+      .toContain('no está disponible');
+
+    expect(component.results)
+      .toEqual(mockResults);
+
+  });
+
+
+  it('should not navigate to evaluation outside the empty state', () => {
+
+    const router = TestBed.inject(Router);
+    const navigateSpy = spyOn(router, 'navigate');
+
+    selectedCompanyId.set(1);
+
+    component.resultsLoadState = 'success';
+    component.results = mockResults;
+
+    component.openEvaluation();
+
+    expect(navigateSpy).not.toHaveBeenCalled();
+
+  });
+
+  it('should not navigate to evaluation without a selected company', () => {
+
+    const router = TestBed.inject(Router);
+    const navigateSpy = spyOn(router, 'navigate');
+
+    selectedCompanyId.set(null);
+
+    component.resultsLoadState = 'empty';
+
+    component.openEvaluation();
+
+    expect(navigateSpy).not.toHaveBeenCalled();
+
+  });
+
 });

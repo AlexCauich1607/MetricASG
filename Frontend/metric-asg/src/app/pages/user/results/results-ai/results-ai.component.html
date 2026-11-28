@@ -1,164 +1,366 @@
-<section class="asg-card results-ai" data-html2canvas-ignore aria-labelledby="ai-explanation-title">
+<section
+  class="asg-card results-ai"
+  [class.results-ai--assistant]="
+    !generating && !error && !unavailable && !explanation
+  "
+  data-html2canvas-ignore
+  aria-labelledby="ai-explanation-title">
+  @if (!generating && !error && !unavailable && !explanation) {
 
-  <header class="results-panel-header">
+    <!-- Estado inicial: asistente inteligente -->
 
-    <div class="results-panel-header__identity">
+    <div class="results-ai__hero">
 
-      <span class="results-panel-header__icon" aria-hidden="true">
+      <div
+        class="results-ai__hero-decoration"
+        aria-hidden="true">
+
+        <span></span>
+        <span></span>
+        <span></span>
 
         <i class="bi bi-stars"></i>
 
-      </span>
+      </div>
 
-      <div class="results-panel-header__content">
+      <div class="results-ai__hero-content">
+
+        <div class="results-ai__hero-eyebrow">
+
+          <i
+            class="bi bi-stars"
+            aria-hidden="true">
+          </i>
+
+          <span>Inteligencia artificial</span>
+
+        </div>
 
         <h2 id="ai-explanation-title">
-          Interpretación con IA
+          Comprende lo que hay detrás
+          de tus resultados.
         </h2>
 
-        <p>
-          Obtén un análisis complementario
-          de tu desempeño ASG.
+        <p class="results-ai__hero-description">
+          Un análisis personalizado para entender
+          el desempeño ASG de tu empresa y orientar
+          tus próximos pasos.
         </p>
+
+        <button
+          type="button"
+          class="asg-btn results-ai__hero-button"
+          (click)="requestExplanation()">
+
+          <i
+            class="bi bi-stars"
+            aria-hidden="true">
+          </i>
+
+          <span>Generar interpretación</span>
+
+          <i
+            class="bi bi-arrow-right results-ai__hero-arrow"
+            aria-hidden="true">
+          </i>
+
+        </button>
 
       </div>
 
     </div>
 
+  } @else {
 
-    <div class="results-ai__actions">
+    <!-- Encabezado de estados activos -->
 
-      <button type="button" class="asg-btn" [class.asg-btn--primary]="!explanation"
-        [class.asg-btn--secondary]="!!explanation" [disabled]="generating" [attr.aria-busy]="generating"
-        (click)="requestExplanation()">
+    <header class="results-panel-header">
 
-        @if (generating) {
+      <div class="results-panel-header__identity">
 
-        <span class="spinner-border spinner-border-sm" aria-hidden="true">
+        <span
+          class="results-panel-header__icon"
+          aria-hidden="true">
+
+          <i class="bi bi-stars"></i>
+
         </span>
 
-        Generando explicación...
+        <div class="results-panel-header__content">
 
-        } @else {
+          <h2 id="ai-explanation-title">
+            Interpretación con IA
+          </h2>
 
-        <i [class]="explanation || error
-          ? 'bi bi-arrow-clockwise'
-          : 'bi bi-stars'" aria-hidden="true">
-        </i>
+          <p>
+            Obtén un análisis complementario
+            de tu desempeño ASG.
+          </p>
 
-        {{ explanation
-        ? 'Generar nuevamente'
-        : error
-        ? 'Reintentar'
-        : 'Generar explicación con IA'
-        }}
-
-        }
-
-      </button>
-
-    </div>
-
-
-  </header>
-
-
-  <div class="results-ai__body" [attr.aria-busy]="generating">
-
-    @if (generating) {
-
-    <div class="results-ai__loading" role="status">
-
-      <span class="spinner-border spinner-border-sm" aria-hidden="true">
-      </span>
-
-      <div class="results-ai__loading-content">
-
-        <p class="results-ai__loading-title">
-          Analizando tus resultados...
-        </p>
-
-        <p class="results-ai__loading-description">
-          Estamos preparando una interpretación
-          de las puntuaciones de tu empresa.
-        </p>
+        </div>
 
       </div>
 
-    </div>
+      <div class="results-ai__actions">
 
-    }
+        <button
+          type="button"
+          class="asg-btn"
+          [class.asg-btn--primary]="!explanation"
+          [class.asg-btn--secondary]="!!explanation"
+          [disabled]="generating"
+          [attr.aria-busy]="generating"
+          aria-controls="ai-explanation-body"
+          (click)="requestExplanation()">
 
-    @if (error) {
+          @if (generating) {
 
-    <div class="alert alert-danger mb-0 results-ai__error" role="alert">
+            <span
+              class="spinner-border spinner-border-sm"
+              aria-hidden="true">
+            </span>
 
-      <i class="bi bi-exclamation-circle" aria-hidden="true">
-      </i>
+            Generando explicación...
 
-      <span>
-        {{ error }}
-      </span>
+          } @else {
 
-    </div>
+            <i
+              [class]="explanation || error || unavailable
+                ? 'bi bi-arrow-clockwise'
+                : 'bi bi-stars'"
+              aria-hidden="true">
+            </i>
 
-    }
+            {{
+              unavailable || error
+                ? 'Reintentar'
+                : explanation
+                  ? 'Generar nuevamente'
+                  : 'Generar explicación con IA'
+            }}
 
-    @if (explanation) {
+          }
 
-    <article class="results-ai__interpretation" aria-live="polite">
-
-      <header class="results-ai__interpretation-header">
-
-        <i class="bi bi-stars" aria-hidden="true">
-        </i>
-
-        <h3>
-          Interpretación de los resultados
-        </h3>
-
-      </header>
-
-
-      <div class="results-ai__explanation">
-
-        @for (block of explanationBlocks; track $index) {
-
-        @switch (block.type) {
-
-        @case ('heading') {
-
-        <h4 class="results-ai__section-title">
-          {{ block.text }}
-        </h4>
-
-        }
-
-        @case ('paragraph') {
-
-        <p class="results-ai__paragraph">
-          {{ block.text }}
-        </p>
-
-        }
-
-        }
-
-        }
+        </button>
 
       </div>
 
+    </header>
 
-    </article>
+    <div
+      id="ai-explanation-body"
+      class="results-ai__body">
 
-    }
+      @if (generating) {
 
-  </div>
+        <!-- Estado de generación -->
 
+        <div class="results-ai__loading">
+
+          <div
+            class="results-ai__loading-header"
+            role="status"
+            aria-live="polite">
+
+            <span
+              class="spinner-border spinner-border-sm"
+              aria-hidden="true">
+            </span>
+
+            <div class="results-ai__loading-content">
+
+              <p class="results-ai__loading-title">
+                Analizando tus resultados...
+              </p>
+
+              <p class="results-ai__loading-description">
+                Estamos preparando una interpretación
+                de las puntuaciones de tu empresa.
+              </p>
+
+            </div>
+
+          </div>
+
+          <div
+            class="results-ai__skeleton"
+            aria-hidden="true">
+
+            <div class="results-ai__skeleton-group">
+
+              <span
+                class="results-ai__skeleton-line
+                       results-ai__skeleton-line--heading">
+              </span>
+
+              <span class="results-ai__skeleton-line"></span>
+
+              <span
+                class="results-ai__skeleton-line
+                       results-ai__skeleton-line--long">
+              </span>
+
+              <span
+                class="results-ai__skeleton-line
+                       results-ai__skeleton-line--medium">
+              </span>
+
+            </div>
+
+            <div class="results-ai__skeleton-group">
+
+              <span
+                class="results-ai__skeleton-line
+                       results-ai__skeleton-line--heading">
+              </span>
+
+              <span class="results-ai__skeleton-line"></span>
+
+              <span
+                class="results-ai__skeleton-line
+                       results-ai__skeleton-line--long">
+              </span>
+
+              <span
+                class="results-ai__skeleton-line
+                       results-ai__skeleton-line--short">
+              </span>
+
+            </div>
+
+          </div>
+
+        </div>
+
+      } @else if (unavailable) {
+
+        <!-- Servicio IA no disponible -->
+
+        <div
+          class="results-ai__unavailable"
+          role="status">
+
+          <i
+            class="bi bi-info-circle"
+            aria-hidden="true">
+          </i>
+
+          <div class="results-ai__feedback-content">
+
+            <p class="results-ai__feedback-title">
+              Servicio IA no disponible
+            </p>
+
+            <p>
+              {{ error ||
+                'La interpretación inteligente no está disponible en este momento.'
+              }}
+            </p>
+
+            <p>
+              Puedes seguir consultando tus resultados
+              y recomendaciones tradicionales.
+            </p>
+
+          </div>
+
+        </div>
+
+      } @else if (error) {
+
+        <!-- Error recuperable -->
+
+        <div
+          class="alert alert-danger mb-0 results-ai__error"
+          role="alert">
+
+          <i
+            class="bi bi-exclamation-circle"
+            aria-hidden="true">
+          </i>
+
+          <div class="results-ai__feedback-content">
+
+            <p class="results-ai__feedback-title">
+              No se pudo generar la explicación
+            </p>
+
+            <p>
+              {{ error }}
+            </p>
+
+            <p>
+              Tus puntuaciones ASG permanecen disponibles.
+            </p>
+
+          </div>
+
+        </div>
+
+      } @else if (explanationBlocks.length) {
+
+        <!-- Interpretación generada -->
+
+        <article
+          class="results-ai__interpretation"
+          aria-live="polite">
+
+          <header class="results-ai__interpretation-header">
+
+            <i
+              class="bi bi-stars"
+              aria-hidden="true">
+            </i>
+
+            <h3>
+              Interpretación de los resultados
+            </h3>
+
+          </header>
+
+          <div class="results-ai__explanation">
+
+            @for (block of explanationBlocks; track $index) {
+
+              @switch (block.type) {
+
+                @case ('heading') {
+
+                  <h4 class="results-ai__section-title">
+                    {{ block.text }}
+                  </h4>
+
+                }
+
+                @case ('paragraph') {
+
+                  <p class="results-ai__paragraph">
+                    {{ block.text }}
+                  </p>
+
+                }
+
+              }
+
+            }
+
+          </div>
+
+        </article>
+
+      }
+
+    </div>
+
+  }
+
+  <!-- Advertencia permanente -->
 
   <footer class="results-ai__disclaimer">
 
-    <i class="bi bi-info-circle" aria-hidden="true">
+    <i
+      class="bi bi-info-circle"
+      aria-hidden="true">
     </i>
 
     <p>

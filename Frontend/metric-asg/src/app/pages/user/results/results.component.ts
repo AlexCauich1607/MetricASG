@@ -4,8 +4,15 @@ import {
   switchMap,
   tap,
   catchError,
-  Subscription
+  Subscription,
+  Subject,
+  merge,
+  defer,
+  defaultIfEmpty,
+  map,
+  filter
 } from 'rxjs';
+
 import { toObservable, takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import {
   Component,
@@ -44,6 +51,17 @@ import {
 
 import { AsgReportAssetsService } from '../../../services/asg-report-assets.service';
 
+import { HttpErrorResponse } from '@angular/common/http';
+
+import { ResultsSkeletonComponent } from
+  './results-skeleton/results-skeleton.component';
+
+export type ResultsLoadState =
+  | 'idle'
+  | 'loading'
+  | 'success'
+  | 'empty'
+  | 'error';
 
 @Component({
   selector: 'app-results',
@@ -52,7 +70,8 @@ import { AsgReportAssetsService } from '../../../services/asg-report-assets.serv
     AsgReportTemplateComponent,
     ResultsAiComponent,
     ResultsEvidencesComponent,
-    ResultsPerformanceComponent
+    ResultsPerformanceComponent,
+    ResultsSkeletonComponent
   ],
   templateUrl: './results.component.html',
   changeDetection: ChangeDetectionStrategy.Eager,
@@ -67,6 +86,14 @@ export class ResultsComponent {
   anioAnterior = '';
 
   results: ResultEvaluation | null = null;
+  resultsLoadState: ResultsLoadState = 'idle';
+
+  resultsLoadError: string | null = null;
+
+  private readonly resultsReloadRequest =
+    new Subject<number | null>();
+  private lastRequestedCompanyId:
+    number | null | undefined = undefined;
   evidences: EvaluationEvidence[] = [];
   loadingEvidences = false;
   evidencesError = false;
@@ -85,8 +112,12 @@ export class ResultsComponent {
 
 
   aiExplanation: string | null = null;
+
   generatingAIExplanation = false;
+
   aiExplanationError: string | null = null;
+
+  aiExplanationUnavailable = false;
 
   private aiExplanationRequest?: Subscription;
 
@@ -99,6 +130,63 @@ export class ResultsComponent {
   private reportContextVersion = 0;
 
   private componentDestroyed = false;
+
+  private handleResultsLoadError(error: unknown): void {
+
+    this.results = null;
+
+    this.evidences = [];
+    this.loadingEvidences = false;
+    this.evidencesError = false;
+
+    if (
+      error instanceof HttpErrorResponse &&
+      error.status === 404 &&
+      error.error?.detail === 'No evaluations found'
+    ) {
+      this.resultsLoadState = 'empty';
+      this.resultsLoadError = null;
+
+      this.cdr.markForCheck();
+
+      return;
+    }
+
+    this.resultsLoadState = 'error';
+
+    if (error instanceof HttpErrorResponse) {
+
+      switch (error.status) {
+
+        case 0:
+          this.resultsLoadError =
+            'No fue posible conectar con el servidor. Verifica tu conexión e inténtalo nuevamente.';
+          break;
+
+        case 401:
+          this.resultsLoadError =
+            'Tu sesión no es válida o ha expirado.';
+          break;
+
+        case 403:
+          this.resultsLoadError =
+            'No tienes permisos para consultar los resultados de esta empresa.';
+          break;
+
+        default:
+          this.resultsLoadError =
+            'No fue posible cargar los resultados ASG. Inténtalo nuevamente.';
+      }
+
+    } else {
+
+      this.resultsLoadError =
+        'No fue posible cargar los resultados ASG. Inténtalo nuevamente.';
+
+    }
+
+    this.cdr.markForCheck();
+  }
 
   get highestScoringAmbits() {
 
@@ -150,51 +238,153 @@ export class ResultsComponent {
     private companyContext: CompanyContextService,
     private destroyRef: DestroyRef
   ) {
+
     this.destroyRef.onDestroy(() => {
       this.componentDestroyed = true;
       this.reportContextVersion++;
     });
-    toObservable(this.companyContext.selectedCompanyId)
+
+    const companyChanges$ = toObservable(
+      this.companyContext.selectedCompanyId
+    ).pipe(
+      map(companyId => ({
+        companyId,
+        source: 'context' as const
+      }))
+    );
+
+    const manualReloads$ =
+      this.resultsReloadRequest.pipe(
+        map(companyId => ({
+          companyId,
+          source: 'manual' as const
+        }))
+      );
+
+    merge(
+      companyChanges$,
+      manualReloads$
+    )
       .pipe(
-        tap(() => {
-          // Invalidar exportaciones pertenecientes
-          // al contexto empresarial anterior.
-          this.reportContextVersion++;
 
-          this.evidenceRequest?.unsubscribe();
-          this.evidenceDownloadRequest?.unsubscribe();
-          this.aiExplanationRequest?.unsubscribe();
+        // Ignorar emisiones que ya no corresponden
+        // al contexto empresarial vigente.
+        filter(({ companyId }) =>
+          !this.componentDestroyed &&
+          companyId ===
+          this.companyContext.selectedCompanyId()
+        ),
 
-          this.clearResultsState();
+        // Ignorar emisiones automáticas redundantes,
+        // pero permitir siempre los reintentos manuales.
+        filter(({ companyId, source }) =>
+          source === 'manual' ||
+          companyId !== this.lastRequestedCompanyId
+        ),
 
-          this.aiExplanation = null;
-          this.generatingAIExplanation = false;
-          this.aiExplanationError = null;
+        tap(({ companyId }) => {
+          this.lastRequestedCompanyId = companyId;
+        }),
 
-          this.downloadingEvidenceId = null;
+        switchMap(({ companyId }) => {
+
+          this.resetResultsContext();
 
           this.name =
-            this.companyContext.selectedMembership()?.company_name ?? '';
-        }),
-        switchMap(companyId => {
+            this.companyContext.selectedMembership()
+              ?.company_name ?? '';
+
           if (companyId === null) {
+
+            this.resultsLoadState = 'idle';
+
+            this.cdr.markForCheck();
+
             return EMPTY;
           }
 
-          return this.resultService.getLastEvaluationResult().pipe(
+          this.resultsLoadState = 'loading';
+
+          this.cdr.markForCheck();
+
+          const contextVersion =
+            this.reportContextVersion;
+
+          const isCurrentContext = (): boolean =>
+            !this.componentDestroyed &&
+            this.reportContextVersion === contextVersion &&
+            this.companyContext.selectedCompanyId() === companyId;
+
+          return defer(() =>
+            this.resultService.getLastEvaluationResult()
+          ).pipe(
+
+            defaultIfEmpty(null),
+
+            tap(data => {
+
+              if (!isCurrentContext()) {
+                return;
+              }
+
+              if (data === null) {
+
+                this.handleResultsLoadError(
+                  new Error(
+                    'El servidor no devolvió resultados.'
+                  )
+                );
+
+                return;
+              }
+
+              this.results = data;
+
+              this.resultsLoadState = 'success';
+
+              this.resultsLoadError = null;
+
+              this.getPeriodo(data.date);
+
+              this.loadEvidences(data.evaluation_id);
+
+              this.cdr.markForCheck();
+
+            }),
+
             catchError(error => {
-              console.error('Error al cargar resultados:', error);
+
+              if (isCurrentContext()) {
+                this.handleResultsLoadError(error);
+              }
+
               return EMPTY;
             })
+
           );
+
         }),
+
         takeUntilDestroyed(this.destroyRef)
+
       )
-      .subscribe(data => {
-        this.results = data;
-        this.getPeriodo(data.date);
-        this.loadEvidences(data.evaluation_id);
-      });
+      .subscribe();
+
+  }
+
+  openEvaluation(): void {
+
+    if (
+      this.componentDestroyed ||
+      this.resultsLoadState !== 'empty' ||
+      this.companyContext.selectedCompanyId() === null
+    ) {
+      return;
+    }
+
+    void this.router.navigate([
+      '/user/evaluation'
+    ]);
 
   }
 
@@ -233,9 +423,11 @@ export class ResultsComponent {
 
 
   generateAIExplanation(): void {
+
     const evaluationId = this.results?.evaluation_id;
 
     if (
+      this.componentDestroyed ||
       evaluationId === undefined ||
       !Number.isSafeInteger(evaluationId) ||
       evaluationId <= 0 ||
@@ -248,34 +440,89 @@ export class ResultsComponent {
 
     this.aiExplanation = null;
     this.aiExplanationError = null;
+    this.aiExplanationUnavailable = false;
     this.generatingAIExplanation = true;
 
-    this.aiExplanationRequest = this.resultService
-      .generateAIExplanation(evaluationId)
-      .pipe(takeUntilDestroyed(this.destroyRef))
+    const companyId =
+      this.companyContext.selectedCompanyId();
+
+    const contextVersion =
+      this.reportContextVersion;
+
+    const isCurrentContext = (): boolean =>
+      !this.componentDestroyed &&
+      this.reportContextVersion === contextVersion &&
+      this.companyContext.selectedCompanyId() === companyId &&
+      this.results?.evaluation_id === evaluationId;
+
+    this.aiExplanationRequest = defer(() =>
+      this.resultService.generateAIExplanation(evaluationId)
+    )
+      .pipe(
+        defaultIfEmpty(null),
+        takeUntilDestroyed(this.destroyRef)
+      )
       .subscribe({
+
         next: response => {
+
+          if (!isCurrentContext()) {
+            return;
+          }
+
           if (
+            response === null ||
             response.evaluation_id !== evaluationId ||
             response.generated_by_ai !== true ||
+            typeof response.explanation !== 'string' ||
             !response.explanation.trim()
           ) {
+
             this.aiExplanationError =
               'No se recibió una explicación válida.';
+
           } else {
+
             this.aiExplanation = response.explanation;
+
           }
 
           this.generatingAIExplanation = false;
+
           this.cdr.markForCheck();
+
         },
-        error: () => {
-          this.aiExplanationError =
-            'No fue posible generar la explicación. Inténtalo nuevamente.';
+
+        error: (error: unknown) => {
+
+          if (!isCurrentContext()) {
+            return;
+          }
+
+          this.aiExplanationUnavailable =
+            error instanceof HttpErrorResponse &&
+            error.status === 503;
+
+          if (this.aiExplanationUnavailable) {
+
+            this.aiExplanationError =
+              'La interpretación inteligente no está disponible en este momento. Inténtalo más tarde.';
+
+          } else {
+
+            this.aiExplanationError =
+              'No fue posible generar la explicación. Inténtalo nuevamente.';
+
+          }
+
           this.generatingAIExplanation = false;
+
           this.cdr.markForCheck();
+
         }
+
       });
+
   }
 
   loadEvidences(evaluationId: number): void {
@@ -346,10 +593,32 @@ export class ResultsComponent {
     });
   }
 
+  private resetResultsContext(): void {
 
+    // Invalidar exportaciones PDF anteriores.
+    this.reportContextVersion++;
+
+    // Cancelar solicitudes relacionadas con
+    // la evaluación anterior.
+    this.evidenceRequest?.unsubscribe();
+    this.evidenceDownloadRequest?.unsubscribe();
+    this.aiExplanationRequest?.unsubscribe();
+
+    this.evidenceRequest = undefined;
+    this.evidenceDownloadRequest = undefined;
+    this.aiExplanationRequest = undefined;
+
+    this.clearResultsState();
+
+    this.resultsLoadState = 'idle';
+    this.resultsLoadError = null;
+
+    this.cdr.markForCheck();
+  }
 
   private clearResultsState(): void {
 
+    // Resultados
     this.results = null;
 
     // Periodos de evaluación
@@ -362,7 +631,15 @@ export class ResultsComponent {
     this.evidences = [];
     this.loadingEvidences = false;
     this.evidencesError = false;
+
+    this.downloadingEvidenceId = null;
     this.evidenceDownloadError = null;
+
+    // Explicaciones IA
+    this.aiExplanation = null;
+    this.generatingAIExplanation = false;
+    this.aiExplanationError = null;
+    this.aiExplanationUnavailable = false;
 
     // Reporte ASG
     this.asgReport = null;
@@ -370,29 +647,15 @@ export class ResultsComponent {
 
   }
 
-
   loadResults(): void {
 
-    this.resultService.getLastEvaluationResult().subscribe({
+    if (this.componentDestroyed) {
+      return;
+    }
 
-      next: (data) => {
-
-        this.results = data;
-
-        this.getPeriodo(data.date);
-
-        this.loadEvidences(data.evaluation_id);
-
-      },
-
-      error: (err) => {
-
-        this.evidences = [];
-        this.loadingEvidences = false;
-
-      }
-
-    });
+    this.resultsReloadRequest.next(
+      this.companyContext.selectedCompanyId()
+    );
 
   }
 

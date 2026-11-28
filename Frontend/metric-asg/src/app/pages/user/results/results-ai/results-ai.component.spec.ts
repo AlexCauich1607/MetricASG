@@ -237,6 +237,7 @@ describe('ResultsAiComponent', () => {
 
   });
 
+
   it('should render potentially unsafe HTML as plain text', () => {
 
     const unsafeContent =
@@ -292,149 +293,257 @@ describe('ResultsAiComponent', () => {
     );
 
   });
+  it('should render the intelligent assistant in its initial state', () => {
 
-  it('should identify known explanation headings', () => {
-
-    fixture.componentRef.setInput(
-      'explanation',
-      [
-        'Resumen general del resultado ASG',
-        '',
-        'La puntuación global es de 9.47 puntos.',
-        '',
-        'Interpretación de los resultados por ámbito',
-        '',
-        'El ámbito Ambiental obtuvo 9.80 puntos.',
-        '',
-        'Brechas registradas',
-        '',
-        'No se registran brechas.'
-      ].join('\n')
-    );
+    component.explanation = null;
+    component.generating = false;
+    component.error = null;
+    component.unavailable = false;
 
     fixture.detectChanges();
 
-    const element: HTMLElement = fixture.nativeElement;
-
-    const headings = Array.from(
-      element.querySelectorAll(
-        '.results-ai__section-title'
-      )
-    ).map(heading => heading.textContent?.trim());
-
-    expect(headings).toEqual([
-      'Resumen general del resultado ASG',
-      'Interpretación de los resultados por ámbito',
-      'Brechas registradas'
-    ]);
-
-  });
-
-  it('should render explanation paragraphs separately', () => {
-
-    fixture.componentRef.setInput(
-      'explanation',
-      'Resumen general del resultado ASG\r\n\r\n' +
-      'Primer párrafo de la explicación.\r\n\r\n' +
-      'Segundo párrafo de la explicación.'
-    );
-
-    fixture.detectChanges();
-
-    const element: HTMLElement = fixture.nativeElement;
-
-    const paragraphs = Array.from(
-      element.querySelectorAll(
-        '.results-ai__paragraph'
-      )
-    ).map(paragraph => paragraph.textContent?.trim());
-
-    expect(paragraphs).toEqual([
-      'Primer párrafo de la explicación.',
-      'Segundo párrafo de la explicación.'
-    ]);
-
-  });
-
-  it('should preserve unrecognized explanation content', () => {
-
-    fixture.componentRef.setInput(
-      'explanation',
-      'Información adicional\n\n' +
-      'La puntuación oficial es de 9.47 puntos.'
-    );
-
-    fixture.detectChanges();
-
-    const element: HTMLElement = fixture.nativeElement;
+    const element: HTMLElement =
+      fixture.nativeElement;
 
     expect(
-      element.querySelectorAll('.results-ai__section-title').length
-    ).toBe(0);
+      element.querySelector('.results-ai--assistant')
+    ).not.toBeNull();
 
-    expect(element.textContent).toContain(
-      'Información adicional'
+    expect(
+      element.querySelector('.results-ai__hero')
+    ).not.toBeNull();
+
+    expect(
+      element.querySelector('.results-panel-header')
+    ).toBeNull();
+
+    expect(
+      element.querySelector('.results-ai__hero-button')
+        ?.textContent
+    ).toContain('Generar interpretación');
+
+  });
+  it('should emit the generation event from the assistant button', () => {
+
+    const generateSpy = spyOn(
+      component.generate,
+      'emit'
     );
 
-    expect(element.textContent).toContain(
-      'La puntuación oficial es de 9.47 puntos.'
+    fixture.detectChanges();
+
+    const button: HTMLButtonElement =
+      fixture.nativeElement.querySelector(
+        '.results-ai__hero-button'
+      );
+
+    button.click();
+
+    expect(generateSpy).toHaveBeenCalledTimes(1);
+
+  });
+  it('should render an accessible skeleton while generating an explanation', () => {
+
+    fixture.componentRef.setInput(
+      'generating',
+      true
+    );
+
+    fixture.detectChanges();
+
+    const element: HTMLElement =
+      fixture.nativeElement;
+
+    const skeleton = element.querySelector(
+      '.results-ai__skeleton'
+    );
+
+    expect(skeleton).not.toBeNull();
+
+    expect(
+      skeleton?.getAttribute('aria-hidden')
+    ).toBe('true');
+
+    expect(
+      skeleton?.querySelectorAll(
+        '.results-ai__skeleton-line'
+      ).length
+    ).toBe(8);
+
+    expect(
+      element.querySelector(
+        '.results-ai__loading-header[role="status"]'
+      )
+    ).not.toBeNull();
+
+    expect(
+      element.querySelector('.results-ai__hero')
+    ).toBeNull();
+
+    const button: HTMLButtonElement =
+      element.querySelector(
+        '.results-ai__actions button'
+      )!;
+
+    expect(button.disabled).toBeTrue();
+
+  });
+  it('should prioritize the loading state over other explanation states', () => {
+
+    fixture.componentRef.setInput(
+      'explanation',
+      'Explicación anterior.'
+    );
+
+    fixture.componentRef.setInput(
+      'error',
+      'Error anterior.'
+    );
+
+    fixture.componentRef.setInput(
+      'unavailable',
+      true
+    );
+
+    fixture.componentRef.setInput(
+      'generating',
+      true
+    );
+
+    fixture.detectChanges();
+
+    const element: HTMLElement =
+      fixture.nativeElement;
+
+    expect(
+      element.querySelector('.results-ai__loading')
+    ).not.toBeNull();
+
+    for (const selector of [
+      '.results-ai__hero',
+      '.results-ai__error',
+      '.results-ai__unavailable',
+      '.results-ai__interpretation'
+    ]) {
+
+      expect(
+        element.querySelector(selector)
+      ).toBeNull();
+
+    }
+
+  });
+  it('should render a dedicated unavailable state', () => {
+
+    fixture.componentRef.setInput(
+      'unavailable',
+      true
+    );
+
+    fixture.componentRef.setInput(
+      'error',
+      'El servicio IA no está disponible.'
+    );
+
+    fixture.detectChanges();
+
+    const element: HTMLElement =
+      fixture.nativeElement;
+
+    const unavailable = element.querySelector(
+      '.results-ai__unavailable'
+    );
+
+    expect(unavailable).not.toBeNull();
+
+    expect(unavailable?.textContent).toContain(
+      'Servicio IA no disponible'
+    );
+
+    expect(
+      unavailable?.getAttribute('role')
+    ).toBe('status');
+
+    expect(
+      element.querySelector('.results-ai__error')
+    ).toBeNull();
+
+    const button: HTMLButtonElement =
+      element.querySelector(
+        '.results-ai__actions button'
+      )!;
+
+    expect(button.disabled).toBeFalse();
+
+    expect(button.textContent).toContain(
+      'Reintentar'
     );
 
   });
+  it('should reuse processed explanation blocks when the explanation has not changed', () => {
 
-  it('should render potentially unsafe HTML as plain text', () => {
+    const explanation =
+      'Resumen general del resultado ASG\n\n' +
+      'La empresa presenta un desempeño favorable.';
 
-    const unsafeContent =
-      '<img src="invalid" onerror="alert(1)">';
+    component.explanation = explanation;
 
-    fixture.componentRef.setInput(
-      'explanation',
-      unsafeContent
-    );
+    const originalBlocks =
+      component.explanationBlocks;
 
-    fixture.detectChanges();
+    expect(originalBlocks.length)
+      .toBeGreaterThan(0);
 
-    const content: HTMLElement =
-      fixture.nativeElement.querySelector(
-        '.results-ai__explanation'
-      );
+    component.explanation = explanation;
 
-    expect(content.querySelector('img')).toBeNull();
+    expect(component.explanationBlocks)
+      .toBe(originalBlocks);
 
-    expect(content.textContent).toContain(
-      unsafeContent
-    );
+    component.explanation =
+      'Una explicación diferente.';
+
+    expect(component.explanationBlocks)
+      .not.toBe(originalBlocks);
+
+    expect(component.explanationBlocks)
+      .toEqual([
+        {
+          type: 'paragraph',
+          text: 'Una explicación diferente.'
+        }
+      ]);
 
   });
-
-  it('should update formatted content when explanation changes', () => {
-
-    fixture.componentRef.setInput(
-      'explanation',
-      'Resumen ejecutivo\n\nPrimera interpretación.'
-    );
+  it('should hide decorative elements from assistive technologies', () => {
 
     fixture.detectChanges();
 
-    fixture.componentRef.setInput(
-      'explanation',
-      'Conclusión\n\nSegunda interpretación.'
+    const element: HTMLElement =
+      fixture.nativeElement;
+
+    const section = element.querySelector(
+      '.results-ai'
     );
 
-    fixture.detectChanges();
-
-    const content: HTMLElement =
-      fixture.nativeElement.querySelector(
-        '.results-ai__explanation'
-      );
-
-    expect(content.textContent).toContain(
-      'Segunda interpretación.'
+    const decoration = element.querySelector(
+      '.results-ai__hero-decoration'
     );
 
-    expect(content.textContent).not.toContain(
-      'Primera interpretación.'
-    );
+    expect(
+      section?.getAttribute('aria-labelledby')
+    ).toBe('ai-explanation-title');
+
+    expect(
+      element.querySelector('#ai-explanation-title')
+    ).not.toBeNull();
+
+    expect(
+      decoration?.getAttribute('aria-hidden')
+    ).toBe('true');
+
+    expect(
+      element.querySelector('.results-ai__disclaimer')
+    ).not.toBeNull();
 
   });
 

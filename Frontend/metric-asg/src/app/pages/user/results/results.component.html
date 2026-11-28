@@ -34,6 +34,189 @@
 
 
 
+    <!-- HU-058-T05.5 — Estados de Resultados -->
+
+    @switch (resultsLoadState) {
+
+    <!-- Sin empresa seleccionada -->
+
+    @case ('idle') {
+
+    <section class="asg-card results-state" aria-labelledby="results-idle-title">
+
+      <div class="results-state__decoration" aria-hidden="true">
+
+        <span></span>
+        <span></span>
+        <span></span>
+
+        <i class="bi bi-buildings"></i>
+
+      </div>
+
+      <div class="results-state__content">
+
+        <span class="results-state__eyebrow">
+
+          <i class="bi bi-building" aria-hidden="true">
+          </i>
+
+          Contexto empresarial
+
+        </span>
+
+        <h2 id="results-idle-title">
+
+          Selecciona una empresa
+
+        </h2>
+
+        <p>
+
+          Selecciona una empresa desde el menú de
+          navegación para consultar sus resultados ASG.
+
+        </p>
+
+      </div>
+
+    </section>
+
+    }
+
+    <!-- Carga de resultados -->
+
+    @case ('loading') {
+
+    <app-results-skeleton data-html2canvas-ignore>
+    </app-results-skeleton>
+
+    }
+
+    <!-- Sin evaluaciones completadas -->
+
+    @case ('empty') {
+
+    <section class="asg-card results-state results-state--empty" aria-labelledby="results-empty-title">
+
+      <div class="results-state__decoration" aria-hidden="true">
+
+        <span></span>
+        <span></span>
+        <span></span>
+
+        <i class="bi bi-clipboard-data"></i>
+
+      </div>
+
+      <div class="results-state__content">
+
+        <span class="results-state__eyebrow">
+
+          <i class="bi bi-clipboard-data" aria-hidden="true">
+          </i>
+
+          Tu diagnóstico ASG
+
+        </span>
+
+        <h2 id="results-empty-title">
+
+          Comienza a medir tu desempeño ASG.
+
+        </h2>
+
+        <p>
+
+          Aún no tienes evaluaciones completadas.
+          Realiza una evaluación para conocer las
+          fortalezas y oportunidades de mejora
+          de tu empresa.
+
+        </p>
+
+        <button type="button" class="asg-btn asg-btn--primary results-state__button" (click)="openEvaluation()">
+
+          <i class="bi bi-clipboard-check" aria-hidden="true">
+          </i>
+
+          Ir a evaluación
+
+          <i class="bi bi-arrow-right" aria-hidden="true">
+          </i>
+
+        </button>
+
+      </div>
+
+    </section>
+
+    }
+
+    <!-- Error al recuperar resultados -->
+
+    @case ('error') {
+
+    <section class="asg-card results-state results-state--error" aria-labelledby="results-error-title">
+
+      <div class="results-state__decoration" aria-hidden="true">
+
+        <span></span>
+        <span></span>
+        <span></span>
+
+        <i class="bi bi-exclamation-circle"></i>
+
+      </div>
+
+      <div class="results-state__content">
+
+        <span class="results-state__eyebrow">
+
+          <i class="bi bi-exclamation-circle" aria-hidden="true">
+          </i>
+
+          Resultados no disponibles
+
+        </span>
+
+        <div class="results-state__message" role="alert">
+
+          <h2 id="results-error-title">
+
+            No pudimos cargar tus resultados.
+
+          </h2>
+
+          <p>
+
+            {{
+            resultsLoadError ||
+            'No fue posible cargar los resultados ASG. Inténtalo nuevamente.'
+            }}
+
+          </p>
+
+        </div>
+
+        <button type="button" class="asg-btn asg-btn--primary results-state__button" (click)="loadResults()">
+
+          <i class="bi bi-arrow-clockwise" aria-hidden="true">
+          </i>
+
+          Reintentar
+
+        </button>
+
+      </div>
+
+    </section>
+
+    }
+
+    }
+
+
 
     @if (results; as evaluation) {
 
@@ -141,8 +324,7 @@
     @if (results) {
 
     <app-results-ai data-html2canvas-ignore [explanation]="aiExplanation" [generating]="generatingAIExplanation"
-      [error]="aiExplanationError" (generate)="generateAIExplanation()">
-
+      [error]="aiExplanationError" [unavailable]="aiExplanationUnavailable" (generate)="generateAIExplanation()">
     </app-results-ai>
 
     }
@@ -262,9 +444,7 @@
 
 <!-- Plantilla temporal para generar el reporte ASG -->
 @if (asgReport) {
-<div class="asg-report-export"
-     aria-hidden="true"
-     inert>
+<div class="asg-report-export" aria-hidden="true" inert>
   <app-asg-report-template [report]="asgReport">
   </app-asg-report-template>
 </div>

@@ -1,4 +1,3 @@
-
 import {
   Component,
   Input,
@@ -22,11 +21,33 @@ interface ExplanationBlock {
 })
 export class ResultsAiComponent {
 
-  @Input() explanation: string | null = null;
+  private explanationValue: string | null = null;
+
+  explanationBlocks: ExplanationBlock[] = [];
+
+  @Input()
+  set explanation(value: string | null) {
+
+    if (value === this.explanationValue) {
+      return;
+    }
+
+    this.explanationValue = value;
+
+    this.explanationBlocks =
+      this.buildExplanationBlocks(value);
+
+  }
+
+  get explanation(): string | null {
+    return this.explanationValue;
+  }
 
   @Input() generating = false;
 
   @Input() error: string | null = null;
+
+  @Input() unavailable = false;
 
   @Output() generate = new EventEmitter<void>();
 
@@ -42,9 +63,11 @@ export class ResultsAiComponent {
     'conclusiones'
   ]);
 
-  get explanationBlocks(): ExplanationBlock[] {
+  private buildExplanationBlocks(
+    explanation: string | null
+  ): ExplanationBlock[] {
 
-    if (!this.explanation?.trim()) {
+    if (!explanation?.trim()) {
       return [];
     }
 
@@ -67,7 +90,7 @@ export class ResultsAiComponent {
 
     };
 
-    const lines = this.explanation
+    const lines = explanation
       .replace(/\r\n?/g, '\n')
       .split('\n');
 
