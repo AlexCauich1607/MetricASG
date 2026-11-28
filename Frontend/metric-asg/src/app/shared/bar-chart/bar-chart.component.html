@@ -4,13 +4,112 @@
   [class.chart-container--dashboard]="variant === 'dashboard'"
   [class.chart-container--results]="variant === 'results'">
 
-  <canvas
+  <!-- HU-059 / T03 - Dynamic canvas label -->
+<canvas
     #chartCanvas
     [id]="'MyChart' + id"
     [attr.role]="variant !== 'default' ? 'img' : null"
-    [attr.aria-label]="variant !== 'default'
+    [attr.aria-label]="variant === 'default' ? (variant !== 'default'
       ? 'Gráfica de puntuaciones por ámbito ASG. Los valores se muestran en las tarjetas anteriores.'
-      : null">
+      : null) : accessibleChartDescription">
   </canvas>
 
 </div>
+
+<!-- HU-059 / T03 - Accessible bar chart alternative -->
+
+@if (variant !== 'default') {
+
+  <details class="chart-data-alternative">
+
+    <summary class="chart-data-alternative__summary">
+
+  <span
+    class="chart-data-alternative__icon"
+    aria-hidden="true">
+
+    <i class="bi bi-table"></i>
+
+  </span>
+
+  <span class="chart-data-alternative__label">
+
+    <span class="chart-data-alternative__label--closed">
+      Consultar datos de la gráfica
+    </span>
+
+    <span class="chart-data-alternative__label--open">
+      Ocultar datos de la gráfica
+    </span>
+
+  </span>
+
+  <span
+    class="chart-data-alternative__chevron"
+    aria-hidden="true">
+
+    <i class="bi bi-chevron-down"></i>
+
+  </span>
+
+</summary>
+
+    <div class="chart-data-alternative__content">
+
+      @if (hasAccessibleChartData) {
+
+        <table class="chart-data-alternative__table">
+
+          <caption>
+            {{ accessibleChartTitle }}
+          </caption>
+
+          <thead>
+            <tr>
+
+              <th scope="col">
+                {{ variant === 'admin' ? 'Categoría' : 'Ámbito' }}
+              </th>
+
+              <th scope="col">
+                {{ accessibleValueHeading }}
+              </th>
+
+            </tr>
+          </thead>
+
+          <tbody>
+
+            @for (label of data; track $index; let i = $index) {
+
+              <tr>
+
+                <th scope="row">
+                  {{ label }}
+                </th>
+
+                <td>
+                  {{ formatAccessibleChartValue(scores[i]) }}
+                </td>
+
+              </tr>
+
+            }
+
+          </tbody>
+
+        </table>
+
+      } @else {
+
+        <p class="chart-data-alternative__empty">
+          No hay datos disponibles.
+        </p>
+
+      }
+
+    </div>
+
+  </details>
+
+}

@@ -32,7 +32,7 @@ export class BarChartComponent implements AfterViewInit, OnDestroy {
   @Input() scores: number[] = [];
   @Input() colors: string[] = [];
   @Input() bordes: string[] = [];
-  @Input() variant: 'default' | 'dashboard' | 'results' = 'default';
+  @Input() variant: 'default' | 'dashboard' | 'results' | 'admin' = 'default';
 
 
   ngAfterViewInit(): void {
@@ -53,6 +53,7 @@ export class BarChartComponent implements AfterViewInit, OnDestroy {
     const ctx = this.chartCanvas.nativeElement.getContext('2d');
     const isDashboard = this.variant === 'dashboard';
     const isResults = this.variant === 'results';
+    const isAdmin = this.variant === 'admin';
 
     if (!ctx) {
       console.error('Could not get 2d context');
@@ -123,6 +124,120 @@ export class BarChartComponent implements AfterViewInit, OnDestroy {
         }
       }
     };
+    // HU-059 / T02 - Administrative charts
+
+    if (isAdmin) {
+
+      config.options = {
+
+        responsive: true,
+        maintainAspectRatio: false,
+
+        layout: {
+          padding: {
+            top: 8,
+            right: 8,
+            bottom: 4,
+            left: 0
+          }
+        },
+
+        plugins: {
+
+          legend: {
+            display: false
+          },
+
+          tooltip: {
+            backgroundColor: '#00245d',
+            titleColor: '#ffffff',
+            bodyColor: '#ffffff',
+            padding: 10,
+            cornerRadius: 8,
+            displayColors: false,
+
+            callbacks: {
+              label: context =>
+                `Usuarios: ${context.parsed.y?.toLocaleString('es-MX')
+                ?? 'N/D'
+                }`
+            }
+          }
+        },
+
+        scales: {
+
+          y: {
+            beginAtZero: true,
+
+            border: {
+              display: false
+            },
+
+            grid: {
+              color: '#e4e9ed',
+              drawTicks: false
+            },
+
+            ticks: {
+              precision: 0,
+              maxTicksLimit: 6,
+              color: '#595959',
+              padding: 6,
+
+              font: context => ({
+                size: context.chart.width < 360 ? 10 : 11
+              }),
+
+              callback: value =>
+                Number(value).toLocaleString('es-MX')
+            }
+          },
+
+          x: {
+
+            border: {
+              display: false
+            },
+
+            grid: {
+              display: false
+            },
+
+            ticks: {
+              color: '#13243d',
+              padding: 6,
+
+              autoSkip: true,
+              minRotation: 0,
+              maxRotation: 45,
+
+              font: context => ({
+                size: context.chart.width < 360 ? 10 : 12,
+                weight: 500
+              }),
+
+              callback: function (value) {
+
+                const label = this.getLabelForValue(
+                  Number(value)
+                );
+
+                const maxLength =
+                  this.chart.width < 360 ? 12 :
+                    this.chart.width < 600 ? 18 : 28;
+
+                return label.length > maxLength
+                  ? `${label.slice(0, maxLength - 1)}…`
+                  : label;
+              }
+            }
+          }
+        }
+      };
+    }
+
+    // HU-059 / T02.2 - Adaptive ASG charts
     if (isDashboard) {
 
       config.options = {
@@ -180,9 +295,9 @@ export class BarChartComponent implements AfterViewInit, OnDestroy {
               color: '#595959',
               padding: 8,
 
-              font: {
-                size: 11
-              }
+              font: context => ({
+                size: context.chart.width < 360 ? 10 : 11
+              })
             }
           },
 
@@ -203,10 +318,10 @@ export class BarChartComponent implements AfterViewInit, OnDestroy {
               minRotation: 0,
               autoSkip: false,
 
-              font: {
-                size: 11,
+              font: context => ({
+                size: context.chart.width < 360 ? 10 : 11,
                 weight: 500
-              }
+              })
             }
           }
         }
@@ -219,7 +334,12 @@ export class BarChartComponent implements AfterViewInit, OnDestroy {
 
       dataset.borderColor = 'transparent';
       dataset.borderWidth = 0;
-      dataset.borderRadius = 6;
+      dataset.borderRadius = {
+        topLeft: 0,
+        bottomLeft: 0,
+        topRight: 7,
+        bottomRight: 7
+      };
       dataset.borderSkipped = false;
       dataset.barPercentage = 0.60;
       dataset.categoryPercentage = 0.70;
@@ -234,12 +354,12 @@ export class BarChartComponent implements AfterViewInit, OnDestroy {
         animation: false,
 
         layout: {
-          padding: {
+          padding: context => ({
             top: 12,
-            right: 40,
+            right: context.chart.width < 360 ? 32 : 40,
             bottom: 8,
             left: 4
-          }
+          })
         },
         plugins: {
 
@@ -285,9 +405,9 @@ export class BarChartComponent implements AfterViewInit, OnDestroy {
               color: '#595959',
               padding: 8,
 
-              font: {
-                size: 12
-              }
+              font: context => ({
+                size: context.chart.width < 360 ? 11 : 12
+              })
             }
 
           },
@@ -307,10 +427,10 @@ export class BarChartComponent implements AfterViewInit, OnDestroy {
               padding: 8,
               autoSkip: false,
 
-              font: {
-                size: 12,
+              font: context => ({
+                size: context.chart.width < 360 ? 11 : 12,
                 weight: 500
-              }
+              })
             }
 
           }
@@ -335,7 +455,12 @@ export class BarChartComponent implements AfterViewInit, OnDestroy {
 
             ctx.save();
 
-            ctx.font = '600 13px Aptos, Segoe UI, sans-serif';
+            const compact = chart.width < 360;
+            const fontSize = compact ? 11 : 13;
+            const labelGap = compact ? 5 : 8;
+
+            ctx.font =
+              `600 ${fontSize}px Aptos, Segoe UI, sans-serif`;
             ctx.fillStyle = '#00245d';
             ctx.textAlign = 'left';
             ctx.textBaseline = 'middle';
@@ -351,9 +476,22 @@ export class BarChartComponent implements AfterViewInit, OnDestroy {
                 return;
               }
 
+              const label = score.toFixed(1);
+              const labelWidth = ctx.measureText(label).width;
+
+              const maxX = Math.max(
+                0,
+                chart.width - labelWidth - 3
+              );
+
+              const labelX = Math.min(
+                bar.x + labelGap,
+                maxX
+              );
+
               ctx.fillText(
-                score.toFixed(1),
-                bar.x + 8,
+                label,
+                labelX,
                 bar.y
               );
 
@@ -388,4 +526,57 @@ export class BarChartComponent implements AfterViewInit, OnDestroy {
       this.chart = null;
     }
   }
+
+  // HU-059 / T03 - Accessible bar chart data
+
+  get hasAccessibleChartData(): boolean {
+    return this.data.length > 0;
+  }
+
+  get accessibleChartTitle(): string {
+    return this.variant === 'admin'
+      ? 'Cantidades de usuarios por categoría'
+      : 'Puntuaciones por ámbito ASG';
+  }
+
+  get accessibleValueHeading(): string {
+    return this.variant === 'admin'
+      ? 'Usuarios'
+      : 'Puntuación';
+  }
+
+  formatAccessibleChartValue(
+    value: number | null | undefined
+  ): string {
+
+    if (
+      typeof value !== 'number' ||
+      !Number.isFinite(value)
+    ) {
+      return 'N/D';
+    }
+
+    if (this.variant === 'admin') {
+      return value.toLocaleString('es-MX', {
+        maximumFractionDigits: 0
+      });
+    }
+
+    return `${value.toFixed(1)} / 10`;
+  }
+
+  get accessibleChartDescription(): string {
+
+    if (!this.hasAccessibleChartData) {
+      return `${this.accessibleChartTitle}. Sin datos disponibles.`;
+    }
+
+    const values = this.data.map(
+      (label, index) =>
+        `${label}: ${this.formatAccessibleChartValue(this.scores[index])}`
+    );
+
+    return `${this.accessibleChartTitle}. ${values.join('; ')}.`;
+  }
+
 }
