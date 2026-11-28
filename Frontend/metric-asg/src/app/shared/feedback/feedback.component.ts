@@ -10,7 +10,25 @@ import { ResultAmbit } from '../../models/evaluation_result';
 })
 export class FeedbackComponent {
 
-  @Input() ambits: ResultAmbit []= [];
+  @Input() ambits: ResultAmbit[] = [];
+
+  @Input() variant: 'default' | 'analysis' = 'default';
+
+  getAmbitIcon(letter: string): string {
+    switch (letter?.trim().toUpperCase()) {
+      case 'A':
+        return 'bi bi-tree';
+
+      case 'S':
+        return 'bi bi-people';
+
+      case 'G':
+        return 'bi bi-bank';
+
+      default:
+        return 'bi bi-globe-americas';
+    }
+  }
 
   getBorderColor(level: string): string {
     let color = "";

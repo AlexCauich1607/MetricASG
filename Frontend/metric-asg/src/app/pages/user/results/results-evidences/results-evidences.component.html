@@ -1,0 +1,270 @@
+
+<details class="asg-card results-evidences"
+  data-html2canvas-ignore>
+
+  <summary class="results-evidences__summary">
+
+    <span class="results-panel-header__icon"
+      aria-hidden="true">
+
+      <i class="bi bi-paperclip"></i>
+
+    </span>
+
+    <span class="results-panel-header__content">
+
+      <span class="results-evidences__title">
+        Evidencias registradas
+      </span>
+
+      <span class="results-evidences__description">
+
+        @if (loading) {
+
+        Consultando evidencias...
+
+        } @else if (error) {
+
+        No se pudieron consultar las evidencias.
+
+        } @else {
+
+        {{ evidences.length }}
+
+        {{ evidences.length === 1
+          ? 'evidencia asociada'
+          : 'evidencias asociadas'
+        }}
+
+        a la evaluación.
+
+        }
+
+      </span>
+
+    </span>
+
+    <i class="bi bi-chevron-down
+      results-evidences__chevron"
+      aria-hidden="true">
+    </i>
+
+  </summary>
+
+  <div class="results-evidences__body">
+
+    @if (downloadError) {
+
+    <div class="alert alert-danger mb-0"
+      role="alert">
+
+      {{ downloadError }}
+
+    </div>
+
+    }
+
+    @if (loading) {
+
+    <div class="results-evidences__state"
+      role="status">
+
+      <span class="spinner-border spinner-border-sm"
+        aria-hidden="true">
+      </span>
+
+      <p>Cargando evidencias...</p>
+
+    </div>
+
+    } @else if (error) {
+
+    <div class="results-evidences__state">
+
+      <i class="bi bi-exclamation-circle"
+        aria-hidden="true">
+      </i>
+
+      <p>
+        No se pudieron recuperar las evidencias.
+      </p>
+
+      <button
+        type="button"
+        class="asg-btn asg-btn--secondary"
+        (click)="requestRetry()">
+
+        <i class="bi bi-arrow-clockwise"
+          aria-hidden="true">
+        </i>
+
+        Reintentar
+
+      </button>
+
+    </div>
+
+    } @else if (evidences.length === 0) {
+
+    <div class="results-evidences__state">
+
+      <i class="bi bi-folder2-open"
+        aria-hidden="true">
+      </i>
+
+      <h3>Sin evidencias registradas</h3>
+
+      <p>
+        No se agregaron comentarios, enlaces
+        ni archivos a esta evaluación.
+      </p>
+
+    </div>
+
+    } @else {
+
+    @for (
+      indicatorId of getEvidenceIndicatorIds();
+      track indicatorId
+    ) {
+
+    <section class="results-evidences__group">
+
+      <h3 class="results-evidences__group-title">
+
+        <i class="bi bi-list-check"
+          aria-hidden="true">
+        </i>
+
+        Indicador {{ indicatorId }}
+
+      </h3>
+
+      <div class="results-evidences__list">
+
+        @for (evidence of evidences; track evidence.id) {
+
+        @if (evidence.indicator_id === indicatorId) {
+
+        <article class="results-evidences__item">
+
+          @switch (evidence.type) {
+
+          @case ('COMMENT') {
+
+          <span class="results-evidences__item-icon"
+            aria-hidden="true">
+
+            <i class="bi bi-chat-left-text"></i>
+
+          </span>
+
+          <div class="results-evidences__item-content">
+
+            <h4>Comentario</h4>
+
+            <p class="evidence-content">
+              {{ evidence.content }}
+            </p>
+
+          </div>
+
+          }
+
+          @case ('URL') {
+
+          <span class="results-evidences__item-icon"
+            aria-hidden="true">
+
+            <i class="bi bi-link-45deg"></i>
+
+          </span>
+
+          <div class="results-evidences__item-content">
+
+            <h4>Enlace</h4>
+
+            <a
+              [href]="evidence.content"
+              target="_blank"
+              rel="noopener noreferrer">
+
+              {{ evidence.content }}
+
+              <i class="bi bi-box-arrow-up-right"
+                aria-hidden="true">
+              </i>
+
+            </a>
+
+          </div>
+
+          }
+
+          @case ('FILE') {
+
+          <span class="results-evidences__item-icon"
+            aria-hidden="true">
+
+            <i class="bi bi-file-earmark-text"></i>
+
+          </span>
+
+          <div class="results-evidences__item-content">
+
+            <h4>Archivo adjunto</h4>
+
+            <p>
+              {{ evidence.original_filename || 'Archivo adjunto' }}
+            </p>
+
+          </div>
+
+          <button
+            type="button"
+            class="asg-btn asg-btn--secondary
+              results-evidences__download"
+            [disabled]="downloadingEvidenceId !== null"
+            (click)="requestDownload(evidence)">
+
+            @if (downloadingEvidenceId === evidence.id) {
+
+            <span class="spinner-border spinner-border-sm"
+              aria-hidden="true">
+            </span>
+
+            Descargando...
+
+            } @else {
+
+            <i class="bi bi-download"
+              aria-hidden="true">
+            </i>
+
+            Descargar
+
+            }
+
+          </button>
+
+          }
+
+          }
+
+        </article>
+
+        }
+
+        }
+
+      </div>
+
+    </section>
+
+    }
+
+    }
+
+  </div>
+
+</details>

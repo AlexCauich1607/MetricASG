@@ -490,7 +490,7 @@ export class EvaluationComponent {
 
         next: () => {
           this.evaluationSubmitted = true;
-          this.router.navigate(['/user/results']);
+          this.router.navigate(['/user/analysis/results']);
         },
         error: () => {
           this.finalizing = false;

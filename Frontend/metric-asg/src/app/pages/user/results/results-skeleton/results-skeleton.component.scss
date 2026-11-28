@@ -1,0 +1,444 @@
+
+/* HU-058-T05.4 — Skeleton de Resultados */
+
+:host {
+  display: block;
+  min-width: 0;
+
+  --sk-color: #e2e8f0;
+}
+
+/* ========================================
+   Estructura principal
+   ======================================== */
+
+.results-loading,
+.results-loading__content {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--asg-space-6);
+  min-width: 0;
+}
+
+.results-loading__status {
+  display: flex;
+  align-items: center;
+  gap: var(--asg-space-2);
+
+  color: var(--asg-color-text-muted);
+  font-size: var(--asg-font-size-sm);
+
+  .spinner-border {
+    flex-shrink: 0;
+    color: var(--asg-color-brand-primary);
+  }
+}
+
+/* ========================================
+   Placeholders reutilizables
+   ======================================== */
+
+.sk {
+  display: block;
+  min-width: 0;
+  min-height: .75rem;
+
+  background: var(--sk-color);
+  border-radius: var(--asg-radius-sm);
+
+  animation: results-skeleton-pulse
+    1.5s ease-in-out infinite;
+
+  &--icon {
+    width: 44px;
+    height: 44px;
+    flex-shrink: 0;
+  }
+
+  &--title {
+    height: 1.125rem;
+  }
+
+  &--score {
+    height: 2rem;
+  }
+
+  &--progress {
+    min-height: 5px;
+    height: 5px;
+    border-radius: var(--asg-radius-pill);
+  }
+
+  &--pill {
+    height: 1.5rem;
+    border-radius: var(--asg-radius-pill);
+  }
+
+  &--button {
+    width: 200px;
+    max-width: 100%;
+    height: 44px;
+  }
+
+  &--summary-score {
+    width: 55px;
+    height: 24px;
+    flex-shrink: 0;
+  }
+
+  &--small {
+    width: 30px;
+    height: 30px;
+    flex-shrink: 0;
+  }
+}
+
+.sk-row {
+  display: flex;
+  align-items: center;
+  gap: var(--asg-space-3);
+  min-width: 0;
+}
+
+.sk-content {
+  display: grid;
+  flex: 1;
+  gap: var(--asg-space-2);
+  min-width: 0;
+}
+
+/* ========================================
+   Contexto empresarial
+   ======================================== */
+
+.sk-company {
+  display: grid;
+
+  grid-template-columns:
+    minmax(0, 1fr)
+    minmax(0, 1.2fr)
+    auto;
+
+  align-items: center;
+  gap: var(--asg-space-4);
+
+  min-width: 0;
+  padding: var(--asg-space-4);
+
+  > .sk-row {
+    padding: var(--asg-space-2);
+  }
+}
+
+.sk-company .sk-period {
+  padding: var(--asg-space-3);
+  background: #f5f8fc;
+  border: 1px solid #e2e9f0;
+  border-radius: var(--asg-radius-sm);
+}
+
+.sk-company-action {
+  display: flex;
+  justify-content: flex-end;
+  min-width: 0;
+}
+
+/* ========================================
+   Encabezados
+   ======================================== */
+
+.sk-section-header {
+  margin-bottom: var(--asg-space-4);
+
+  h2 {
+    margin: 0 0 var(--asg-space-1);
+
+    color: var(--asg-color-brand-primary);
+    font-size: clamp(1.25rem, 2.5vw, 1.5rem);
+    font-weight: var(--asg-font-weight-bold);
+  }
+
+  p {
+    margin: 0;
+
+    color: var(--asg-color-text-muted);
+    font-size: var(--asg-font-size-sm);
+    line-height: 1.5;
+  }
+}
+
+/* ========================================
+   Distribución de tarjetas
+   ======================================== */
+
+.sk-performance-grid,
+.sk-analysis-grid,
+.sk-summary-grid,
+.sk-next-grid {
+  display: grid;
+  gap: var(--asg-space-4);
+  min-width: 0;
+}
+
+.sk-performance-grid {
+  grid-template-columns:
+    minmax(0, 1.65fr)
+    repeat(3, minmax(0, 1fr));
+}
+
+.sk-analysis-grid {
+  grid-template-columns:
+    minmax(0, 1.2fr)
+    minmax(0, 1fr);
+}
+
+.sk-summary-grid,
+.sk-next-grid {
+  grid-template-columns:
+    repeat(2, minmax(0, 1fr));
+}
+
+.sk-card,
+.sk-chart,
+.sk-summary,
+.sk-ai,
+.sk-next-card {
+  display: grid;
+  align-content: start;
+  gap: var(--asg-space-4);
+  min-width: 0;
+}
+
+.sk-card--featured {
+  --sk-color: rgb(255 255 255 / 18%);
+
+  background: linear-gradient(
+    145deg,
+    #00245d,
+    #103d75
+  );
+
+  border-color: transparent;
+}
+
+/* ========================================
+   Gráficas decorativas
+   ======================================== */
+
+.sk-chart {
+  padding: var(--asg-space-6);
+}
+
+.sk-chart-body {
+  display: grid;
+  place-items: center;
+  min-width: 0;
+  height: 240px;
+}
+
+.sk-chart-figure {
+  display: block;
+  width: 100%;
+  height: 100%;
+  max-width: 360px;
+
+  animation: results-skeleton-pulse
+    1.5s ease-in-out infinite;
+}
+
+.sk-chart-grid,
+.sk-chart-axis {
+  fill: none;
+  stroke: #dce5ee;
+  stroke-width: 1.5;
+}
+
+.sk-chart-fill {
+  fill: #e2e8f0;
+}
+
+/* ========================================
+   Resumen de desempeño
+   ======================================== */
+
+.sk-summary-grid {
+  gap: var(--asg-space-6);
+
+  > .sk-row + .sk-row {
+    padding-left: var(--asg-space-6);
+    border-left: 1px solid #e2e9f0;
+  }
+}
+
+/* ========================================
+   Asistente inteligente
+   ======================================== */
+
+.sk-ai {
+  --sk-color: #d5e0ed;
+
+  gap: var(--asg-space-3);
+  padding: clamp(1.5rem, 3vw, 2rem);
+
+  background: linear-gradient(
+    125deg,
+    #fff 25%,
+    #f0f5fb 65%,
+    #d3e2f5
+  );
+
+  .sk--title {
+    height: 1.5rem;
+  }
+
+  &__disclaimer {
+    margin-top: var(--asg-space-2);
+    padding-top: var(--asg-space-3);
+    border-top: 1px solid #dce5ee;
+  }
+}
+
+/* ========================================
+   Evidencias y siguientes pasos
+   ======================================== */
+
+.sk-evidences {
+  padding: var(--asg-space-4);
+}
+
+.sk-next-card {
+  padding: var(--asg-space-6, 1.5rem);
+
+  .sk--icon {
+    width: 48px;
+    height: 48px;
+  }
+}
+
+/* ========================================
+   Responsive
+   ======================================== */
+
+@media (max-width: 1199.98px) {
+  .sk-analysis-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 1023.98px) {
+  .sk-performance-grid {
+    grid-template-columns:
+      repeat(3, minmax(0, 1fr));
+  }
+
+  .sk-card--featured {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 991.98px) {
+  .sk-company {
+    grid-template-columns:
+      repeat(2, minmax(0, 1fr));
+  }
+
+  .sk-company-action {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 767.98px) {
+  .results-loading,
+  .results-loading__content {
+    gap: var(--asg-space-4);
+  }
+
+  .sk-company,
+  .sk-summary-grid,
+  .sk-next-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--asg-space-3);
+  }
+
+  .sk-summary-grid > .sk-row + .sk-row {
+    padding-left: 0;
+    padding-top: var(--asg-space-3);
+    border-left: 0;
+    border-top: 1px solid #e2e9f0;
+  }
+
+  .sk-company-action .sk--button,
+  .sk-next-card .sk--button {
+    width: 100%;
+  }
+
+  .sk-chart-body {
+    height: 210px;
+  }
+
+  .sk-next-card {
+    padding: var(--asg-space-4);
+  }
+}
+
+@media (max-width: 575.98px) {
+  .sk-performance-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--asg-space-3);
+  }
+
+  .sk-chart,
+  .sk-summary {
+    padding: var(--asg-space-4);
+  }
+
+  .sk--icon {
+    width: 36px;
+    height: 36px;
+  }
+
+  .sk-company .sk--icon,
+  .sk-next-card .sk--icon {
+    width: 40px;
+    height: 40px;
+  }
+
+  .sk-ai {
+    padding: var(--asg-space-5, 1.25rem);
+
+    .sk--button {
+      width: 100%;
+    }
+
+    .sk--title {
+      width: 85% !important;
+    }
+  }
+
+  .sk-row {
+    gap: var(--asg-space-2);
+  }
+}
+
+/* ========================================
+   Animación y accesibilidad
+   ======================================== */
+
+@keyframes results-skeleton-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: .55;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sk,
+  .sk-chart-figure,
+  .results-loading__status .spinner-border {
+    animation: none;
+  }
+}

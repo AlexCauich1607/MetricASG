@@ -19,6 +19,7 @@ import {
   startWith,
   distinctUntilChanged,
   catchError,
+  map,
   of
 } from 'rxjs';
 
@@ -38,6 +39,18 @@ import { CompanySize } from '../../../../models/company_size';
 import { CompanyMembersComponent } from '../../company-members/company-members.component';
 import { CompanySettingsComponent } from '../../../modals/settings/company-settings/company-settings.component';
 
+type CompanyDetailStatus =
+  | 'loading'
+  | 'ready'
+  | 'empty'
+  | 'error';
+
+interface CompanyDetailState {
+  companyId: number | null;
+  status: CompanyDetailStatus;
+  company: CompanyDetailResponse | null;
+}
+
 @Component({
   selector: 'app-company-settings-page',
   standalone: true,
@@ -50,9 +63,48 @@ export class CompanySettingsPageComponent implements OnInit {
   private readonly destroyRef = inject(DestroyRef);
   private readonly injector = inject(Injector);
 
-  readonly company = signal<CompanyDetailResponse | null>(null);
-  readonly loading = signal(false);
-  readonly error = signal(false);
+
+  private readonly companyState = signal<CompanyDetailState>({
+    companyId: null,
+    status: 'empty',
+    company: null
+  });
+
+  readonly state = computed<CompanyDetailState>(() => {
+
+    const companyId =
+      this.companyContext.selectedCompanyId();
+
+    const currentState = this.companyState();
+
+    if (currentState.companyId !== companyId) {
+
+      return {
+        companyId,
+        status: companyId === null
+          ? 'empty'
+          : 'loading',
+        company: null
+      };
+
+    }
+
+    return currentState;
+
+  });
+
+  readonly company = computed(
+    () => this.state().company
+  );
+
+  readonly loading = computed(
+    () => this.state().status === 'loading'
+  );
+
+  readonly error = computed(
+    () => this.state().status === 'error'
+  );
+
 
   readonly sectors = signal<CompanySector[]>([]);
   readonly sizes = signal<CompanySize[]>([]);
@@ -73,47 +125,90 @@ export class CompanySettingsPageComponent implements OnInit {
     private readonly dialog: MatDialog
   ) { }
 
+
   ngOnInit(): void {
+
     this.loadCatalogs();
 
-    toObservable(this.companyContext.selectedCompanyId, {
-      injector: this.injector
-    })
+    toObservable(
+      this.companyContext.selectedCompanyId,
+      {
+        injector: this.injector
+      }
+    )
       .pipe(
+
         distinctUntilChanged(),
+
         switchMap(companyId => {
-          this.company.set(null);
-          this.error.set(false);
 
           if (companyId === null) {
-            this.loading.set(false);
-            return of(null);
+
+            return of<CompanyDetailState>({
+              companyId: null,
+              status: 'empty',
+              company: null
+            });
+
           }
 
           return this.retryRequests$.pipe(
-            startWith(void 0),
-            switchMap(() => {
-              this.loading.set(true);
-              this.error.set(false);
 
-              return this.membershipService
+            startWith(void 0),
+
+            switchMap(() =>
+
+              this.membershipService
                 .getCompany(companyId)
                 .pipe(
-                  catchError(() => {
-                    this.error.set(true);
-                    return of(null);
-                  })
-                );
-            })
+
+                  map((company): CompanyDetailState => ({
+
+                    companyId,
+
+                    status: company
+                      ? 'ready'
+                      : 'empty',
+
+                    company: company ?? null
+
+                  })),
+
+                  startWith<CompanyDetailState>({
+                    companyId,
+                    status: 'loading',
+                    company: null
+                  }),
+
+                  catchError(() =>
+
+                    of<CompanyDetailState>({
+                      companyId,
+                      status: 'error',
+                      company: null
+                    })
+
+                  )
+
+                )
+
+            )
+
           );
+
         }),
+
         takeUntilDestroyed(this.destroyRef)
+
       )
-      .subscribe(company => {
-        this.company.set(company);
-        this.loading.set(false);
+      .subscribe(state => {
+
+        this.companyState.set(state);
+
       });
+
   }
+
 
   private loadCatalogs(): void {
     this.sectorService.getAll()
@@ -160,7 +255,13 @@ export class CompanySettingsPageComponent implements OnInit {
   openEditCompany(): void {
     const membership = this.companyContext.selectedMembership();
 
-    if (!membership || !this.canEdit()) {
+    if (
+      !membership ||
+      !this.canEdit() ||
+      this.loading() ||
+      !this.company() ||
+      this.company()?.id !== membership.company_id
+    ) {
       return;
     }
 

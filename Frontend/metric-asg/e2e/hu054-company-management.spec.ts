@@ -722,6 +722,9 @@ test.describe('HU-054 - Gestión empresarial', () => {
         // El token no debe enviarse nuevamente.
         expect(acceptanceCount).toBe(1);
     });
+
+
+
     test('conserva los enlaces de navegación empresarial en móvil', async ({ page }) => {
         await page.setViewportSize({ width: 375, height: 900 });
 
@@ -739,24 +742,58 @@ test.describe('HU-054 - Gestión empresarial', () => {
 
         const navbar = page.locator('#mainNavbar');
 
-        await expect(navbar.getByRole('link', { name: 'Inicio' })).toBeVisible();
-        await expect(navbar.getByRole('link', { name: 'Evaluación' })).toBeVisible();
-        await expect(navbar.getByRole('link', { name: 'Resultados' })).toBeVisible();
-        await expect(navbar.getByRole('link', { name: 'Gestión empresarial' })).toBeVisible();
+        await expect(navbar).toHaveClass(/\bshow\b/);
 
-        await navbar.getByRole('button', { name: 'Más' }).click();
+        // Navegación principal reorganizada en HU-058.
 
-        await expect(navbar.getByRole('link', { name: 'Historial' })).toBeVisible();
-        await expect(navbar.getByRole('link', { name: 'Benchmarking' })).toBeVisible();
-        await expect(navbar.getByRole('link', { name: 'Retroalimentación' })).toBeVisible();
+        const navigationLinks = [
+            {
+                name: 'Inicio',
+                href: '/user/home'
+            },
+            {
+                name: 'Empresa',
+                href: '/user/company-settings'
+            },
+            {
+                name: 'Análisis ASG',
+                href: '/user/analysis'
+            },
+            {
+                name: 'Mejora',
+                href: '/user/improvement'
+            }
+        ];
 
-        // Verificar que también se mantiene el selector empresarial.
-        await expect(navbar.locator('.company-context__trigger')).toBeVisible();
+        for (const item of navigationLinks) {
+            const link = navbar.getByRole('link', {
+                name: item.name,
+                exact: true
+            });
+
+            await expect(link).toBeVisible();
+            await expect(link).toHaveAttribute('href', item.href);
+        }
+
+        // El selector empresarial debe permanecer disponible.
+
+        const companySelector = navbar.getByRole('button', {
+            name: 'Seleccionar empresa',
+            exact: true
+        });
+
+        await expect(companySelector).toBeVisible();
+        await expect(companySelector).toBeEnabled();
 
         // Cerrar el menú hamburguesa.
+
         await navbarToggler.click();
+
         await expect(navbar).not.toHaveClass(/\bshow\b/);
     });
+
+
+
 
     test('permite recorrer el menú móvil en pantallas de poca altura', async ({ page }) => {
         await page.setViewportSize({ width: 320, height: 568 });
@@ -773,37 +810,75 @@ test.describe('HU-054 - Gestión empresarial', () => {
         const navbar = page.locator('#mainNavbar');
 
         await toggler.click();
+
         await expect(navbar).toHaveClass(/\bshow\b/);
 
-        // El menú debe disponer de desplazamiento vertical propio.
-        const canScroll = await navbar.evaluate(element =>
-            element.scrollHeight > element.clientHeight &&
-            getComputedStyle(element).overflowY === 'auto'
-        );
+        // El menú debe conservar su capacidad de desplazamiento.
 
-        expect(canScroll).toBe(true);
+        await expect(navbar).toHaveCSS('overflow-y', 'auto');
+
+        // Reducir la altura para garantizar un escenario de desbordamiento.
+
+        await page.setViewportSize({
+            width: 320,
+            height: 360
+        });
+
+        // Verificar que el contenido requiere desplazamiento real.
+
+        await expect.poll(() =>
+            navbar.evaluate(element =>
+                element.scrollHeight > element.clientHeight
+            )
+        ).toBe(true);
 
         // Acceder a las opciones situadas al final.
+
         const profile = navbar.getByRole('button', {
             name: 'Abrir menú de perfil'
         });
 
         await profile.scrollIntoViewIfNeeded();
+
+        await expect(profile).toBeInViewport();
+
+        // Comprobar que el menú se desplazó realmente.
+
+        await expect.poll(() =>
+            navbar.evaluate(element => element.scrollTop)
+        ).toBeGreaterThan(0);
+
         await profile.click();
 
-        await expect(
-            navbar.getByRole('button', { name: 'Configuración' })
-        ).toBeVisible();
+        const configuration = navbar.getByRole('button', {
+            name: 'Configuración',
+            exact: true
+        });
 
-        await expect(
-            navbar.getByRole('button', { name: 'Cerrar Sesión' })
-        ).toBeVisible();
+        const logout = navbar.getByRole('button', {
+            name: 'Cerrar sesión',
+            exact: true
+        });
 
-        // El botón hamburguesa debe seguir disponible.
+        await configuration.scrollIntoViewIfNeeded();
+
+        await expect(configuration).toBeVisible();
+        await expect(configuration).toBeInViewport();
+
+        await logout.scrollIntoViewIfNeeded();
+
+        await expect(logout).toBeVisible();
+        await expect(logout).toBeInViewport();
+
+        // El botón hamburguesa debe permanecer accesible.
+
         await expect(toggler).toBeVisible();
+        await expect(toggler).toBeInViewport();
 
         await toggler.click();
+
         await expect(navbar).not.toHaveClass(/\bshow\b/);
     });
+
 
 });

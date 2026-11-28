@@ -1,0 +1,237 @@
+/* HU-058-T03 — Plan de mejora ASG */
+
+:host {
+    display: block;
+    min-width: 0;
+}
+
+
+/* Contenedor principal */
+
+.improvement-plan-shell {
+    background:
+        radial-gradient(ellipse at 0% 0%,
+            rgb(93 151 50 / 12%),
+            transparent 50%),
+        radial-gradient(ellipse at 100% 100%,
+            rgba(21, 6, 117, .14),
+            transparent 75%),
+        var(--asg-color-surface-muted);
+
+    color: var(--asg-color-text-primary);
+
+    min-width: 0;
+}
+
+.improvement-plan-container {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+
+    gap: var(--asg-space-6);
+
+    padding-block: var(--asg-space-8);
+
+    min-width: 0;
+}
+
+
+/* Encabezado */
+
+.plan-header {
+    min-width: 0;
+
+    &__eyebrow {
+        display: inline-flex;
+        align-items: center;
+        gap: var(--asg-space-2);
+
+        margin: 0 0 var(--asg-space-3);
+        padding: .375rem .75rem;
+
+        background: #e6efde;
+        border: 1px solid #d3e3c5;
+        border-radius: var(--asg-radius-sm);
+
+        color: var(--asg-color-action-success);
+
+        font-size: var(--asg-font-size-xs);
+        font-weight: var(--asg-font-weight-semibold);
+        letter-spacing: .04em;
+        text-transform: uppercase;
+    }
+
+    &__title {
+        margin: 0 0 var(--asg-space-2);
+
+        color: var(--asg-color-brand-primary);
+
+        font-size: clamp(1.5rem, 3vw, 2.25rem);
+        font-weight: var(--asg-font-weight-bold);
+        line-height: 1.2;
+        letter-spacing: -.02em;
+
+        overflow-wrap: anywhere;
+    }
+
+    &__description {
+        margin: 0;
+
+        color: var(--asg-color-text-muted);
+
+        font-size: var(--asg-font-size-md);
+        line-height: 1.6;
+    }
+
+    &__evaluation {
+        display: inline-flex;
+        align-items: center;
+        gap: var(--asg-space-2);
+
+        margin-top: var(--asg-space-3);
+
+        color: var(--asg-color-text-muted);
+
+        font-size: var(--asg-font-size-sm);
+        font-weight: var(--asg-font-weight-semibold);
+    }
+}
+
+
+/* Encabezado de acciones */
+
+.plan-actions-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+
+    gap: var(--asg-space-4);
+
+    min-width: 0;
+
+    &__content {
+        flex: 1 1 280px;
+
+        min-width: 0;
+
+        h2 {
+            margin: 0 0 var(--asg-space-1);
+
+            color: var(--asg-color-brand-primary);
+
+            font-size: clamp(1.25rem, 2.5vw, 1.5rem);
+            font-weight: var(--asg-font-weight-bold);
+        }
+
+        p {
+            margin: 0;
+
+            color: var(--asg-color-text-muted);
+
+            font-size: var(--asg-font-size-sm);
+            line-height: 1.5;
+        }
+    }
+}
+
+.plan-actions-toolbar {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+
+    gap: var(--asg-space-2);
+
+    min-width: 0;
+
+    .asg-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+
+        gap: var(--asg-space-2);
+
+        min-height: 44px;
+        max-width: 100%;
+
+        white-space: normal;
+
+        i {
+            flex-shrink: 0;
+        }
+    }
+}
+
+.plan-export-button {
+    background: #fff;
+
+    border: 1px solid #ccd9e7;
+
+    color: var(--asg-color-brand-primary);
+
+    &:hover:not(:disabled) {
+        background: var(--asg-color-surface-blue);
+    }
+
+    &:disabled {
+        opacity: .5;
+        cursor: not-allowed;
+    }
+}
+
+
+.plan-action-list {
+    display: grid;
+
+    grid-template-columns:
+        repeat(2, minmax(0, 1fr));
+
+    align-items: stretch;
+
+    gap: var(--asg-space-4);
+
+    min-width: 0;
+}
+
+
+@media (max-width: 991.98px) {
+
+    .plan-action-list {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+
+
+
+@media (max-width: 767.98px) {
+    .improvement-plan-container {
+        gap: var(--asg-space-4);
+
+        padding-block: var(--asg-space-4);
+    }
+
+    .plan-actions-header {
+        flex-direction: column;
+        align-items: stretch;
+
+        &__content {
+            flex: initial;
+        }
+    }
+
+    .plan-actions-toolbar {
+        display: grid;
+
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+
+        .asg-btn {
+            width: 100%;
+
+            font-size: var(--asg-font-size-sm);
+        }
+    }
+
+    .plan-create-button {
+        grid-column: 1 / -1;
+    }
+
+}

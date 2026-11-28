@@ -1029,7 +1029,7 @@ describe('EvaluationComponent', () => {
     pendingSubmission.complete();
 
     expect(navigateSpy)
-      .toHaveBeenCalledOnceWith(['/user/results']);
+      .toHaveBeenCalledOnceWith(['/user/analysis/results']);
 
     confirmSpy.calls.reset();
 

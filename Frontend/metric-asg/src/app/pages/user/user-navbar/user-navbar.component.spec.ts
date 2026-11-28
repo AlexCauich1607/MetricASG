@@ -625,9 +625,8 @@ describe('UserNavbarComponent', () => {
   it('should allow changing companies outside the evaluation form', () => {
     const router = TestBed.inject(Router);
 
-    spyOnProperty(router, 'url', 'get').and.returnValue(
-      '/user/history'
-    );
+    spyOnProperty(router, 'url', 'get')
+      .and.returnValue('/user/analysis/evolution');
 
     component.selectCompany(7);
 
@@ -645,6 +644,25 @@ describe('UserNavbarComponent', () => {
       .and.returnValue('/user/evaluation?draft=1');
 
     fixture.detectChanges();
+
+    const obsoleteRoutes = [
+      '/user/evaluation',
+      '/user/results',
+      '/user/history',
+      '/user/benchmark',
+      '/user/feedback'
+    ];
+
+    obsoleteRoutes.forEach(route => {
+
+      expect(
+        fixture.nativeElement.querySelector(
+          `a[routerLink="${route}"]`
+        )
+      ).toBeNull();
+
+    });
+
 
     expect(component.companySelectionLocked).toBeTrue();
 
@@ -763,6 +781,47 @@ describe('UserNavbarComponent', () => {
     // El administrador puede acceder a Gestión empresarial.
     expect(component.canManageMembers).toBeTrue();
     expect(getManagementLink()).not.toBeNull();
+
+    const expectedRoutes = [
+      '/user/home',
+      '/user/company-settings',
+      '/user/analysis',
+      '/user/improvement'
+    ];
+
+    const navigationLinks = Array.from(
+      fixture.nativeElement.querySelectorAll(
+        'a.nav-link[routerLink]'
+      )
+    ) as HTMLAnchorElement[];
+
+    const actualRoutes = navigationLinks
+      .map(link => link.getAttribute('routerLink'))
+      .filter(route =>
+        route !== null &&
+        expectedRoutes.includes(route)
+      );
+
+    expect(actualRoutes).toEqual(expectedRoutes);
+
+    const obsoleteRoutes = [
+      '/user/evaluation',
+      '/user/results',
+      '/user/history',
+      '/user/benchmark',
+      '/user/feedback'
+    ];
+
+    obsoleteRoutes.forEach(route => {
+
+      expect(
+        fixture.nativeElement.querySelector(
+          `a[routerLink="${route}"]`
+        )
+      ).toBeNull();
+
+    });
+
 
     // Cambiar a la empresa donde es colaborador.
     component.selectCompany(7);

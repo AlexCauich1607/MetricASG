@@ -38,7 +38,6 @@ export class HistoryComponent {
   historial: EvaluationHistory | null = null;
   evaluationId1: number | null = null;
   evaluationId2: number | null = null;
-  improvementEvaluationId: number | null = null;
   dashboard: EvaluationDashboard | null = null;
   latestEvaluation: EvaluationDashboard['history'][number] | null = null;
   private historyRequest?: Subscription;
@@ -136,7 +135,6 @@ export class HistoryComponent {
     // Evaluaciones seleccionadas
     this.evaluationId1 = null;
     this.evaluationId2 = null;
-    this.improvementEvaluationId = null;
 
     // Dashboard histórico
     this.dashboard = null;
@@ -229,27 +227,23 @@ export class HistoryComponent {
     );
   }
 
+
   compareEvaluations(): void {
+
     if (!this.canCompare) {
       return;
     }
 
-    this.router.navigate(['/user/compare'], {
-      queryParams: {
-        evaluation_id_1: this.evaluationId1,
-        evaluation_id_2: this.evaluationId2
+    this.router.navigate(
+      ['/user/analysis/evolution/compare'],
+      {
+        queryParams: {
+          evaluation_id_1: this.evaluationId1,
+          evaluation_id_2: this.evaluationId2
+        }
       }
-    });
-  }
-  openImprovementPlan(evaluationId: number): void {
-    if (!Number.isSafeInteger(evaluationId) || evaluationId <= 0) {
-      return;
-    }
+    );
 
-    this.router.navigate([
-      '/user/evaluations',
-      evaluationId,
-      'improvement-plan'
-    ]);
   }
+
 }

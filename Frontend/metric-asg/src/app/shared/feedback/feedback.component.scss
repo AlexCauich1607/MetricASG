@@ -10,3 +10,226 @@
 .sw-card-bg {
     background-color: #ffffffa9;
 }
+
+
+
+/* HU-058 / T01 — Recomendaciones ASG */
+
+.analysis-feedback {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--asg-space-4);
+
+  min-width: 0;
+
+  &__card {
+    display: grid;
+    gap: var(--asg-space-4);
+
+    min-width: 0;
+
+    --feedback-accent: var(--asg-color-brand-primary);
+    --feedback-maturity: #64748b;
+  }
+
+  &__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: var(--asg-space-3);
+
+    min-width: 0;
+  }
+
+  &__identity {
+    display: flex;
+    align-items: center;
+    gap: var(--asg-space-3);
+
+    flex: 1 1 180px;
+    min-width: 0;
+  }
+
+  &__identity-content {
+    display: grid;
+    justify-items: start;
+    gap: var(--asg-space-2);
+
+    min-width: 0;
+  }
+
+  &__icon {
+    display: grid;
+    place-items: center;
+    flex-shrink: 0;
+
+    width: 48px;
+    height: 48px;
+
+    background: color-mix(
+      in srgb,
+      var(--feedback-accent) 12%,
+      white
+    );
+
+    border-radius: var(--asg-radius-sm);
+
+    color: color-mix(
+      in srgb,
+      var(--feedback-accent) 65%,
+      var(--asg-color-text-primary)
+    );
+
+    font-size: 1.5rem;
+  }
+
+  &__title {
+    margin: 0;
+
+    color: var(--asg-color-brand-primary);
+    font-size: 1.125rem;
+    font-weight: var(--asg-font-weight-semibold);
+
+    overflow-wrap: anywhere;
+  }
+
+  &__maturity {
+    display: inline-flex;
+    align-items: center;
+    gap: .375rem;
+
+    max-width: 100%;
+    padding: .375rem .75rem;
+
+    background: color-mix(
+      in srgb,
+      var(--feedback-maturity) 8%,
+      white
+    );
+
+    border: 1px solid color-mix(
+      in srgb,
+      var(--feedback-maturity) 20%,
+      white
+    );
+
+    border-radius: var(--asg-radius-pill);
+
+    color: color-mix(
+      in srgb,
+      var(--feedback-maturity) 45%,
+      #13243d
+    );
+
+    font-size: .75rem;
+    font-weight: 600;
+
+    overflow-wrap: anywhere;
+  }
+
+  &__maturity-dot {
+    width: 7px;
+    height: 7px;
+
+    flex-shrink: 0;
+
+    background: var(--feedback-maturity);
+    border-radius: 50%;
+  }
+
+  &__score {
+    color: var(--asg-color-brand-primary);
+
+    font-size: clamp(1.75rem, 3vw, 2.25rem);
+    font-weight: var(--asg-font-weight-bold);
+    font-variant-numeric: tabular-nums;
+    line-height: 1.2;
+
+    span {
+      color: var(--asg-color-text-muted);
+      font-size: var(--asg-font-size-sm);
+      font-weight: 400;
+    }
+  }
+
+  &__track {
+    height: 6px;
+
+    background: #e9edf1;
+    border-radius: var(--asg-radius-pill);
+
+    overflow: hidden;
+  }
+
+  &__fill {
+    height: 100%;
+    max-width: 100%;
+    min-width: 0;
+
+    background: var(--feedback-accent);
+    border-radius: inherit;
+  }
+
+  &__recommendation {
+    min-width: 0;
+
+    padding: var(--asg-space-4);
+
+    background: #f5f8fc;
+    border: 1px solid #dce5ee;
+    border-radius: var(--asg-radius-sm);
+
+    h4 {
+      display: flex;
+      align-items: center;
+      gap: var(--asg-space-2);
+
+      margin: 0 0 var(--asg-space-3);
+
+      color: var(--asg-color-brand-primary);
+      font-size: var(--asg-font-size-md);
+      font-weight: var(--asg-font-weight-semibold);
+
+      i {
+        flex-shrink: 0;
+      }
+    }
+
+    p {
+      margin: 0;
+
+      color: var(--asg-color-text-primary);
+      font-size: var(--asg-font-size-md);
+      line-height: 1.65;
+
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+    }
+  }
+}
+
+@media (max-width: 575.98px) {
+
+  .analysis-feedback {
+
+    &__card {
+      padding: var(--asg-space-4);
+    }
+
+    &__icon {
+      width: 40px;
+      height: 40px;
+      font-size: 1.25rem;
+    }
+
+    &__identity {
+      flex-basis: 140px;
+    }
+
+    &__recommendation {
+      padding: var(--asg-space-3);
+    }
+
+  }
+}

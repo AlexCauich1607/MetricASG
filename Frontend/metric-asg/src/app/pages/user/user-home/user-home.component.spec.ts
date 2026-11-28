@@ -664,7 +664,7 @@ describe('UserHomeComponent', () => {
     component.goToResults();
 
     expect(navigate).toHaveBeenCalledWith([
-      '/user/results'
+      '/user/analysis/results'
     ]);
   });
 
@@ -715,7 +715,7 @@ describe('UserHomeComponent', () => {
     button.click();
 
     expect(navigate).toHaveBeenCalledWith([
-      '/user/results'
+      '/user/analysis/results'
     ]);
   });
   it('should render maturity colors received from the evaluation', () => {

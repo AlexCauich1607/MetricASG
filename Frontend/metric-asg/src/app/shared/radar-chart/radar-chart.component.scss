@@ -1,0 +1,69 @@
+
+:host {
+  display: block;
+  min-width: 0;
+  width: 100%;
+}
+
+.radar-chart {
+  display: grid;
+
+  grid-template-columns: minmax(0, 1fr);
+
+  gap: var(--asg-space-2);
+
+  min-width: 0;
+}
+
+.radar-container {
+  position: relative;
+
+  width: 100%;
+  min-width: 0;
+
+  height: 300px;
+}
+
+.radar-legend {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  gap: var(--asg-space-2);
+
+  color: var(--asg-color-text-muted);
+  font-size: var(--asg-font-size-sm);
+
+  &__sample {
+    display: block;
+    flex-shrink: 0;
+
+    width: 20px;
+    height: 12px;
+
+    background: rgba(21, 101, 192, 0.16);
+
+    border: 2px solid var(--asg-color-brand-primary);
+    border-radius: 3px;
+  }
+}
+
+@media (max-width: 575.98px) {
+
+  .radar-container {
+    height: 270px;
+  }
+
+  .radar-legend {
+    font-size: var(--asg-font-size-xs);
+  }
+
+}
+
+@media (max-width: 359.98px) {
+
+  .radar-container {
+    height: 240px;
+  }
+
+}

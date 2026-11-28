@@ -1,0 +1,377 @@
+
+:host {
+  display: block;
+  min-width: 0;
+}
+
+/* Contenedor principal */
+
+.company-shell {
+  min-height: 60vh;
+
+  background:
+    radial-gradient(
+      ellipse at top left,
+      rgba(93, 151, 50, 0.12),
+      transparent 55%
+    ),
+    radial-gradient(
+      ellipse at bottom right,
+      rgba(89, 61, 173, 0.14),
+      transparent 55%
+    ),
+    var(--asg-color-surface-muted, #f3f6f4);
+}
+
+.company-container {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+
+  gap: var(--asg-space-6);
+  padding-block: var(--asg-space-8);
+}
+
+/* Encabezado de página */
+
+.company-header {
+  min-width: 0;
+
+  &__eyebrow {
+    display: inline-flex;
+    align-items: center;
+
+    gap: var(--asg-space-2);
+    margin-bottom: var(--asg-space-3);
+    padding: 6px 12px;
+
+    border: 1px solid #d3e3c5;
+    border-radius: var(--asg-radius-sm);
+
+    background: #e6efde;
+    color: var(--asg-color-action-success);
+
+    font-size: 0.75rem;
+    font-weight: 500;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+  }
+
+  h1 {
+    margin: 0 0 var(--asg-space-2);
+
+    color: var(--asg-color-brand-primary);
+
+    font-size: clamp(1.5rem, 3vw, 2.25rem);
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    line-height: 1.2;
+  }
+
+  p {
+    max-width: 65ch;
+    margin: 0;
+
+    color: var(--asg-color-text-muted);
+    line-height: 1.6;
+  }
+}
+
+/* Tarjetas principales */
+
+.company-information,
+.company-members-card {
+  min-width: 0;
+}
+
+.company-information {
+  display: grid;
+  gap: var(--asg-space-5);
+}
+
+.company-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+
+  gap: var(--asg-space-4);
+  min-width: 0;
+
+  &__identity {
+    display: flex;
+    align-items: center;
+
+    flex: 1 1 240px;
+
+    gap: var(--asg-space-3);
+    min-width: 0;
+  }
+
+  &__icon {
+    display: grid;
+    place-items: center;
+
+    flex-shrink: 0;
+
+    width: 48px;
+    height: 48px;
+
+    border-radius: var(--asg-radius-sm);
+
+    background: #e1ebf6;
+    color: var(--asg-color-brand-primary);
+
+    font-size: 1.5rem;
+  }
+
+  &__content {
+    min-width: 0;
+
+    h2 {
+      margin: 0 0 var(--asg-space-1);
+
+      color: var(--asg-color-brand-primary);
+
+      font-size: var(--asg-font-size-lg);
+      font-weight: 600;
+      overflow-wrap: anywhere;
+    }
+
+    p {
+      margin: 0;
+
+      color: var(--asg-color-text-muted);
+      font-size: var(--asg-font-size-sm);
+      line-height: 1.5;
+    }
+  }
+}
+
+.company-edit-button {
+  min-height: 44px;
+  white-space: normal;
+}
+
+/* Información empresarial */
+
+.company-details {
+  display: grid;
+
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--asg-space-4);
+
+  margin: 0;
+}
+
+.company-detail {
+  display: flex;
+  flex-direction: column;
+
+  gap: var(--asg-space-2);
+  min-width: 0;
+
+  padding: var(--asg-space-4);
+
+  border: 1px solid #dce5ee;
+  border-radius: var(--asg-radius-sm);
+
+  background: #f5f8fc;
+
+  &__icon {
+    display: grid;
+    place-items: center;
+
+    width: 36px;
+    height: 36px;
+
+    border-radius: var(--asg-radius-sm);
+
+    background: #e1ebf6;
+    color: var(--asg-color-brand-primary);
+
+    font-size: 1.1rem;
+  }
+
+  dt {
+    color: var(--asg-color-text-muted);
+
+    font-size: var(--asg-font-size-sm);
+    font-weight: 400;
+
+    overflow-wrap: anywhere;
+  }
+
+  dd {
+    margin: 0;
+
+    color: var(--asg-color-brand-primary);
+
+    font-size: 1rem;
+    font-weight: 600;
+    line-height: 1.5;
+
+    overflow-wrap: anywhere;
+  }
+}
+
+/* Estados de interfaz */
+
+.company-state {
+  display: flex;
+  flex-direction: column;
+
+  align-items: center;
+  justify-content: center;
+
+  gap: var(--asg-space-3);
+  padding: var(--asg-space-8);
+
+  min-width: 0;
+
+  text-align: center;
+
+  &__icon {
+    display: grid;
+    place-items: center;
+
+    width: 56px;
+    height: 56px;
+
+    border-radius: var(--asg-radius-sm);
+
+    background: #e1ebf6;
+    color: var(--asg-color-brand-primary);
+
+    font-size: 1.75rem;
+  }
+
+  h2 {
+    margin: 0;
+
+    color: var(--asg-color-brand-primary);
+
+    font-size: var(--asg-font-size-lg);
+    font-weight: 600;
+  }
+
+  p {
+    max-width: 50ch;
+    margin: 0;
+
+    color: var(--asg-color-text-muted);
+    line-height: 1.6;
+  }
+
+  .asg-btn {
+    min-height: 44px;
+  }
+
+  &--error {
+    .company-state__icon {
+      background: #fdf0f0;
+      color: #b42318;
+    }
+  }
+}
+
+/* Skeleton de información empresarial */
+
+.company-skeleton {
+  &__shape {
+    display: block;
+
+    border-radius: 6px;
+
+    background: linear-gradient(
+      90deg,
+      #e8edf3 25%,
+      #f4f7fa 50%,
+      #e8edf3 75%
+    );
+
+    background-size: 200% 100%;
+
+    animation: company-skeleton-shimmer 1.6s ease-in-out infinite;
+  }
+
+  &__icon {
+    width: 36px;
+    height: 36px;
+  }
+
+  &__label {
+    width: 65%;
+    height: 12px;
+  }
+
+  &__value {
+    width: 85%;
+    height: 20px;
+  }
+}
+
+@keyframes company-skeleton-shimmer {
+  from {
+    background-position: 200% 0;
+  }
+
+  to {
+    background-position: -200% 0;
+  }
+}
+
+/* Adaptación responsive */
+
+@media (max-width: 767.98px) {
+  .company-container {
+    gap: var(--asg-space-4);
+    padding-block: var(--asg-space-4);
+  }
+
+  .company-information,
+  .company-members-card {
+    padding: var(--asg-space-4);
+  }
+
+  .company-details {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--asg-space-3);
+  }
+
+  .company-section-header {
+    gap: var(--asg-space-3);
+
+    &__icon {
+      width: 40px;
+      height: 40px;
+
+      font-size: 1.25rem;
+    }
+  }
+
+  .company-detail {
+    padding: var(--asg-space-3);
+  }
+
+  .company-edit-button {
+    width: 100%;
+  }
+
+  .company-state {
+    padding: var(--asg-space-4);
+
+    .asg-btn {
+      width: 100%;
+    }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .company-skeleton__shape {
+    animation: none;
+  }
+}
+
+.company-information > .company-section-header {
+  margin-bottom: var(--asg-space-4, 16px);
+}

@@ -14,3 +14,29 @@
         height: 210px;
     }
 }
+
+
+/* HU-058 / T01 — Gráfica de resultados */
+
+
+.chart-container--results {
+  width: 100%;
+  min-width: 0;
+  height: 300px;
+}
+
+@media (max-width: 575.98px) {
+
+  .chart-container--results {
+    height: 260px;
+  }
+
+}
+
+@media (max-width: 359.98px) {
+
+  .chart-container--results {
+    height: 240px;
+  }
+
+}

@@ -1,0 +1,314 @@
+
+<section
+  class="performance"
+  aria-labelledby="results-performance-title">
+
+  <header class="performance__header">
+
+    <h2 id="results-performance-title">
+      Desempeño ASG
+    </h2>
+
+    <p>
+      Puntuaciones y niveles de madurez
+      de tu organización.
+    </p>
+
+  </header>
+
+  <div class="performance__grid">
+
+    <!-- Resultado global -->
+
+    <app-ambit-card
+      class="performance__global"
+      variant="dashboard"
+      [featured]="true"
+      title="Nivel ASG global"
+      letter="ASG"
+      color="var(--asg-color-brand-primary)"
+      [subtitle]="globalMaturity"
+      [score]="globalScore"
+      [maturity_color]="globalMaturityColor">
+
+    </app-ambit-card>
+
+    <!-- Resultados por ámbito -->
+
+    @for (ambit of ambits; track ambit.ambit_id) {
+
+    <app-ambit-card
+      variant="dashboard"
+      [title]="ambit.ambit_name"
+      [letter]="ambit.letter"
+      [color]="ambit.color"
+      [subtitle]="ambit.maturity_level"
+      [maturity_color]="ambit.maturity_color"
+      [score]="ambit.score">
+
+    </app-ambit-card>
+
+    }
+
+  </div>
+
+</section>
+
+<!-- Análisis de desempeño ASG -->
+
+<section
+  class="performance-analysis"
+  aria-labelledby="performance-analysis-title">
+
+  <header class="performance__header">
+
+    <h2 id="performance-analysis-title">
+      Análisis de desempeño
+    </h2>
+
+    <p>
+      Compara las puntuaciones y el equilibrio
+      entre los ámbitos ASG.
+    </p>
+
+  </header>
+
+  @if (hasChartData) {
+
+  <div class="performance-analysis__grid">
+
+    <!-- Gráfica de barras -->
+
+    <article
+      class="asg-card performance-chart"
+      aria-labelledby="performance-bar-title">
+
+      <header class="performance-chart__header">
+
+        <div>
+
+          <h3 id="performance-bar-title">
+            Puntuación por ámbito
+          </h3>
+
+          <p>
+            Comparación en una escala de 0 a 10.
+          </p>
+
+        </div>
+
+        <span
+          class="performance-chart__icon"
+          aria-hidden="true">
+
+          <i class="bi bi-bar-chart"></i>
+
+        </span>
+
+      </header>
+
+      <div class="performance-chart__body">
+
+        @for (revision of [chartRevision]; track revision) {
+
+        <app-bar-chart
+          variant="results"
+          [data]="barLabels"
+          [scores]="barScores"
+          [colors]="barColors">
+
+        </app-bar-chart>
+
+        }
+
+      </div>
+
+    </article>
+
+    <!-- Gráfica de radar -->
+
+    <article
+      class="asg-card performance-chart"
+      aria-labelledby="performance-radar-title">
+
+      <header class="performance-chart__header">
+
+        <div>
+
+          <h3 id="performance-radar-title">
+            Perfil ASG
+          </h3>
+
+          <p>
+            Distribución del desempeño entre ámbitos.
+          </p>
+
+        </div>
+
+        <span
+          class="performance-chart__icon"
+          aria-hidden="true">
+
+          <i class="bi bi-diagram-3"></i>
+
+        </span>
+
+      </header>
+
+      <div class="performance-chart__body">
+
+        <app-radar-chart
+          [data]="radarLabels"
+          [scores]="radarScores"
+          [colors]="radarColors">
+
+        </app-radar-chart>
+
+      </div>
+
+    </article>
+
+  </div>
+
+  } @else {
+
+  <div class="asg-card performance-analysis__empty">
+
+    <i class="bi bi-bar-chart" aria-hidden="true"></i>
+
+    <p>
+      No hay puntuaciones disponibles para
+      representar el desempeño ASG.
+    </p>
+
+  </div>
+
+  }
+
+</section>
+
+<!-- Resumen de desempeño -->
+
+@if (hasSummary) {
+
+<section
+  class="asg-card performance-summary"
+  aria-labelledby="performance-summary-title">
+
+  <h2 id="performance-summary-title">
+    Resumen de desempeño
+  </h2>
+
+  @if (isBalanced) {
+
+  <div class="performance-summary__item">
+
+    <span
+      class="performance-summary__icon"
+      aria-hidden="true">
+
+      <i class="bi bi-bar-chart"></i>
+
+    </span>
+
+    <div class="performance-summary__content">
+
+      <p class="performance-summary__name">
+        Desempeño equilibrado
+      </p>
+
+      <p class="performance-summary__label">
+
+        Todos los ámbitos con puntuaciones disponibles
+        obtuvieron el mismo resultado.
+
+      </p>
+
+    </div>
+
+  </div>
+
+  } @else {
+
+  <div class="performance-summary__grid">
+
+    <!-- Mayor puntuación -->
+
+    <div class="performance-summary__item
+      performance-summary__item--highest">
+
+      <span
+        class="performance-summary__icon"
+        aria-hidden="true">
+
+        <i class="bi bi-graph-up-arrow"></i>
+
+      </span>
+
+      <div class="performance-summary__content">
+
+        <p class="performance-summary__label">
+          Mayor puntuación
+        </p>
+
+        <p class="performance-summary__name">
+
+          {{ getAmbitNames(highestAmbits) }}
+
+        </p>
+
+      </div>
+
+      <p class="performance-summary__score">
+
+        {{ highestAmbits[0].score.toFixed(1) }}
+
+        <span>/ 10</span>
+
+      </p>
+
+    </div>
+
+    <!-- Menor puntuación -->
+
+    <div class="performance-summary__item">
+
+      <span
+        class="performance-summary__icon"
+        aria-hidden="true">
+
+        <i class="bi bi-bullseye"></i>
+
+      </span>
+
+      <div class="performance-summary__content">
+
+        <p class="performance-summary__label">
+          Menor puntuación
+        </p>
+
+        <p class="performance-summary__name">
+
+          {{ getAmbitNames(lowestAmbits) }}
+
+        </p>
+
+      </div>
+
+      <p class="performance-summary__score">
+
+        {{ lowestAmbits[0].score.toFixed(1) }}
+
+        <span>/ 10</span>
+
+      </p>
+
+    </div>
+
+  </div>
+
+  }
+
+</section>
+
+}

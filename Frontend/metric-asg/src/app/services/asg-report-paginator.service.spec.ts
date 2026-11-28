@@ -444,5 +444,317 @@ describe('AsgReportPaginatorService', () => {
             workspace.remove();
         }
     });
+    it('should keep an improvement action together when it fits on a new page', () => {
+        const report = document.createElement('div');
+
+        const section = document.createElement('section');
+        section.setAttribute('data-pdf-section', '');
+
+        const previousContent = document.createElement('div');
+        previousContent.style.height = '850px';
+        previousContent.textContent = 'Contenido anterior';
+
+        const action = document.createElement('article');
+        action.className = 'report-action';
+
+        const description = document.createElement('h4');
+        description.style.height = '150px';
+        description.textContent = 'Descripción de la acción';
+
+        const gap = document.createElement('p');
+        gap.style.height = '150px';
+        gap.textContent = 'Brecha identificada';
+
+        action.append(description, gap);
+
+        section.append(previousContent, action);
+        report.appendChild(section);
+        container.appendChild(report);
+
+        const { workspace, pages } = service.paginate(report);
+
+        try {
+            expect(pages.length).toBe(2);
+
+            expect(
+                pages[0].querySelector('.report-action')
+            ).toBeNull();
+
+            const exportedAction =
+                pages[1].querySelector('.report-action');
+
+            expect(exportedAction).not.toBeNull();
+
+            expect(exportedAction?.textContent)
+                .toContain('Descripción de la acción');
+
+            expect(exportedAction?.textContent)
+                .toContain('Brecha identificada');
+
+            expect(
+                workspace.querySelectorAll('.report-action').length
+            ).toBe(1);
+        } finally {
+            workspace.remove();
+        }
+    });
+    it('should split an oversized improvement action without losing its content', () => {
+        const report = document.createElement('div');
+
+        const section = document.createElement('section');
+        section.setAttribute('data-pdf-section', '');
+
+        const action = document.createElement('article');
+        action.className = 'report-action';
+
+        const description = document.createElement('h4');
+        description.style.height = '600px';
+        description.textContent = 'Descripción extensa';
+
+        const gap = document.createElement('p');
+        gap.style.height = '600px';
+        gap.textContent = 'Brecha extensa';
+
+        const details = document.createElement('div');
+        details.className = 'report-action-details';
+        details.style.height = '100px';
+        details.textContent =
+            'Responsable: Área de Sistemas. Prioridad: Alta.';
+
+        action.append(description, gap, details);
+
+        section.appendChild(action);
+        report.appendChild(section);
+        container.appendChild(report);
+
+        const originalHtml = report.outerHTML;
+
+        const { workspace, pages } = service.paginate(report);
+
+        try {
+            expect(pages.length).toBe(2);
+
+            const fragments = pages.flatMap(page =>
+                Array.from(
+                    page.querySelectorAll('.report-action')
+                )
+            );
+
+            expect(fragments.length).toBe(2);
+
+            expect(fragments[0].textContent)
+                .toContain('Descripción extensa');
+
+            expect(fragments[1].textContent)
+                .toContain('Brecha extensa');
+
+            expect(fragments[1].textContent)
+                .toContain('Responsable: Área de Sistemas');
+
+            expect(fragments[1].textContent)
+                .toContain('Prioridad: Alta');
+
+            expect(
+                workspace.querySelectorAll(
+                    '.report-action-details'
+                ).length
+            ).toBe(1);
+
+            expect(
+                pages.every(page => page.textContent?.trim())
+            ).toBeTrue();
+
+            expect(report.outerHTML).toBe(originalHtml);
+        } finally {
+            workspace.remove();
+        }
+    });
+    it('should reject content that exceeds the horizontal printable area', () => {
+        const report = document.createElement('div');
+
+        const section = document.createElement('section');
+        section.setAttribute('data-pdf-section', '');
+
+        const block = document.createElement('div');
+        block.style.width = '1000px';
+        block.style.height = '100px';
+        block.textContent = 'Contenido con desbordamiento horizontal';
+
+        section.appendChild(block);
+        report.appendChild(section);
+        container.appendChild(report);
+
+        try {
+            expect(() => service.paginate(report)).toThrowError();
+        } finally {
+            container
+                .querySelector('[data-pdf-workspace]')
+                ?.remove();
+        }
+
+        expect(
+            container.querySelector('[data-pdf-workspace]')
+        ).toBeNull();
+    });
+    it('should detect horizontal overflow in nested report elements', () => {
+        const report = document.createElement('div');
+
+        const section = document.createElement('section');
+        section.setAttribute('data-pdf-section', '');
+
+        const block = document.createElement('div');
+        block.style.width = '100%';
+        block.style.height = '150px';
+
+        const nested = document.createElement('div');
+        nested.style.width = '900px';
+        nested.style.height = '50px';
+        nested.textContent = 'Elemento interno desbordado';
+
+        block.appendChild(nested);
+        section.appendChild(block);
+        report.appendChild(section);
+        container.appendChild(report);
+
+        try {
+            expect(() => service.paginate(report)).toThrowError();
+        } finally {
+            container
+                .querySelector('[data-pdf-workspace]')
+                ?.remove();
+        }
+
+        expect(
+            container.querySelector('[data-pdf-workspace]')
+        ).toBeNull();
+    });
+
+    it('should keep a section heading together with its following content', () => {
+        const report = document.createElement('div');
+
+        const section = document.createElement('section');
+        section.setAttribute('data-pdf-section', '');
+
+        const previousContent = document.createElement('div');
+        previousContent.style.height = '850px';
+        previousContent.textContent = 'Contenido anterior';
+
+        const heading = document.createElement('h3');
+        heading.style.height = '60px';
+        heading.style.margin = '0';
+        heading.textContent = 'Detalle de acciones';
+
+        const content = document.createElement('div');
+        content.style.height = '200px';
+        content.textContent = 'Contenido asociado al encabezado';
+
+        section.append(
+            previousContent,
+            heading,
+            content
+        );
+
+        report.appendChild(section);
+        container.appendChild(report);
+
+        const { workspace, pages } = service.paginate(report);
+
+        try {
+            expect(pages.length).toBe(2);
+
+            expect(
+                pages[0].querySelector('h3')
+            ).toBeNull();
+
+            expect(
+                pages[1].querySelector('h3')?.textContent
+            ).toBe('Detalle de acciones');
+
+            expect(pages[1].textContent)
+                .toContain('Contenido asociado al encabezado');
+
+            expect(
+                workspace.querySelectorAll('h3').length
+            ).toBe(1);
+        } finally {
+            workspace.remove();
+        }
+    });
+    it('should not leave an orphan table header when the first row does not fit', () => {
+        const report = document.createElement('div');
+
+        const section = document.createElement('section');
+        section.setAttribute('data-pdf-section', '');
+
+        const previousContent = document.createElement('div');
+        previousContent.style.height = '850px';
+        previousContent.textContent = 'Contenido anterior';
+
+        const table = document.createElement('table');
+        table.style.width = '100%';
+        table.style.borderCollapse = 'collapse';
+
+        const thead = table.createTHead();
+        const headerRow = thead.insertRow();
+
+        headerRow.style.height = '60px';
+
+        const headerCell = document.createElement('th');
+        headerCell.textContent = 'Indicador';
+        headerRow.appendChild(headerCell);
+
+        const tbody = table.createTBody();
+
+        for (let index = 1; index <= 3; index++) {
+            const row = tbody.insertRow();
+
+            row.style.height = '200px';
+
+            const cell = row.insertCell();
+            cell.textContent = `Indicador ${index}`;
+        }
+
+        section.append(previousContent, table);
+        report.appendChild(section);
+        container.appendChild(report);
+
+        const { workspace, pages } = service.paginate(report);
+
+        try {
+            expect(pages.length).toBe(2);
+
+            expect(
+                pages[0].querySelector('table')
+            ).toBeNull();
+
+            const exportedTables = Array.from(
+                workspace.querySelectorAll('table')
+            );
+
+            expect(exportedTables.length).toBeGreaterThan(0);
+
+            exportedTables.forEach(exportedTable => {
+                expect(
+                    exportedTable.querySelectorAll('tbody tr').length
+                ).toBeGreaterThan(0);
+
+                expect(
+                    exportedTable.querySelector('thead')
+                ).not.toBeNull();
+            });
+
+            const exportedRows = Array.from(
+                workspace.querySelectorAll('tbody tr')
+            ).map(row => row.textContent?.trim());
+
+            expect(exportedRows).toEqual([
+                'Indicador 1',
+                'Indicador 2',
+                'Indicador 3'
+            ]);
+        } finally {
+            workspace.remove();
+        }
+    });
 
 });

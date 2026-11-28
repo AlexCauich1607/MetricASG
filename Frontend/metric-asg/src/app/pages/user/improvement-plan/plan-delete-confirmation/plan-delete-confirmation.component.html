@@ -1,0 +1,60 @@
+<div class="plan-delete-confirmation" role="alert">
+
+    <div class="plan-delete-confirmation__heading">
+
+        <i class="bi bi-exclamation-triangle" aria-hidden="true"></i>
+
+        <strong>
+            ¿Estás seguro de que deseas eliminar
+            esta acción de mejora?
+        </strong>
+
+    </div>
+
+    <p>
+        Esta operación eliminará el registro
+        de forma permanente.
+    </p>
+
+    @if (deleteError) {
+
+    <div class="alert alert-danger mb-0" role="alert">
+
+        {{ deleteError }}
+
+    </div>
+
+    }
+
+    <div class="plan-delete-confirmation__actions">
+
+        <button type="button" class="asg-btn plan-action-button" [disabled]="deletingActionId !== null"
+            (click)="cancelled.emit()">
+
+            Cancelar
+
+        </button>
+
+        <button type="button" class="asg-btn plan-action-button plan-action-button--danger-solid"
+            [disabled]="deletingActionId !== null" (click)="confirmed.emit()">
+
+            @if (deletingActionId === actionId) {
+
+            <span class="spinner-border spinner-border-sm" aria-hidden="true">
+            </span>
+
+            } @else {
+
+            <i class="bi bi-trash" aria-hidden="true"></i>
+
+            }
+
+            {{ deletingActionId === actionId
+            ? 'Eliminando...'
+            : 'Confirmar eliminación' }}
+
+        </button>
+
+    </div>
+
+</div>

@@ -1,0 +1,458 @@
+@if (activeModal === 'create') {
+
+<div class="modal d-block plan-modal" tabindex="-1" role="dialog" aria-modal="true"
+    aria-labelledby="createActionModalTitle">
+
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-lg">
+
+        <div class="modal-content" cdkTrapFocus [cdkTrapFocusAutoCapture]="true">
+
+            <!-- Encabezado -->
+
+            <div class="modal-header">
+
+                <div class="plan-modal__identity">
+
+                    <span class="plan-modal__icon" aria-hidden="true">
+
+                        <i class="bi bi-clipboard-plus"></i>
+
+                    </span>
+
+                    <div class="plan-modal__heading">
+
+                        <h2 id="createActionModalTitle" class="modal-title">
+
+                            Nueva acción de mejora
+
+                        </h2>
+
+                        <p>
+                            Define una acción para fortalecer
+                            el desempeño de tu empresa.
+                        </p>
+
+                    </div>
+
+                </div>
+
+                <button type="button" class="btn-close" aria-label="Cerrar" [disabled]="saving"
+                    (click)="createCancelled.emit()">
+                </button>
+
+            </div>
+
+            <form #actionForm="ngForm" (ngSubmit)="createSubmitted.emit()">
+
+                <div class="modal-body">
+
+                    <!-- Información de la acción -->
+
+                    <section class="plan-form-section" aria-label="Información de la acción">
+
+                        <div class="plan-form-grid">
+
+                            <div class="plan-form-field plan-form-field--full">
+
+                                <label for="gapDescription" class="form-label">
+                                    <i class="bi bi-shield-exclamation" aria-hidden="true"></i>
+                                    Brecha identificada *
+
+                                </label>
+
+                                <textarea id="gapDescription" name="gap_description" class="form-control" rows="3"
+                                    maxlength="2000" required cdkFocusInitial
+                                    placeholder="Describe la situación o área de oportunidad identificada..."
+                                    [(ngModel)]="newAction.gap_description">
+                                    </textarea>
+
+                            </div>
+
+                            <div class="plan-form-field plan-form-field--full">
+
+                                <label for="actionDescription" class="form-label">
+                                    <i class="bi bi-card-checklist" aria-hidden="true"></i>
+
+                                    Acción propuesta *
+
+                                </label>
+
+                                <textarea id="actionDescription" name="description" class="form-control" rows="3"
+                                    maxlength="2000" required
+                                    placeholder="Describe la acción que se implementará para atender la brecha..."
+                                    [(ngModel)]="newAction.description">
+                                    </textarea>
+
+                            </div>
+
+                        </div>
+
+                    </section>
+
+                    <!-- Planificación y seguimiento -->
+
+                    <section class="plan-form-section" aria-label="Planificación de la acción">
+
+                        <div class="plan-form-grid">
+
+                            <div class="plan-form-field plan-form-field--full">
+
+                                <label for="responsible" class="form-label">
+                                    <i class="bi bi-person" aria-hidden="true"></i>
+                                    Responsable *
+
+                                </label>
+
+                                <input id="responsible" name="responsible" type="text" class="form-control"
+                                    maxlength="150" required placeholder="Persona o departamento responsable"
+                                    [(ngModel)]="newAction.responsible">
+
+                            </div>
+
+                            <div class="plan-form-field">
+
+                                <label for="priority" class="form-label">
+                                    <i class="bi bi-flag" aria-hidden="true"></i>
+                                    Prioridad *
+
+                                </label>
+
+                                <select id="priority" name="priority" class="form-select" required
+                                    [(ngModel)]="newAction.priority">
+
+                                    <option value="LOW">Baja</option>
+                                    <option value="MEDIUM">Media</option>
+                                    <option value="HIGH">Alta</option>
+
+                                </select>
+
+                            </div>
+
+                            <div class="plan-form-field">
+
+                                <label for="targetDate" class="form-label">
+                                    <i class="bi bi-calendar-event" aria-hidden="true"></i>
+                                    Fecha objetivo *
+
+                                </label>
+
+                                <input id="targetDate" name="target_date" type="date" class="form-control" required
+                                    [(ngModel)]="newAction.target_date">
+
+                            </div>
+
+                        </div>
+
+                    </section>
+
+                    @if (formError) {
+
+                    <div class="alert alert-danger mb-0" role="alert">
+
+                        {{ formError }}
+
+                    </div>
+
+                    }
+
+                </div>
+
+                <!-- Acciones del formulario -->
+
+                <div class="modal-footer">
+
+                    <p class="plan-modal__required">
+                        * Campos obligatorios
+                    </p>
+
+                    <div class="plan-modal__actions">
+
+                        <button type="button" class="asg-btn plan-action-button" [disabled]="saving"
+                            (click)="createCancelled.emit()">
+
+                            Cancelar
+
+                        </button>
+
+                        <button type="submit" class="asg-btn asg-btn--primary plan-modal-submit"
+                            [disabled]="actionForm.invalid || saving">
+
+                            @if (saving) {
+
+                            <span class="spinner-border spinner-border-sm" aria-hidden="true">
+                            </span>
+
+                            } @else {
+
+                            <i class="bi bi-check-lg" aria-hidden="true">
+                            </i>
+
+                            }
+
+                            {{ saving
+                            ? 'Guardando...'
+                            : 'Guardar acción' }}
+
+                        </button>
+
+                    </div>
+
+                </div>
+
+            </form>
+
+        </div>
+
+    </div>
+
+</div>
+
+<div class="modal-backdrop fade show plan-modal-backdrop" aria-hidden="true">
+</div>
+
+}
+
+@if (activeModal === 'edit' && editingActionId !== null) {
+
+<div class="modal d-block plan-modal" tabindex="-1" role="dialog" aria-modal="true"
+    aria-labelledby="editActionModalTitle">
+
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-lg">
+
+        <div class="modal-content" cdkTrapFocus [cdkTrapFocusAutoCapture]="true">
+
+            <!-- Encabezado -->
+
+            <div class="modal-header">
+
+                <div class="plan-modal__identity">
+
+                    <span class="plan-modal__icon" aria-hidden="true">
+
+                        <i class="bi bi-pencil-square"></i>
+
+                    </span>
+
+                    <div class="plan-modal__heading">
+
+                        <h2 id="editActionModalTitle" class="modal-title">
+
+                            Editar acción de mejora
+
+                        </h2>
+
+                        <p>
+                            Actualiza la información y el seguimiento
+                            de esta acción.
+                        </p>
+
+                    </div>
+
+                </div>
+
+                <button type="button" class="btn-close" aria-label="Cerrar" [disabled]="updating"
+                    (click)="editCancelled.emit()">
+                </button>
+
+            </div>
+
+            <form #editForm="ngForm" (ngSubmit)="editSubmitted.emit()">
+
+                <div class="modal-body">
+
+                    <!-- Información de la acción -->
+
+                    <section class="plan-form-section" aria-label="Información de la acción">
+
+                        <div class="plan-form-grid">
+
+                            <div class="plan-form-field plan-form-field--full">
+
+                                <label for="editGapDescription" class="form-label">
+                                    <i class="bi bi-shield-exclamation" aria-hidden="true"></i>
+                                    Brecha identificada *
+
+                                </label>
+
+                                <textarea id="editGapDescription" name="edit_gap_description" class="form-control"
+                                    rows="3" maxlength="2000" required cdkFocusInitial
+                                    placeholder="Describe la situación o área de oportunidad identificada..."
+                                    [(ngModel)]="editAction.gap_description">
+                                    </textarea>
+
+                            </div>
+
+                            <div class="plan-form-field plan-form-field--full">
+
+                                <label for="editDescription" class="form-label">
+                                    <i class="bi bi-card-checklist" aria-hidden="true"></i>
+
+                                    Acción propuesta *
+
+                                </label>
+
+                                <textarea id="editDescription" name="edit_description" class="form-control" rows="3"
+                                    maxlength="2000" required
+                                    placeholder="Describe la acción que se implementará para atender la brecha..."
+                                    [(ngModel)]="editAction.description">
+                                    </textarea>
+
+                            </div>
+
+                        </div>
+
+                    </section>
+
+                    <!-- Planificación y seguimiento -->
+
+                    <section class="plan-form-section" aria-label="Planificación de la acción">
+
+                        <div class="plan-form-grid">
+
+                            <div class="plan-form-field plan-form-field--full">
+
+                                <label for="editResponsible" class="form-label">
+                                    <i class="bi bi-person" aria-hidden="true"></i>
+                                    Responsable *
+
+                                </label>
+
+                                <input id="editResponsible" name="edit_responsible" type="text" class="form-control"
+                                    maxlength="150" required placeholder="Persona o departamento responsable"
+                                    [(ngModel)]="editAction.responsible">
+
+                            </div>
+
+                            <div class="plan-form-field">
+
+                                <label for="editPriority" class="form-label">
+                                    <i class="bi bi-flag" aria-hidden="true"></i>
+                                    Prioridad *
+
+                                </label>
+
+                                <select id="editPriority" name="edit_priority" class="form-select" required
+                                    [(ngModel)]="editAction.priority">
+
+                                    <option value="LOW">Baja</option>
+                                    <option value="MEDIUM">Media</option>
+                                    <option value="HIGH">Alta</option>
+
+                                </select>
+
+                            </div>
+
+                            <div class="plan-form-field">
+
+                                <label for="editTargetDate" class="form-label">
+                                    <i class="bi bi-calendar-event" aria-hidden="true"></i>
+                                    Fecha objetivo *
+
+                                </label>
+
+                                <input id="editTargetDate" name="edit_target_date" type="date" class="form-control"
+                                    required [(ngModel)]="editAction.target_date">
+
+                            </div>
+
+                            <div class="plan-form-field plan-form-field--full">
+
+                                <label for="editStatus" class="form-label">
+                                    <i class="bi bi-arrow-repeat" aria-hidden="true"></i>
+                                    Estado *
+
+                                </label>
+
+                                <select id="editStatus" name="edit_status" class="form-select" required
+                                    [(ngModel)]="editAction.status">
+
+                                    <option value="PENDING">
+                                        Pendiente
+                                    </option>
+
+                                    <option value="IN_PROGRESS">
+                                        En progreso
+                                    </option>
+
+                                    <option value="COMPLETED">
+                                        Completada
+                                    </option>
+
+                                    <option value="CANCELLED">
+                                        Cancelada
+                                    </option>
+
+                                </select>
+
+                            </div>
+
+                        </div>
+
+                    </section>
+
+                    @if (editError) {
+
+                    <div class="alert alert-danger mb-0" role="alert">
+
+                        {{ editError }}
+
+                    </div>
+
+                    }
+
+                </div>
+
+                <!-- Acciones del formulario -->
+
+                <div class="modal-footer">
+
+                    <p class="plan-modal__required">
+                        * Campos obligatorios
+                    </p>
+
+                    <div class="plan-modal__actions">
+
+                        <button type="button" class="asg-btn plan-action-button" [disabled]="updating"
+                            (click)="editCancelled.emit()">
+
+                            Cancelar
+
+                        </button>
+
+                        <button type="submit" class="asg-btn asg-btn--primary plan-modal-submit"
+                            [disabled]="editForm.invalid || updating">
+
+                            @if (updating) {
+
+                            <span class="spinner-border spinner-border-sm" aria-hidden="true">
+                            </span>
+
+                            } @else {
+
+                            <i class="bi bi-check-lg" aria-hidden="true">
+                            </i>
+
+                            }
+
+                            {{ updating
+                            ? 'Actualizando...'
+                            : 'Guardar cambios' }}
+
+                        </button>
+
+                    </div>
+
+                </div>
+
+            </form>
+
+        </div>
+
+    </div>
+
+</div>
+
+<div class="modal-backdrop fade show plan-modal-backdrop" aria-hidden="true">
+</div>
+
+}

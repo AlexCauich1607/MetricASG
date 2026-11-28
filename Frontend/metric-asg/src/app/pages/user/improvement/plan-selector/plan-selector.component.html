@@ -1,0 +1,160 @@
+
+<div class="plan-selector-shell">
+
+  <div class="container plan-selector-container">
+
+    <header class="plan-selector-header">
+
+      <p class="plan-selector-header__eyebrow">
+        <i class="bi bi-clipboard-check"
+          aria-hidden="true">
+        </i>
+        Mejora continua
+      </p>
+
+      <h1>Plan de mejora ASG</h1>
+
+      <p class="plan-selector-header__description">
+        Consulta y gestiona las acciones de mejora
+        asociadas a tus evaluaciones.
+      </p>
+
+    </header>
+
+    <section
+      class="asg-card plan-selector"
+      aria-labelledby="plan-selector-title">
+
+      <h2 id="plan-selector-title">
+        Seleccionar evaluación
+      </h2>
+
+      @if (state().loading) {
+
+        <div class="plan-selector__state" role="status">
+
+          <span
+            class="spinner-border spinner-border-sm"
+            aria-hidden="true">
+          </span>
+
+          Cargando evaluaciones...
+
+        </div>
+
+      } @else if (state().error) {
+
+        <div class="plan-selector__state" role="alert">
+
+          <i
+            class="bi bi-exclamation-circle"
+            aria-hidden="true">
+          </i>
+
+          <p>
+            No fue posible cargar las evaluaciones.
+          </p>
+
+          <button
+            type="button"
+            class="asg-btn asg-btn--secondary"
+            (click)="retry()">
+
+            Reintentar
+
+          </button>
+
+        </div>
+
+      } @else if (state().evaluations.length === 0) {
+
+        <div class="plan-selector__state">
+
+          <i
+            class="bi bi-clipboard"
+            aria-hidden="true">
+          </i>
+
+          <h3>
+            Aún no tienes evaluaciones finalizadas
+          </h3>
+
+          <p>
+            Completa una evaluación ASG para
+            comenzar a gestionar acciones de mejora.
+          </p>
+
+        </div>
+
+      } @else {
+
+        <p class="plan-selector__description">
+          Selecciona la evaluación cuyo plan
+          de mejora deseas consultar.
+        </p>
+
+        <div class="plan-selector__form">
+
+          <div class="plan-selector__field">
+
+            <label for="planEvaluationId">
+              Evaluación finalizada
+            </label>
+
+            <select
+              id="planEvaluationId"
+              #evaluationSelect
+              class="form-select"
+              [value]="selectedEvaluationId() ?? ''"
+              (change)="selectEvaluation(
+                evaluationSelect.value
+              )">
+
+              @for (
+                evaluation of state().evaluations;
+                track evaluation.evaluation_id;
+                let first = $first
+              ) {
+
+                <option
+                  [value]="evaluation.evaluation_id">
+
+                  {{ evaluation.date | date:'dd/MM/yyyy' }}
+
+                  — Puntuación:
+                  {{ evaluation.global_score.toFixed(1) }}
+
+                  {{ first ? ' — Más reciente' : '' }}
+
+                </option>
+
+              }
+
+            </select>
+
+          </div>
+
+          <button
+            type="button"
+            class="asg-btn asg-btn--primary"
+            [disabled]="selectedEvaluationId() === null"
+            (click)="openPlan()">
+
+            Consultar plan de mejora
+
+            <i
+              class="bi bi-arrow-right"
+              aria-hidden="true">
+            </i>
+
+          </button>
+
+        </div>
+
+      }
+
+    </section>
+
+  </div>
+
+</div>

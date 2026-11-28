@@ -351,6 +351,14 @@ describe('AsgReportTemplateComponent', () => {
         expect(conclusionsSection.textContent).toContain(
             'La diferencia de puntuación global'
         );
+        const comparisonText = (
+            comparisonSection.textContent ?? ''
+        ).replace(/\s+/g, ' ');
+
+        expect(comparisonText).toContain(
+            'El cálculo utiliza las puntuaciones originales, ' +
+            'antes de aplicar el redondeo de presentación.'
+        );
     });
 
     it('should display an empty state when no improvement actions exist', () => {
@@ -710,5 +718,294 @@ describe('AsgReportTemplateComponent', () => {
             'El avance registrado de las acciones activas'
         );
     });
+    it('should paginate twenty improvement actions without losing or duplicating content', () => {
+        const paginator = TestBed.inject(
+            AsgReportPaginatorService
+        );
 
+        const baseAction = report.improvement_actions[0];
+
+        const actions = Array.from(
+            { length: 20 },
+            (_, index) => ({
+                ...baseAction,
+                id: index + 1,
+                description: `Acción de prueba número ${index + 1}`,
+                gap_description:
+                    `Brecha identificada número ${index + 1}. ` +
+                    'Se requiere implementar mecanismos de seguimiento y mejora continua.',
+                status: 'PENDING' as const
+            })
+        );
+
+        fixture.componentRef.setInput('report', {
+            ...report,
+            improvement_actions: actions,
+            improvement_progress: {
+                evaluation_id: report.evaluation.evaluation_id,
+                total: 20,
+                pending: 20,
+                in_progress: 0,
+                completed: 0,
+                cancelled: 0,
+                progress_percentage: 0
+            }
+        });
+
+        fixture.detectChanges();
+
+        const root = (
+            fixture.nativeElement as HTMLElement
+        ).querySelector<HTMLElement>('[data-pdf-root]')!;
+
+        const { workspace, pages } = paginator.paginate(root);
+
+        try {
+            expect(pages.length).toBeGreaterThan(6);
+
+            const exportedActions = pages.flatMap(page =>
+                Array.from(
+                    page.querySelectorAll<HTMLElement>(
+                        '.report-action'
+                    )
+                )
+            );
+
+            expect(exportedActions.length).toBe(20);
+
+            const exportedDescriptions = exportedActions.map(
+                action => action.querySelector('h4')
+                    ?.textContent?.trim()
+            );
+
+            expect(exportedDescriptions).toEqual(
+                actions.map(action => action.description)
+            );
+        } finally {
+            workspace.remove();
+        }
+    });
+    it('should preserve an improvement action with maximum-length content', () => {
+        const paginator = TestBed.inject(
+            AsgReportPaginatorService
+        );
+
+        const description = (
+            'Implementar medidas de mejora continua y seguimiento. '
+        ).repeat(50).slice(0, 2000);
+
+        const gapDescription = (
+            'Se identificaron oportunidades de mejora en los procesos internos. '
+        ).repeat(50).slice(0, 2000);
+
+        const action = {
+            ...report.improvement_actions[0],
+            description,
+            gap_description: gapDescription,
+            responsible: 'Área de Administración y Calidad',
+            priority: 'HIGH' as const,
+            status: 'IN_PROGRESS' as const
+        };
+
+        fixture.componentRef.setInput('report', {
+            ...report,
+            improvement_actions: [action],
+            improvement_progress: {
+                evaluation_id: report.evaluation.evaluation_id,
+                total: 1,
+                pending: 0,
+                in_progress: 1,
+                completed: 0,
+                cancelled: 0,
+                progress_percentage: 0
+            }
+        });
+
+        fixture.detectChanges();
+
+        const root = (
+            fixture.nativeElement as HTMLElement
+        ).querySelector<HTMLElement>('[data-pdf-root]')!;
+
+        const { workspace, pages } = paginator.paginate(root);
+
+        try {
+            const exportedText = pages
+                .map(page => page.textContent ?? '')
+                .join(' ')
+                .replace(/\s+/g, ' ');
+
+            expect(exportedText).toContain(
+                description.replace(/\s+/g, ' ').trim()
+            );
+
+            expect(exportedText).toContain(
+                gapDescription.replace(/\s+/g, ' ').trim()
+            );
+
+            expect(exportedText).toContain(action.responsible);
+            expect(exportedText).toContain('Alta');
+            expect(exportedText).toContain('En progreso');
+        } finally {
+            workspace.remove();
+        }
+    });
+    it('should preserve the original report DOM after pagination', () => {
+        const paginator = TestBed.inject(
+            AsgReportPaginatorService
+        );
+
+        fixture.detectChanges();
+
+        const root = (
+            fixture.nativeElement as HTMLElement
+        ).querySelector<HTMLElement>('[data-pdf-root]')!;
+
+        const originalHtml = root.outerHTML;
+
+        const originalSections = Array.from(
+            root.querySelectorAll('[data-pdf-section]')
+        );
+
+        const { workspace, pages } = paginator.paginate(root);
+
+        try {
+            expect(pages.length).toBeGreaterThanOrEqual(6);
+
+            expect(root.outerHTML).toBe(originalHtml);
+
+            const currentSections = Array.from(
+                root.querySelectorAll('[data-pdf-section]')
+            );
+
+            expect(currentSections.length).toBe(
+                originalSections.length
+            );
+
+            currentSections.forEach((section, index) => {
+                expect(section).toBe(originalSections[index]);
+            });
+
+            expect(
+                root.querySelector('[data-pdf-page]')
+            ).toBeNull();
+
+            expect(
+                root.querySelector('[data-pdf-workspace]')
+            ).toBeNull();
+        } finally {
+            workspace.remove();
+        }
+
+        expect(root.outerHTML).toBe(originalHtml);
+    });
+    it('should preserve long unbroken text in improvement actions', () => {
+        const paginator = TestBed.inject(
+            AsgReportPaginatorService
+        );
+
+        const description = 'A'.repeat(2000);
+        const gapDescription = 'B'.repeat(2000);
+
+        const action = {
+            ...report.improvement_actions[0],
+            description,
+            gap_description: gapDescription,
+            responsible: 'Área de Sistemas',
+            priority: 'HIGH' as const,
+            status: 'IN_PROGRESS' as const
+        };
+
+        fixture.componentRef.setInput('report', {
+            ...report,
+            improvement_actions: [action],
+            improvement_progress: {
+                evaluation_id: report.evaluation.evaluation_id,
+                total: 1,
+                pending: 0,
+                in_progress: 1,
+                completed: 0,
+                cancelled: 0,
+                progress_percentage: 0
+            }
+        });
+
+        fixture.detectChanges();
+
+        const root = (
+            fixture.nativeElement as HTMLElement
+        ).querySelector<HTMLElement>('[data-pdf-root]')!;
+
+        const originalHtml = root.outerHTML;
+
+        const { workspace, pages } = paginator.paginate(root);
+
+        try {
+            const actionFragments = pages.flatMap(page =>
+                Array.from(
+                    page.querySelectorAll<HTMLElement>(
+                        '.report-action'
+                    )
+                )
+            );
+
+            const descriptions = actionFragments
+                .flatMap(fragment =>
+                    Array.from(fragment.querySelectorAll('h4'))
+                )
+                .map(element => element.textContent ?? '')
+                .join('')
+                .replace(/\s+/g, '');
+
+            const exportedText = actionFragments
+                .map(fragment => fragment.textContent ?? '')
+                .join('')
+                .replace(/\s+/g, '');
+
+            expect(descriptions).toBe(description);
+            expect(exportedText).toContain(gapDescription);
+
+            expect(
+                workspace.querySelectorAll(
+                    '.report-action-details'
+                ).length
+            ).toBe(1);
+
+            expect(root.outerHTML).toBe(originalHtml);
+
+            for (const page of pages) {
+                const rect = page.getBoundingClientRect();
+                const styles = getComputedStyle(page);
+
+                const left =
+                    rect.left + parseFloat(styles.paddingLeft);
+
+                const right =
+                    rect.right - parseFloat(styles.paddingRight);
+
+                const elements = Array.from(
+                    page.querySelectorAll<HTMLElement>(
+                        '.report-action, .report-action h4, .report-action p'
+                    )
+                );
+
+                for (const element of elements) {
+                    const bounds = element.getBoundingClientRect();
+
+                    expect(bounds.left)
+                        .toBeGreaterThanOrEqual(left - 1);
+
+                    expect(bounds.right)
+                        .toBeLessThanOrEqual(right + 1);
+
+                    expect(element.scrollWidth)
+                        .toBeLessThanOrEqual(
+                            element.clientWidth + 1
+                        );
+                }
+            }
+        } finally {
+            workspace.remove();
+        }
+    });
 });
