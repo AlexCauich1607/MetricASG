@@ -49,7 +49,7 @@
             <b class="text-white px-1 rounded" [style.backgroundColor]="blueColor"><i class="bi bi-person-fill"></i></b>
             {{usersData.name}}
           </h5>
-          <app-bar-chart [data]="usersData.data" [scores]="usersData.value" [colors]="usersData.colors"
+          <app-bar-chart variant="admin" [data]="usersData.data" [scores]="usersData.value" [colors]="usersData.colors"
             [id]="0"></app-bar-chart>
         </div>
       </div>
@@ -60,7 +60,7 @@
             <b class="text-white px-2 rounded" [style.backgroundColor]="ambito.value.color">{{ambito.value.letter}}</b>
             {{ambito.value.name}}
           </h5>
-          <app-bar-chart [data]="data.get(ambito.key)?.data??[]" [scores]="data.get(ambito.key)?.scores??[]"
+          <app-bar-chart variant="admin" [data]="data.get(ambito.key)?.data??[]" [scores]="data.get(ambito.key)?.scores??[]"
             [colors]="data.get(ambito.key)?.colors??[]" [id]="ambito.key"></app-bar-chart>
         </div>
       </div>

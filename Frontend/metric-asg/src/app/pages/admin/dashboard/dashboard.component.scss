@@ -130,3 +130,29 @@
     }
   }
 }
+
+/* HU-059 / T01 — Contenedores de gráficas */
+
+.admin-dashboard {
+  app-bar-chart {
+    --asg-chart-height: 300px;
+
+    min-width: 0;
+  }
+
+  @media (max-width: 575.98px) {
+
+    app-bar-chart {
+      --asg-chart-height: 260px;
+    }
+
+  }
+
+  @media (max-width: 359.98px) {
+
+    app-bar-chart {
+      --asg-chart-height: 240px;
+    }
+
+  }
+}
